@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>마이페이지 - 천운</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #111;
+        color: #e8e8e8;
+        font-family: "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        min-height: 100vh;
+      }
+
+      nav {
+        background: #1a1a1a;
+        border-bottom: 1px solid #2a2a2a;
+        padding: 0 40px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+        color: #fff;
+        text-decoration: none;
+        flex-shrink: 0;
+      }
+
+      .logo-icon {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #7c6aff, #a78bfa);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+
+      .search-bar {
+        flex: 1;
+        max-width: 480px;
+        display: flex;
+        align-items: center;
+        background: #252525;
+        border: 1px solid #333;
+        border-radius: 10px;
+        padding: 0 16px;
+        gap: 10px;
+        height: 40px;
+      }
+
+      .search-bar input {
+        background: none;
+        border: none;
+        outline: none;
+        color: #e8e8e8;
+        font-size: 14px;
+        width: 100%;
+      }
+
+      .search-bar input::placeholder {
+        color: #666;
+      }
+
+      .nav-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .nav-btn {
+        background: none;
+        border: 1px solid #333;
+        color: #ccc;
+        padding: 7px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+      }
+
+      .nav-btn:hover {
+        background: #2a2a2a;
+        color: #fff;
+        border-color: #555;
+      }
+      .nav-btn.sell {
+        background: linear-gradient(135deg, #7c6aff, #a78bfa);
+        border-color: transparent;
+        color: #fff;
+      }
+      .nav-btn.active-nav {
+        background: #7c6aff22;
+        color: #a78bfa;
+        border-color: #7c6aff44;
+      }
+
+      .container {
+        max-width: 1100px;
+        margin: 48px auto;
+        padding: 0 24px;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 32px;
+        align-items: start;
+      }
+
+      /* ── 사이드바 ── */
+      .sidebar {
+        position: sticky;
+        top: 88px;
+      }
+
+      .profile-card {
+        background: linear-gradient(135deg, #1e1830, #1a1a2e);
+        border: 1px solid #7c6aff33;
+        border-radius: 20px;
+        padding: 28px 24px;
+        text-align: center;
+        margin-bottom: 16px;
+      }
+
+      .profile-avatar {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #7c6aff, #a78bfa);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        margin: 0 auto 16px;
+        position: relative;
+      }
+
+      .profile-avatar::after {
+        content: "✏️";
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 26px;
+        height: 26px;
+        background: #2a2a2a;
+        border: 2px solid #333;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .profile-name {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 4px;
+      }
+
+      .profile-email {
+        font-size: 13px;
+        color: #555;
+        margin-bottom: 16px;
+      }
+
+      .profile-rating {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #f5c54222;
+        border: 1px solid #f5c54244;
+        color: #f5c542;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 5px 14px;
+        border-radius: 99px;
+        margin-bottom: 20px;
+      }
+
+      .profile-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 4px;
+      }
+
+      .profile-stat {
+        background: #ffffff08;
+        border-radius: 10px;
+        padding: 12px 8px;
+        text-align: center;
+      }
+
+      .profile-stat-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+      }
+
+      .profile-stat-label {
+        font-size: 11px;
+        color: #555;
+        margin-top: 3px;
+      }
+
+      .sidebar-menu {
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 14px;
+        overflow: hidden;
+      }
+
+      .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        font-size: 14px;
+        color: #888;
+        cursor: pointer;
+        border-bottom: 1px solid #222;
+        transition: all 0.2s;
+      }
+
+      .menu-item:last-child {
+        border-bottom: none;
+      }
+      .menu-item:hover {
+        background: #222;
+        color: #ccc;
+      }
+      .menu-item.active {
+        background: #7c6aff11;
+        color: #a78bfa;
+        border-left: 3px solid #7c6aff;
+      }
+
+      .menu-icon {
+        font-size: 16px;
+        width: 20px;
+        text-align: center;
+      }
+      .menu-badge {
+        margin-left: auto;
+        background: #7c6aff;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 99px;
+      }
+
+      /* ── 메인 콘텐츠 ── */
+      .main-content {
+      }
+
+      /* 요약 카드들 */
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 32px;
+      }
+
+      .summary-card {
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 14px;
+        padding: 18px 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .summary-card:hover {
+        border-color: #7c6aff44;
+        transform: translateY(-2px);
+      }
+
+      .summary-icon {
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+      .summary-value {
+        font-size: 24px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 4px;
+      }
+      .summary-value span {
+        font-size: 14px;
+        font-weight: 400;
+        color: #666;
+      }
+      .summary-label {
+        font-size: 12px;
+        color: #555;
+      }
+
+      /* 응모 내역 */
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .section-title::before {
+        content: "";
+        display: block;
+        width: 4px;
+        height: 18px;
+        background: linear-gradient(180deg, #7c6aff, #a78bfa);
+        border-radius: 2px;
+      }
+
+      .see-all {
+        font-size: 13px;
+        color: #666;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+      .see-all:hover {
+        color: #a78bfa;
+      }
+
+      .entry-list {
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 14px;
+        overflow: hidden;
+        margin-bottom: 32px;
+      }
+
+      .entry-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        border-bottom: 1px solid #1e1e1e;
+        transition: background 0.2s;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      .entry-item:last-child {
+        border-bottom: none;
+      }
+      .entry-item:hover {
+        background: #1e1e1e;
+      }
+
+      .entry-emoji {
+        width: 52px;
+        height: 52px;
+        background: linear-gradient(135deg, #1e1e2e, #252535);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        flex-shrink: 0;
+      }
+
+      .entry-info {
+        flex: 1;
+      }
+      .entry-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #ddd;
+        margin-bottom: 4px;
+      }
+      .entry-meta {
+        font-size: 12px;
+        color: #555;
+        display: flex;
+        gap: 12px;
+      }
+
+      .entry-status {
+        flex-shrink: 0;
+        text-align: right;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 99px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      .status-badge.waiting {
+        background: #7c6aff22;
+        color: #a78bfa;
+        border: 1px solid #7c6aff44;
+      }
+      .status-badge.win {
+        background: #22c55e22;
+        color: #4ade80;
+        border: 1px solid #22c55e44;
+      }
+      .status-badge.lose {
+        background: #33333322;
+        color: #666;
+        border: 1px solid #44444444;
+      }
+      .status-badge.ongoing {
+        background: #ff6b3522;
+        color: #ff8c5a;
+        border: 1px solid #ff6b3544;
+      }
+
+      .btn-win-confirm {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 99px;
+        font-size: 12px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #7c6aff, #a78bfa);
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        margin-bottom: 4px;
+        transition: all 0.2s;
+      }
+      .btn-win-confirm:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 14px #7c6aff55;
+      }
+
+      /* 당첨 팝업 */
+      .win-overlay {
+        position: fixed;
+        inset: 0;
+        background: #000000cc;
+        z-index: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        backdrop-filter: blur(6px);
+      }
+      .win-overlay.open {
+        opacity: 1;
+        pointer-events: all;
+      }
+      .win-modal {
+        background: linear-gradient(135deg, #1e1830, #1a1a2e);
+        border: 1px solid #7c6aff66;
+        border-radius: 28px;
+        padding: 52px 44px 40px;
+        text-align: center;
+        max-width: 400px;
+        width: 90%;
+        position: relative;
+        transform: scale(0.7);
+        transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 24px 80px #7c6aff33;
+      }
+      .win-overlay.open .win-modal {
+        transform: scale(1);
+      }
+      .win-icon {
+        font-size: 72px;
+        margin-bottom: 16px;
+        display: block;
+        animation: bounce 0.6s ease 0.3s both;
+      }
+      @keyframes bounce {
+        0% {
+          transform: scale(0);
+        }
+        60% {
+          transform: scale(1.2);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      .win-title {
+        font-size: 28px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 10px;
+        background: linear-gradient(135deg, #7c6aff, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .win-product {
+        font-size: 15px;
+        color: #aaa;
+        margin-bottom: 28px;
+        line-height: 1.5;
+      }
+      .win-img {
+        width: 120px;
+        height: 120px;
+        border-radius: 16px;
+        overflow: hidden;
+        margin: 0 auto 20px;
+        border: 2px solid #7c6aff44;
+      }
+      .win-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .win-close {
+        background: #7c6aff22;
+        border: 1px solid #7c6aff44;
+        color: #a78bfa;
+        font-size: 15px;
+        font-weight: 700;
+        padding: 12px 32px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .win-close:hover {
+        background: #7c6aff44;
+      }
+
+      .entry-price {
+        font-size: 13px;
+        color: #555;
+      }
+
+      .meta-done {
+        color: #f5c542;
+        font-weight: 600;
+      }
+      .meta-urgent {
+        color: #ff6b6b;
+        font-weight: 600;
+      }
+      .meta-warning {
+        color: #ff8c5a;
+        font-weight: 600;
+      }
+
+      /* 관심 상품 */
+      .wish-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 32px;
+      }
+
+      .wish-card {
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 14px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: block;
+      }
+
+      .wish-card:hover {
+        border-color: #7c6aff44;
+        transform: translateY(-2px);
+      }
+
+      .wish-img {
+        aspect-ratio: 16/9;
+        background: linear-gradient(135deg, #1e1e2e, #252535);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        position: relative;
+      }
+
+      .wish-heart {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        color: #ff6b8a;
+        font-size: 16px;
+      }
+
+      .wish-body {
+        padding: 12px 14px;
+      }
+      .wish-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #ddd;
+        margin-bottom: 4px;
+      }
+      .wish-price {
+        font-size: 14px;
+        font-weight: 700;
+        color: #7c6aff;
+        margin-bottom: 6px;
+      }
+      .wish-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 10px;
+        color: #a78bfa;
+        background: #7c6aff22;
+        border: 1px solid #7c6aff33;
+        border-radius: 99px;
+        padding: 2px 7px;
+      }
+
+      /* 알림 */
+      .notif-list {
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 14px;
+        overflow: hidden;
+      }
+
+      .notif-item {
+        display: flex;
+        gap: 14px;
+        padding: 16px 20px;
+        border-bottom: 1px solid #1e1e1e;
+        align-items: flex-start;
+      }
+
+      .notif-item:last-child {
+        border-bottom: none;
+      }
+      .notif-item.unread {
+        background: #7c6aff08;
+      }
+
+      .notif-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #7c6aff;
+        flex-shrink: 0;
+        margin-top: 6px;
+      }
+
+      .notif-dot.read {
+        background: transparent;
+        border: 1px solid #333;
+      }
+
+      .notif-icon {
+        font-size: 22px;
+        flex-shrink: 0;
+      }
+      .notif-text {
+        flex: 1;
+      }
+      .notif-title {
+        font-size: 14px;
+        color: #ddd;
+        margin-bottom: 3px;
+        line-height: 1.4;
+      }
+      .notif-time {
+        font-size: 12px;
+        color: #555;
+      }
+
+      @media (max-width: 900px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          position: static;
+        }
+        .summary-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .wish-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        nav {
+          padding: 0 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 네비게이션 -->
+    <nav>
+      <a class="logo" href="main.html">
+        <div class="logo-icon">🧧</div>
+        천운
+      </a>
+      <div class="search-bar">
+        <span>🔍</span>
+        <input type="text" placeholder="검색어를 입력하세요" />
+      </div>
+      <div class="nav-actions">
+        <button class="nav-btn sell">＋ 판매하기</button>
+        <button class="nav-btn">💬 채팅하기</button>
+        <button class="nav-btn active-nav">👤 마이페이지</button>
+      </div>
+    </nav>
+
+    <div class="container">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="profile-card">
+          <div class="profile-avatar">🐔</div>
+          <div class="profile-name">경호소인</div>
+          <div class="profile-email">wkcpq103100@gmail.com</div>
+          <div class="profile-rating">⭐ 4.9 · 매너온도 38°C</div>
+          <div class="profile-stats">
+            <div class="profile-stat">
+              <div class="profile-stat-value">12</div>
+              <div class="profile-stat-label">거래 완료</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-value">7</div>
+              <div class="profile-stat-label">판매 중</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-value">23</div>
+              <div class="profile-stat-label">응모 내역</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-value">3</div>
+              <div class="profile-stat-label">당첨 횟수</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-menu">
+          <div class="menu-item active">
+            <span class="menu-icon">🏠</span>
+            내 활동 요약
+          </div>
+          <div class="menu-item">
+            <span class="menu-icon">🎟</span>
+            응모 내역
+            <span class="menu-badge">5</span>
+          </div>
+          <div class="menu-item">
+            <span class="menu-icon">🛍️</span>
+            판매 내역
+          </div>
+          <div class="menu-item">
+            <span class="menu-icon">🤍</span>
+            관심 상품
+          </div>
+          <div class="menu-item">
+            <span class="menu-icon">🔔</span>
+            알림
+            <span class="menu-badge">3</span>
+          </div>
+          <div class="menu-item">
+            <span class="menu-icon">💬</span>
+            채팅 목록
+          </div>
+          <div class="menu-item">
+            <span class="menu-icon">⚙️</span>
+            설정
+          </div>
+        </div>
+      </div>
+
+      <!-- 메인 콘텐츠 -->
+      <div class="main-content">
+        <!-- 요약 통계 -->
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-icon">🎟</div>
+            <div class="summary-value">2 <span>건</span></div>
+            <div class="summary-label">진행 중인 응모</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon">🏆</div>
+            <div class="summary-value">3 <span>회</span></div>
+            <div class="summary-label">누적 당첨</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon">💸</div>
+            <div class="summary-value">8,000 <span>원</span></div>
+            <div class="summary-label">이번 달 응모 금액</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon">🤍</div>
+            <div class="summary-value">8 <span>개</span></div>
+            <div class="summary-label">관심 상품</div>
+          </div>
+        </div>
+
+        <!-- 응모 내역 -->
+        <div class="section-header">
+          <div class="section-title">🎟 최근 응모 내역</div>
+          <div class="see-all">전체보기 →</div>
+        </div>
+
+        <div class="entry-list">
+          <a class="entry-item" href="index.html">
+            <div class="entry-emoji" style="overflow: hidden; padding: 0">
+              <img
+                src="images/naoya.jpg"
+                alt="반다이 맥시매틱 젠인 나오야 피규어[미개봉]"
+                style="
+                  width: 100%;
+                  height: 100%;
+                  object-fit: cover;
+                  border-radius: 12px;
+                "
+              />
+            </div>
+            <div class="entry-info">
+              <div class="entry-title">
+                반다이 맥시매틱 젠인 나오야 피규어[미개봉]
+              </div>
+              <div class="entry-meta">
+                <span>🎟 1장 응모</span>
+                <span>📅 어제</span>
+                <span class="meta-done">🏁 추첨 완료</span>
+              </div>
+            </div>
+            <div class="entry-status">
+              <button class="btn-win-confirm" onclick="openWinModal(event)">
+                🎉 당첨확인
+              </button>
+              <div class="entry-price">1,000원</div>
+            </div>
+          </a>
+
+          <a class="entry-item" href="product_iphone.html">
+            <div class="entry-emoji" style="overflow: hidden; padding: 0">
+              <img
+                src="images/iphone14pro.jpg"
+                alt="아이폰 14 Pro"
+                style="
+                  width: 100%;
+                  height: 100%;
+                  object-fit: cover;
+                  border-radius: 12px;
+                "
+              />
+            </div>
+            <div class="entry-info">
+              <div class="entry-title">아이폰 14 Pro 256GB 스페이스 블랙</div>
+              <div class="entry-meta">
+                <span>🎟 2장 응모</span>
+                <span>📅 오늘</span>
+                <span class="meta-urgent">⏱ 8시간 남음</span>
+              </div>
+            </div>
+            <div class="entry-status">
+              <div class="status-badge waiting">대기 중</div>
+              <div class="entry-price">2,000원</div>
+            </div>
+          </a>
+
+          <a class="entry-item" href="index.html">
+            <div class="entry-emoji" style="overflow: hidden; padding: 0">
+              <img
+                src="images/ps5.jpg"
+                alt="플레이스테이션 5"
+                style="
+                  width: 100%;
+                  height: 100%;
+                  object-fit: cover;
+                  border-radius: 12px;
+                "
+              />
+            </div>
+            <div class="entry-info">
+              <div class="entry-title">플레이스테이션 5 디스크 에디션</div>
+              <div class="entry-meta">
+                <span>🎟 2장 응모</span>
+                <span>📅 3일 전</span>
+                <span class="meta-warning">⏳ 1일 남음</span>
+              </div>
+            </div>
+            <div class="entry-status">
+              <div class="status-badge waiting">대기 중</div>
+              <div class="entry-price">2,000원</div>
+            </div>
+          </a>
+
+          <a class="entry-item" href="index.html">
+            <div class="entry-emoji">🎧</div>
+            <div class="entry-info">
+              <div class="entry-title">에어팟 프로 2세대</div>
+              <div class="entry-meta">
+                <span>🎟 1장 응모</span>
+                <span>📅 5일 전</span>
+                <span class="meta-done">🏁 추첨 완료</span>
+              </div>
+            </div>
+            <div class="entry-status">
+              <div class="status-badge lose">미당첨</div>
+              <div class="entry-price">1,000원</div>
+            </div>
+          </a>
+
+          <a class="entry-item" href="index.html">
+            <div class="entry-emoji">⌚</div>
+            <div class="entry-info">
+              <div class="entry-title">갤럭시 워치 6 클래식</div>
+              <div class="entry-meta">
+                <span>🎟 1장 응모</span>
+                <span>📅 1주일 전</span>
+                <span class="meta-done">🏁 추첨 완료</span>
+              </div>
+            </div>
+            <div class="entry-status">
+              <div class="status-badge lose">미당첨</div>
+              <div class="entry-price">2,000원</div>
+            </div>
+          </a>
+        </div>
+
+        <!-- 관심 상품 -->
+        <div class="section-header">
+          <div class="section-title">🤍 관심 상품</div>
+          <div class="see-all">전체보기 →</div>
+        </div>
+
+        <div class="wish-grid">
+          <a class="wish-card" href="index.html">
+            <div class="wish-img">
+              🎵
+              <span class="wish-heart">❤️</span>
+            </div>
+            <div class="wish-body">
+              <div class="wish-title">소니 WH-1000XM5 헤드폰</div>
+              <div class="wish-price">250,000원</div>
+              <div class="wish-badge">🎟 응모 중 · 4일 남음</div>
+            </div>
+          </a>
+
+          <a class="wish-card" href="index.html">
+            <div class="wish-img">
+              📷
+              <span class="wish-heart">❤️</span>
+            </div>
+            <div class="wish-body">
+              <div class="wish-title">소니 ZV-E10 미러리스 카메라</div>
+              <div class="wish-price">380,000원</div>
+              <div class="wish-badge">🎟 응모 중 · 7일 남음</div>
+            </div>
+          </a>
+
+          <a class="wish-card" href="index.html">
+            <div class="wish-img">
+              🖥️
+              <span class="wish-heart">❤️</span>
+            </div>
+            <div class="wish-body">
+              <div class="wish-title">아이패드 Air 5세대 64GB</div>
+              <div class="wish-price">480,000원</div>
+              <div class="wish-badge">🎟 응모 중 · 6일 남음</div>
+            </div>
+          </a>
+        </div>
+
+        <!-- 알림 -->
+        <div class="section-header">
+          <div class="section-title">🔔 최근 알림</div>
+          <div class="see-all">전체보기 →</div>
+        </div>
+
+        <div class="notif-list">
+          <div class="notif-item unread">
+            <div class="notif-dot"></div>
+            <div class="notif-icon">🎉</div>
+            <div class="notif-text">
+              <div class="notif-title">
+                <strong>플레이스테이션 5</strong> 응모에서
+                <strong style="color: #4ade80">당첨</strong>되셨습니다!
+                판매자에게 연락해 거래를 진행해주세요.
+              </div>
+              <div class="notif-time">3일 전</div>
+            </div>
+          </div>
+
+          <div class="notif-item unread">
+            <div class="notif-dot"></div>
+            <div class="notif-icon">⏰</div>
+            <div class="notif-text">
+              <div class="notif-title">
+                <strong>아이폰 14 Pro</strong> 응모 마감까지
+                <strong style="color: #ff8c5a">8시간</strong> 남았습니다.
+              </div>
+              <div class="notif-time">오늘</div>
+            </div>
+          </div>
+
+          <div class="notif-item unread">
+            <div class="notif-dot"></div>
+            <div class="notif-icon">🎟</div>
+            <div class="notif-text">
+              <div class="notif-title">
+                관심 상품 <strong>소니 WH-1000XM5</strong>에 새로운 응모자가
+                15명 추가되었습니다.
+              </div>
+              <div class="notif-time">1일 전</div>
+            </div>
+          </div>
+
+          <div class="notif-item">
+            <div class="notif-dot read"></div>
+            <div class="notif-icon">💬</div>
+            <div class="notif-text">
+              <div class="notif-title">
+                <strong>테크마켓Pro</strong>님이 채팅 메시지를 보냈습니다.
+              </div>
+              <div class="notif-time">2일 전</div>
+            </div>
+          </div>
+
+          <div class="notif-item">
+            <div class="notif-dot read"></div>
+            <div class="notif-icon">😢</div>
+            <div class="notif-text">
+              <div class="notif-title">
+                <strong>에어팟 프로 2세대</strong> 응모에서 미당첨되셨습니다.
+                다음 기회에 다시 도전해보세요!
+              </div>
+              <div class="notif-time">5일 전</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 폭죽 캔버스 -->
+    <canvas
+      id="confettiCanvas"
+      style="
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 600;
+        width: 100%;
+        height: 100%;
+        display: none;
+      "
+    ></canvas>
+
+    <!-- 당첨 팝업 -->
+    <div class="win-overlay" id="winOverlay" onclick="closeWinModal(event)">
+      <div class="win-modal">
+        <span class="win-icon">🎉</span>
+        <div class="win-title">당첨되셨습니다!</div>
+        <div class="win-img">
+          <img
+            src="images/naoya.jpg"
+            alt="반다이 맥시매틱 젠인 나오야 피규어[미개봉]"
+          />
+        </div>
+        <div class="win-product">
+          반다이 맥시매틱 젠인 나오야 피규어[미개봉]<br /><span
+            style="color: #7c6aff; font-weight: 700"
+            >28,000원</span
+          >
+          상당의 상품에 당첨!
+        </div>
+        <button class="win-close" onclick="closeWinModal()">확인</button>
+      </div>
+    </div>
+
+    <script>
+      function openWinModal(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        document.getElementById("winOverlay").classList.add("open");
+        startConfetti();
+      }
+
+      function closeWinModal(e) {
+        if (
+          e &&
+          e.target !== document.getElementById("winOverlay") &&
+          e.target !== document.querySelector(".win-close")
+        )
+          return;
+        document.getElementById("winOverlay").classList.remove("open");
+        stopConfetti();
+      }
+
+      // 폭죽 효과
+      const canvas = document.getElementById("confettiCanvas");
+      const ctx = canvas.getContext("2d");
+      let particles = [];
+      let animFrame;
+
+      const COLORS = [
+        "#7c6aff",
+        "#a78bfa",
+        "#f5c542",
+        "#4ade80",
+        "#ff6b8a",
+        "#ff8c5a",
+        "#60a5fa",
+        "#fff",
+      ];
+
+      function startConfetti() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        canvas.style.display = "block";
+        particles = [];
+        for (let i = 0; i < 160; i++) {
+          particles.push({
+            x: Math.random() * canvas.width,
+            y: -10 - Math.random() * 300,
+            w: 7 + Math.random() * 9,
+            h: 4 + Math.random() * 5,
+            color: COLORS[Math.floor(Math.random() * COLORS.length)],
+            speed: 2.5 + Math.random() * 3.5,
+            angle: Math.random() * Math.PI * 2,
+            spin: (Math.random() - 0.5) * 0.18,
+            drift: (Math.random() - 0.5) * 1.8,
+          });
+        }
+        cancelAnimationFrame(animFrame);
+        animateConfetti();
+      }
+
+      function animateConfetti() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+        for (const p of particles) {
+          p.y += p.speed;
+          p.x += p.drift;
+          p.angle += p.spin;
+          if (p.y < canvas.height + 20) alive = true;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = 0.85;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+        }
+        if (alive) {
+          animFrame = requestAnimationFrame(animateConfetti);
+        } else {
+          canvas.style.display = "none";
+        }
+      }
+
+      function stopConfetti() {
+        cancelAnimationFrame(animFrame);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.display = "none";
+      }
+    </script>
+  </body>
+</html>

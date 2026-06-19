@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>천운</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #111;
+        color: #e8e8e8;
+        font-family: "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        min-height: 100vh;
+      }
+
+      /* ── 네비게이션 ── */
+      nav {
+        background: #1a1a1a;
+        border-bottom: 1px solid #2a2a2a;
+        padding: 0 40px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+        color: #fff;
+        text-decoration: none;
+        flex-shrink: 0;
+      }
+
+      .logo-icon {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #7c6aff, #a78bfa);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+
+      .search-bar {
+        flex: 1;
+        max-width: 480px;
+        display: flex;
+        align-items: center;
+        background: #252525;
+        border: 1px solid #333;
+        border-radius: 10px;
+        padding: 0 16px;
+        gap: 10px;
+        height: 40px;
+      }
+
+      .search-bar input {
+        background: none;
+        border: none;
+        outline: none;
+        color: #e8e8e8;
+        font-size: 14px;
+        width: 100%;
+      }
+
+      .search-bar input::placeholder {
+        color: #666;
+      }
+
+      .search-icon {
+        color: #666;
+        font-size: 16px;
+      }
+
+      .nav-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .nav-btn {
+        background: none;
+        border: 1px solid #333;
+        color: #ccc;
+        padding: 7px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+      }
+
+      .nav-btn:hover {
+        background: #2a2a2a;
+        color: #fff;
+        border-color: #555;
+      }
+
+      .nav-btn.sell {
+        background: linear-gradient(135deg, #7c6aff, #a78bfa);
+        border-color: transparent;
+        color: #fff;
+      }
+
+      .nav-btn.sell:hover {
+        opacity: 0.9;
+      }
+
+      /* ── 본문 레이아웃 ── */
+      .container {
+        max-width: 1100px;
+        margin: 48px auto;
+        padding: 0 24px;
+      }
+
+      .breadcrumb {
+        font-size: 13px;
+        color: #555;
+        margin-bottom: 32px;
+      }
+
+      .breadcrumb span {
+        color: #777;
+      }
+      .breadcrumb span + span::before {
+        content: " › ";
+      }
+
+      .product-layout {
+        display: grid;
+        grid-template-columns: 1fr 420px;
+        gap: 48px;
+        align-items: start;
+      }
+
+      /* ── 이미지 영역 ── */
+      .image-area {
+      }
+
+      .main-image {
+        width: 100%;
+        aspect-ratio: 4/3;
+        background: #1e1e1e;
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .main-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .image-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+        color: #444;
+      }
+
+      .image-placeholder .cam {
+        font-size: 48px;
+      }
+
+      .thumb-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .thumb {
+        width: 72px;
+        height: 72px;
+        border-radius: 10px;
+        background: #1e1e1e;
+        border: 2px solid transparent;
+        overflow: hidden;
+        cursor: pointer;
+        transition: border-color 0.2s;
+      }
+
+      .thumb.active {
+        border-color: #7c6aff;
+      }
+      .thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      /* ── 셀러 카드 ── */
+      .seller-card {
+        margin-top: 28px;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 14px;
+        padding: 18px 20px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .seller-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7c6aff44, #a78bfa44);
+        border: 2px solid #7c6aff55;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+      }
+
+      .seller-info {
+        flex: 1;
+      }
+      .seller-name {
+        font-weight: 600;
+        font-size: 15px;
+        color: #e8e8e8;
+      }
+
+      .seller-meta {
+        display: flex;
+        gap: 12px;
+        margin-top: 4px;
+        font-size: 12px;
+        color: #666;
+      }
+
+      .seller-meta span {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .seller-rating {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #f5c542;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      /* ── 상품 정보 패널 ── */
+      .info-panel {
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .badge.on-sale {
+        background: #7c6aff22;
+        color: #a78bfa;
+        border: 1px solid #7c6aff55;
+      }
+
+      .badge.raffle {
+        background: #ff6b3522;
+        color: #ff8c5a;
+        border: 1px solid #ff6b3555;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .category {
+        font-size: 13px;
+        color: #555;
+      }
+
+      .product-title {
+        font-size: 26px;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.3;
+        margin-bottom: 10px;
+      }
+
+      .price {
+        font-size: 28px;
+        font-weight: 800;
+        color: #7c6aff;
+        margin-bottom: 6px;
+      }
+
+      .price-sub {
+        font-size: 13px;
+        color: #555;
+        margin-bottom: 20px;
+      }
+
+      .divider {
+        height: 1px;
+        background: #2a2a2a;
+        margin: 20px 0;
+      }
+
+      .description {
+        font-size: 15px;
+        color: #aaa;
+        line-height: 1.7;
+        margin-bottom: 24px;
+      }
+
+      /* ── 응모 섹션 ── */
+      .raffle-section {
+        background: linear-gradient(135deg, #1e1830, #1a1a2e);
+        border: 1px solid #7c6aff33;
+        border-radius: 16px;
+        padding: 22px;
+        margin-bottom: 20px;
+      }
+
+      .raffle-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .raffle-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #c4b5fd;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .raffle-countdown {
+        background: #7c6aff22;
+        border: 1px solid #7c6aff44;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #a78bfa;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .progress-wrap {
+        margin-bottom: 14px;
+      }
+
+      .progress-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 6px;
+      }
+
+      .progress-label .count {
+        color: #a78bfa;
+        font-weight: 600;
+      }
+
+      .progress-bar {
+        height: 6px;
+        background: #2a2a2a;
+        border-radius: 99px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #7c6aff, #a78bfa);
+        border-radius: 99px;
+        width: 38%;
+        transition: width 0.5s ease;
+      }
+
+      .raffle-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .stat-item {
+        background: #ffffff08;
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+      }
+
+      .stat-label {
+        font-size: 11px;
+        color: #555;
+        margin-top: 2px;
+      }
+
+      /* ── CTA 버튼 ── */
+      .cta-row {
+        display: flex;
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .btn-raffle {
+        flex: 1;
+        background: linear-gradient(135deg, #7c6aff, #a78bfa);
+        border: none;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 700;
+        padding: 16px;
+        border-radius: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+        letter-spacing: -0.3px;
+      }
+
+      .btn-raffle:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px #7c6aff44;
+      }
+      .btn-raffle:active {
+        transform: translateY(0);
+      }
+
+      .btn-wish {
+        width: 52px;
+        height: 52px;
+        background: #1e1e1e;
+        border: 1px solid #333;
+        border-radius: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        transition: all 0.2s;
+        flex-shrink: 0;
+      }
+
+      .btn-wish:hover {
+        background: #2a2a2a;
+        border-color: #ff6b8a;
+      }
+      .btn-wish.liked {
+        border-color: #ff6b8a;
+        background: #ff6b8a11;
+      }
+      .btn-wish.liked .heart {
+        color: #ff6b8a;
+      }
+
+      /* ── 상품 메타 ── */
+      .meta-stats {
+        display: flex;
+        gap: 16px;
+        font-size: 13px;
+        color: #555;
+        margin-top: 16px;
+      }
+
+      .meta-stats span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      /* ── 판매한 상품 섹션 ── */
+      .more-section {
+        margin-top: 64px;
+        padding-top: 40px;
+        border-top: 1px solid #2a2a2a;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .section-title::before {
+        content: "";
+        display: block;
+        width: 4px;
+        height: 20px;
+        background: linear-gradient(180deg, #7c6aff, #a78bfa);
+        border-radius: 2px;
+      }
+
+      .see-all {
+        font-size: 13px;
+        color: #666;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: color 0.2s;
+      }
+
+      .see-all:hover {
+        color: #a78bfa;
+      }
+
+      .product-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+
+      .product-card {
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 14px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .product-card:hover {
+        border-color: #7c6aff44;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px #00000066;
+      }
+
+      .card-image {
+        aspect-ratio: 1;
+        background: #222;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        color: #333;
+      }
+
+      .card-body {
+        padding: 12px 14px;
+      }
+
+      .card-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #ddd;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .card-price {
+        font-size: 15px;
+        font-weight: 700;
+        color: #a78bfa;
+      }
+
+      .card-meta {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+        font-size: 11px;
+        color: #555;
+      }
+
+      .card-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 10px;
+        padding: 2px 7px;
+        border-radius: 99px;
+        background: #7c6aff22;
+        color: #a78bfa;
+        border: 1px solid #7c6aff33;
+        margin-top: 6px;
+      }
+
+      /* ── 모달 ── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: #000000cc;
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s;
+        backdrop-filter: blur(4px);
+      }
+
+      .modal-overlay.open {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      .modal {
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 20px;
+        padding: 32px;
+        width: 100%;
+        max-width: 440px;
+        transform: translateY(16px) scale(0.97);
+        transition: transform 0.25s;
+      }
+
+      .modal-overlay.open .modal {
+        transform: translateY(0) scale(1);
+      }
+
+      .modal-icon {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #7c6aff22, #a78bfa22);
+        border: 2px solid #7c6aff44;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        margin: 0 auto 20px;
+      }
+
+      .modal-title {
+        text-align: center;
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 8px;
+      }
+
+      .modal-sub {
+        text-align: center;
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 28px;
+        line-height: 1.6;
+      }
+
+      .ticket-count {
+        background: #111;
+        border: 1px solid #2a2a2a;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .ticket-label {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 12px;
+      }
+
+      .ticket-selector {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        background: #1e1e1e;
+        border: 1px solid #333;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .ticket-btn {
+        width: 44px;
+        height: 44px;
+        background: none;
+        border: none;
+        color: #a78bfa;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+      }
+
+      .ticket-btn:hover {
+        background: #2a2a2a;
+      }
+
+      .ticket-num {
+        flex: 1;
+        text-align: center;
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+      }
+
+      .ticket-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        color: #555;
+        margin-top: 10px;
+      }
+
+      .ticket-info .total {
+        color: #a78bfa;
+        font-weight: 700;
+      }
+
+      .modal-notice {
+        background: #ff6b3511;
+        border: 1px solid #ff6b3533;
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 12px;
+        color: #ff8c5a;
+        line-height: 1.6;
+        margin-bottom: 20px;
+      }
+
+      .modal-notice::before {
+        content: "⚠️  ";
+      }
+
+      .modal-btn-row {
+        display: flex;
+        gap: 10px;
+      }
+
+      .btn-cancel {
+        flex: 1;
+        background: #222;
+        border: 1px solid #333;
+        color: #888;
+        padding: 14px;
+        border-radius: 10px;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-cancel:hover {
+        background: #2a2a2a;
+        color: #ccc;
+      }
+
+      .btn-confirm {
+        flex: 2;
+        background: linear-gradient(135deg, #7c6aff, #a78bfa);
+        border: none;
+        color: #fff;
+        padding: 14px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-confirm:hover {
+        opacity: 0.9;
+      }
+
+      /* ── 성공 토스트 ── */
+      .toast {
+        position: fixed;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: #1e1e1e;
+        border: 1px solid #7c6aff55;
+        color: #fff;
+        padding: 14px 24px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.3s;
+        z-index: 300;
+        box-shadow: 0 8px 32px #7c6aff22;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      @media (max-width: 860px) {
+        .product-layout {
+          grid-template-columns: 1fr;
+        }
+        .product-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        nav {
+          padding: 0 16px;
+        }
+        .container {
+          margin: 24px auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 네비게이션 -->
+    <nav>
+      <a class="logo" href="main.html">
+        <div class="logo-icon">🧧</div>
+        천운
+      </a>
+
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="검색어를 입력하세요" />
+      </div>
+
+      <div class="nav-actions">
+        <button class="nav-btn sell">＋ 판매하기</button>
+        <button class="nav-btn">💬 채팅하기</button>
+        <button class="nav-btn" onclick="location.href = 'mypage.html'">
+          👤 마이페이지
+        </button>
+      </div>
+    </nav>
+
+    <!-- 본문 -->
+    <div class="container">
+      <div class="breadcrumb">
+        <span
+          ><a href="main.html" style="color: #777; text-decoration: none"
+            >홈</a
+          ></span
+        ><span>디지털/가전</span><span>노트북</span>
+      </div>
+
+      <div class="product-layout">
+        <!-- 왼쪽: 이미지 + 셀러 -->
+        <div class="image-area">
+          <div class="main-image">
+            <div class="image-placeholder">
+              <span class="cam">💻</span>
+              <span style="font-size: 14px; color: #444">LG 그램 17인치</span>
+            </div>
+          </div>
+
+          <div class="thumb-row">
+            <div class="thumb active">
+              <div
+                style="
+                  width: 100%;
+                  height: 100%;
+                  background: #222;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 22px;
+                "
+              >
+                💻
+              </div>
+            </div>
+            <div class="thumb">
+              <div
+                style="
+                  width: 100%;
+                  height: 100%;
+                  background: #222;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 22px;
+                "
+              >
+                🖥️
+              </div>
+            </div>
+            <div class="thumb">
+              <div
+                style="
+                  width: 100%;
+                  height: 100%;
+                  background: #222;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 22px;
+                "
+              >
+                ⌨️
+              </div>
+            </div>
+          </div>
+
+          <div class="seller-card">
+            <div class="seller-avatar">🐔</div>
+            <div class="seller-info">
+              <div class="seller-name">갬블마켓</div>
+              <div class="seller-meta">
+                <span>📦 거래 12회</span>
+                <span>📍 서울 강남구</span>
+              </div>
+            </div>
+            <div class="seller-rating">⭐ 4.9</div>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 상품 정보 -->
+        <div class="info-panel">
+          <div class="status-row">
+            <span class="badge on-sale">판매 중</span>
+            <span class="badge raffle">🎟 응모 진행 중</span>
+          </div>
+
+          <div class="product-title">노트북 LG 그램 17인치</div>
+          <div class="price">200,000원</div>
+          <div class="price-sub">응모 마감 후 추첨으로 1명에게 판매됩니다</div>
+
+          <div class="divider"></div>
+
+          <div class="description">
+            깨끗하게 사용했습니다. 구매 후 6개월 사용, 외관 스크래치 없음.<br />
+            배터리 상태 양호, 충전기 포함. 직거래 서울 강남구 가능합니다.
+          </div>
+
+          <!-- 응모 현황 카드 -->
+          <div class="raffle-section">
+            <div class="raffle-header">
+              <div class="raffle-title">🎟 응모 현황</div>
+              <div class="raffle-countdown">⏱ 2일 14:32:07 남음</div>
+            </div>
+
+            <div class="progress-wrap">
+              <div class="progress-label">
+                <span>참여자 <span class="count">19명</span></span>
+                <span>최대 50명</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+            </div>
+
+            <div class="raffle-stats">
+              <div class="stat-item">
+                <div class="stat-value" id="entryCount">19</div>
+                <div class="stat-label">응모자 수</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">1</div>
+                <div class="stat-label">당첨 인원</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">5.3%</div>
+                <div class="stat-label">당첨 확률</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="cta-row">
+            <button class="btn-raffle" onclick="openModal()">
+              🎟 응모하기
+            </button>
+            <button class="btn-wish" id="wishBtn" onclick="toggleWish()">
+              <span class="heart">🤍</span>
+            </button>
+          </div>
+
+          <div class="meta-stats">
+            <span>💬 채팅 3</span>
+            <span>🤍 관심 7</span>
+            <span>👁 조회 42</span>
+            <span>📅 3시간 전</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 판매한 상품 섹션 -->
+      <div class="more-section">
+        <div class="section-header">
+          <div class="section-title">판매한 상품</div>
+          <div class="see-all">전체보기 →</div>
+        </div>
+
+        <div class="product-grid">
+          <div
+            class="product-card"
+            onclick="location.href = 'product_iphone.html'"
+            style="cursor: pointer"
+          >
+            <div class="card-image">📱</div>
+            <div class="card-body">
+              <div class="card-title">아이폰 14 Pro 256GB</div>
+              <div class="card-price">650,000원</div>
+              <div class="card-meta"><span>👁 88</span><span>🤍 12</span></div>
+              <div class="card-badge">🎟 응모 중</div>
+            </div>
+          </div>
+          <div class="product-card">
+            <div class="card-image">🎧</div>
+            <div class="card-body">
+              <div class="card-title">에어팟 프로 2세대</div>
+              <div class="card-price">180,000원</div>
+              <div class="card-meta"><span>👁 55</span><span>🤍 8</span></div>
+              <div class="card-badge">🎟 응모 중</div>
+            </div>
+          </div>
+          <div class="product-card">
+            <div class="card-image">⌚</div>
+            <div class="card-body">
+              <div class="card-title">갤럭시 워치 6</div>
+              <div class="card-price">120,000원</div>
+              <div class="card-meta"><span>👁 31</span><span>🤍 5</span></div>
+              <div
+                class="card-badge"
+                style="
+                  background: #33333322;
+                  color: #666;
+                  border-color: #44444444;
+                "
+              >
+                판매 완료
+              </div>
+            </div>
+          </div>
+          <div class="product-card">
+            <div class="card-image">🎮</div>
+            <div class="card-body">
+              <div class="card-title">닌텐도 스위치 OLED</div>
+              <div class="card-price">280,000원</div>
+              <div class="card-meta"><span>👁 67</span><span>🤍 15</span></div>
+              <div class="card-badge">🎟 응모 중</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 응모 모달 -->
+    <div
+      class="modal-overlay"
+      id="modalOverlay"
+      onclick="closeModalOutside(event)"
+    >
+      <div class="modal">
+        <div class="modal-icon">🎟</div>
+        <div class="modal-title">응모권 선택</div>
+        <div class="modal-sub">
+          노트북 LG 그램 17인치<br />
+          응모권 1장당 <strong style="color: #a78bfa">1,000원</strong>이며
+          추첨일에 당첨자를 발표합니다.
+        </div>
+
+        <div class="ticket-count">
+          <div class="ticket-label">응모권 수량</div>
+          <div class="ticket-selector">
+            <button class="ticket-btn" onclick="changeTicket(-1)">−</button>
+            <div class="ticket-num" id="ticketNum">1</div>
+            <button class="ticket-btn" onclick="changeTicket(1)">+</button>
+          </div>
+          <div class="ticket-info">
+            <span>최대 5장까지 구매 가능</span>
+            <span class="total" id="ticketTotal">총 1,000원</span>
+          </div>
+        </div>
+
+        <div class="modal-notice">
+          응모권 구매 후 취소 및 환불이 불가합니다. 추첨 결과는 마감일 기준
+          24시간 이내에 알림으로 발송됩니다.
+        </div>
+
+        <div class="modal-btn-row">
+          <button class="btn-cancel" onclick="closeModal()">취소</button>
+          <button class="btn-confirm" onclick="submitRaffle()">
+            응모하기 🎟
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 토스트 -->
+    <div class="toast" id="toast">
+      🎉 응모가 완료되었습니다! 당첨을 기다려주세요.
+    </div>
+
+    <script>
+      let ticketCount = 1;
+      let isLiked = false;
+
+      function openModal() {
+        document.getElementById("modalOverlay").classList.add("open");
+      }
+
+      function closeModal() {
+        document.getElementById("modalOverlay").classList.remove("open");
+      }
+
+      function closeModalOutside(e) {
+        if (e.target === document.getElementById("modalOverlay")) closeModal();
+      }
+
+      function changeTicket(delta) {
+        ticketCount = Math.min(5, Math.max(1, ticketCount + delta));
+        document.getElementById("ticketNum").textContent = ticketCount;
+        document.getElementById("ticketTotal").textContent =
+          "총 " + (ticketCount * 1000).toLocaleString() + "원";
+      }
+
+      function submitRaffle() {
+        closeModal();
+        const toast = document.getElementById("toast");
+        toast.classList.add("show");
+
+        // 참여자 수 업데이트
+        const countEl = document.getElementById("entryCount");
+        const newCount = parseInt(countEl.textContent) + ticketCount;
+        countEl.textContent = newCount;
+        const pct = Math.min(100, Math.round((newCount / 50) * 100));
+        document.getElementById("progressFill").style.width = pct + "%";
+
+        setTimeout(() => toast.classList.remove("show"), 3500);
+      }
+
+      function toggleWish() {
+        isLiked = !isLiked;
+        const btn = document.getElementById("wishBtn");
+        btn.classList.toggle("liked", isLiked);
+        btn.querySelector(".heart").textContent = isLiked ? "❤️" : "🤍";
+      }
+
+      // 카운트다운 타이머
+      let remaining = 2 * 86400 + 14 * 3600 + 32 * 60 + 7;
+      function tick() {
+        remaining--;
+        const d = Math.floor(remaining / 86400);
+        const h = Math.floor((remaining % 86400) / 3600);
+        const m = Math.floor((remaining % 3600) / 60);
+        const s = remaining % 60;
+        const pad = (n) => String(n).padStart(2, "0");
+        const el = document.querySelector(".raffle-countdown");
+        if (el) el.innerHTML = `⏱ ${d}일 ${pad(h)}:${pad(m)}:${pad(s)} 남음`;
+      }
+      setInterval(tick, 1000);
+    </script>
+  </body>
+</html>
