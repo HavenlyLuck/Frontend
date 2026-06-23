@@ -146,20 +146,6 @@ export default function HomePage() {
             </Link>
           ))}
         </div>
-
-        {/* 배너 */}
-        <div className="banner">
-          <div className="banner-text">
-            <h3>🧧 내 물건을 팔고 싶다면?</h3>
-            <p>
-              응모 방식으로 판매하면 더 빠르게, 더 높은 가격에 판매할 수 있어요.<br />
-              지금 바로 판매 등록하고 천운의 혜택을 누려보세요!
-            </p>
-          </div>
-          <div>
-            <Link href="/sell" className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none' }}>＋ 판매하기 →</Link>
-          </div>
-        </div>
       </div>
     </>
   )

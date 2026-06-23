@@ -20,7 +20,6 @@ export default function Navbar() {
       </div>
 
       <div className="nav-actions">
-        <Link href="/sell" className="nav-btn sell">＋ 판매하기</Link>
         <button className="nav-btn">💬 채팅하기</button>
         <Link href="/mypage" className={`nav-btn ${isMypage ? 'active-nav' : ''}`}>
           👤 마이페이지
