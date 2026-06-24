@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 
 const CATEGORIES = [
-  '🏠 전체', '💻 디지털/가전', '👕 패션/의류',
+  '🏠 전체', '🧸 피규어/굿즈', '💻 디지털/가전', '👕 패션/의류',
   '⚽ 스포츠/레저', '📚 도서/음반', '🪴 인테리어', '🎁 기타',
 ]
 
