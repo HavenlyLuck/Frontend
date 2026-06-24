@@ -10,6 +10,10 @@ export default function Navbar() {
   const isMypage = pathname === '/mypage'
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
+  // TODO: 실제 API에서 포인트 조회
+  const eungPoint = 12500
+  const ssalPoint = 3000
+
   useEffect(() => {
     setIsLoggedIn(!!localStorage.getItem('token'))
   }, [pathname])
@@ -35,7 +39,15 @@ export default function Navbar() {
       <div className="nav-actions">
         {isLoggedIn ? (
           <>
-            <button className="nav-btn">💬 채팅하기</button>
+            <div className="nav-point-item">
+              <span className="nav-point-label">🎟 응포인트</span>
+              <span className="nav-point-value">{eungPoint.toLocaleString()}P</span>
+              <Link href="/charge" className="nav-point-plus" title="응포인트 충전">＋</Link>
+            </div>
+            <div className="nav-point-item">
+              <span className="nav-point-label">🌾 쌀포인트</span>
+              <span className="nav-point-value">{ssalPoint.toLocaleString()}P</span>
+            </div>
             <Link href="/mypage" className={`nav-btn ${isMypage ? 'active-nav' : ''}`}>
               👤 마이페이지
             </Link>

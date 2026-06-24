@@ -122,6 +122,50 @@ nav {
   border-color: #7c6aff44;
 }
 
+.nav-point-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 6px 12px;
+}
+
+.nav-point-label {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+}
+
+.nav-point-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e2e2;
+  white-space: nowrap;
+}
+
+.nav-point-plus {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c6aff, #a78bfa);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.nav-point-plus:hover {
+  opacity: 0.8;
+}
+
 /* ── 공통 버튼 ── */
 .btn-primary {
   background: linear-gradient(135deg, #7c6aff, #a78bfa);
