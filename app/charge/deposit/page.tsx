@@ -40,25 +40,25 @@ export default function DepositPage() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '60px 16px' }}>
       <div style={{ width: '100%', maxWidth: 480 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <Link href="/charge" style={{ color: '#888', textDecoration: 'none', fontSize: 20 }}>←</Link>
-          <h2 style={{ fontSize: 22, fontWeight: 700 }}>🎟 응포인트 충전</h2>
+          <Link href="/charge" style={{ color: '#8a8a8a', textDecoration: 'none', fontSize: 20 }}>←</Link>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#181818' }}>🎟 응포인트 충전</h2>
         </div>
 
-        <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 12, padding: '16px 20px', marginBottom: 28 }}>
-          <p style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>🎟 현재 응포인트</p>
-          <p style={{ fontSize: 22, fontWeight: 700, color: '#e2e2e2' }}>{eungPoint.toLocaleString()}P</p>
+        <div style={{ background: '#eaf6fd', border: '1px solid #d3ecfb', borderRadius: 12, padding: '16px 20px', marginBottom: 28 }}>
+          <p style={{ fontSize: 12, color: '#767676', marginBottom: 4 }}>🎟 현재 응포인트</p>
+          <p style={{ fontSize: 22, fontWeight: 700, color: '#181818' }}>{eungPoint.toLocaleString()}P</p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div>
-            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: '#ccc' }}>충전 금액</p>
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: '#333333' }}>충전 금액</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
               {PRESET_AMOUNTS.map(v => (
                 <button
                   key={v}
                   type="button"
                   onClick={() => handlePreset(v)}
-                  style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #444', background: '#222', color: '#ccc', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e2e4', background: '#f5f6f7', color: '#454545', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}
                 >
                   +{v.toLocaleString()}원
                 </button>
@@ -66,7 +66,7 @@ export default function DepositPage() {
               <button
                 type="button"
                 onClick={() => setAmount('')}
-                style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #444', background: '#222', color: '#888', fontSize: 13, cursor: 'pointer' }}
+                style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e2e4', background: '#f5f6f7', color: '#8a8a8a', fontSize: 13, cursor: 'pointer' }}
               >
                 초기화
               </button>
@@ -78,27 +78,27 @@ export default function DepositPage() {
                 value={amount}
                 onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
                 min={1000}
-                style={{ width: '100%', padding: '13px 50px 13px 14px', borderRadius: 8, border: '1px solid #444', background: '#111', color: '#e2e2e2', fontSize: 16, fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '13px 50px 13px 14px', borderRadius: 8, border: '1px solid #e2e2e4', background: '#ffffff', color: '#181818', fontSize: 16, fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
               />
-              <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#888', fontSize: 14 }}>원</span>
+              <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#9a9a9a', fontSize: 14 }}>원</span>
             </div>
             {amount !== '' && (
-              <p style={{ marginTop: 6, fontSize: 13, color: '#a78bfa' }}>
+              <p style={{ marginTop: 6, fontSize: 13, color: '#1477b8' }}>
                 충전 후 응포인트: {(eungPoint + Number(amount)).toLocaleString()}P
               </p>
             )}
           </div>
 
           <div>
-            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: '#ccc' }}>결제 수단</p>
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: '#333333' }}>결제 수단</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {PAYMENT_METHODS.map(m => (
                 <label
                   key={m.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 10, border: `1px solid ${method === m.id ? '#7c6aff' : '#333'}`, background: method === m.id ? '#7c6aff11' : '#1a1a1a', cursor: 'pointer', transition: 'all 0.15s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 10, border: `1px solid ${method === m.id ? '#4fa8e8' : '#e2e2e4'}`, background: method === m.id ? '#eaf6fd' : '#ffffff', cursor: 'pointer', transition: 'all 0.15s' }}
                 >
-                  <input type="radio" name="method" value={m.id} checked={method === m.id} onChange={() => setMethod(m.id)} style={{ accentColor: '#7c6aff' }} />
-                  <span style={{ fontSize: 14, color: '#ccc' }}>{m.label}</span>
+                  <input type="radio" name="method" value={m.id} checked={method === m.id} onChange={() => setMethod(m.id)} style={{ accentColor: '#4fa8e8' }} />
+                  <span style={{ fontSize: 14, color: '#454545' }}>{m.label}</span>
                 </label>
               ))}
             </div>
@@ -106,7 +106,7 @@ export default function DepositPage() {
 
           <button
             type="submit"
-            style={{ padding: '14px', borderRadius: 10, background: 'linear-gradient(135deg, #7c6aff, #a78bfa)', color: '#fff', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+            style={{ padding: '14px', borderRadius: 10, background: '#181818', color: '#ffffff', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer' }}
           >
             {amount ? `${Number(amount).toLocaleString()}원 충전하기` : '충전하기'}
           </button>

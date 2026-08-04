@@ -69,7 +69,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               ) : (
                 <div className="image-placeholder">
                   <span className="cam">{product.emoji}</span>
-                  <span style={{ fontSize: '14px', color: '#444' }}>
+                  <span style={{ fontSize: '14px', color: '#8a8a8a' }}>
                     {product.title.replace('\n', ' ')}
                   </span>
                 </div>
@@ -146,8 +146,11 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   <span>참여자 <span className="count">{entryCount}명</span></span>
                   <span>최대 {product.raffle.totalSlots}명</span>
                 </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+                <div className="progress-bar-row">
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+                  </div>
+                  <span className="progress-pct">{progressPct}%</span>
                 </div>
               </div>
 
@@ -226,7 +229,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           <div className="modal-sub">
             {product.title.replace('\n', ' ')}<br />
             응모권 1장당{' '}
-            <strong style={{ color: '#a78bfa' }}>1,000원</strong>이며 추첨일에 당첨자를 발표합니다.
+            <strong style={{ color: '#181818' }}>1,000원</strong>이며 추첨일에 당첨자를 발표합니다.
           </div>
 
           <div className="ticket-count">
