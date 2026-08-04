@@ -16,9 +16,9 @@ const HISTORY = [
 ]
 
 const typeColor: Record<string, string> = {
-  deposit: '#22c55e',
-  withdraw: '#ef4444',
-  bonus: '#a78bfa',
+  deposit: '#16a34a',
+  withdraw: '#e0413a',
+  bonus: '#1477b8',
 }
 
 export default function PointHubPage() {
@@ -27,20 +27,20 @@ export default function PointHubPage() {
       <div style={{ width: '100%', maxWidth: 480 }}>
 
         {/* 총 포인트 */}
-        <div style={{ background: 'linear-gradient(135deg, #7c6aff22, #a78bfa11)', border: '1px solid #7c6aff44', borderRadius: 16, padding: '28px 24px', marginBottom: 20, textAlign: 'center' }}>
-          <p style={{ fontSize: 13, color: '#888', marginBottom: 8 }}>총 보유 포인트</p>
-          <p style={{ fontSize: 36, fontWeight: 800, color: '#e2e2e2', marginBottom: 16 }}>
-            {totalPoint.toLocaleString()}<span style={{ fontSize: 20, fontWeight: 600, color: '#a78bfa', marginLeft: 4 }}>P</span>
+        <div style={{ background: 'linear-gradient(135deg, #eaf6fd, #f5fbfe)', border: '1px solid #d3ecfb', borderRadius: 16, padding: '28px 24px', marginBottom: 20, textAlign: 'center' }}>
+          <p style={{ fontSize: 13, color: '#767676', marginBottom: 8 }}>총 보유 포인트</p>
+          <p style={{ fontSize: 36, fontWeight: 800, color: '#181818', marginBottom: 16 }}>
+            {totalPoint.toLocaleString()}<span style={{ fontSize: 20, fontWeight: 600, color: '#181818', marginLeft: 4 }}>P</span>
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 24 }}>
             <div>
-              <p style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>🎟 응포인트</p>
-              <p style={{ fontSize: 16, fontWeight: 700, color: '#e2e2e2' }}>{eungPoint.toLocaleString()}P</p>
+              <p style={{ fontSize: 11, color: '#767676', marginBottom: 2 }}>🎟 응포인트</p>
+              <p style={{ fontSize: 16, fontWeight: 700, color: '#181818' }}>{eungPoint.toLocaleString()}P</p>
             </div>
-            <div style={{ width: 1, background: '#333' }} />
+            <div style={{ width: 1, background: '#d3ecfb' }} />
             <div>
-              <p style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>🌾 쌀포인트</p>
-              <p style={{ fontSize: 16, fontWeight: 700, color: '#e2e2e2' }}>{ssalPoint.toLocaleString()}P</p>
+              <p style={{ fontSize: 11, color: '#767676', marginBottom: 2 }}>🌾 쌀포인트</p>
+              <p style={{ fontSize: 16, fontWeight: 700, color: '#181818' }}>{ssalPoint.toLocaleString()}P</p>
             </div>
           </div>
         </div>
@@ -51,8 +51,8 @@ export default function PointHubPage() {
             href="/charge/withdraw"
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-              padding: '18px 0', borderRadius: 12, border: '1px solid #444',
-              background: '#1a1a1a', textDecoration: 'none', color: '#ccc', transition: 'all 0.15s',
+              padding: '18px 0', borderRadius: 12, border: '1px solid #e2e2e4',
+              background: '#ffffff', textDecoration: 'none', color: '#454545', transition: 'all 0.15s',
             }}
           >
             <span style={{ fontSize: 24 }}>💸</span>
@@ -62,9 +62,9 @@ export default function PointHubPage() {
             href="/charge/deposit"
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-              padding: '18px 0', borderRadius: 12, border: '1px solid #7c6aff88',
-              background: 'linear-gradient(135deg, #7c6aff, #a78bfa)', textDecoration: 'none',
-              color: '#fff', transition: 'all 0.15s',
+              padding: '18px 0', borderRadius: 12, border: '1px solid transparent',
+              background: '#181818', textDecoration: 'none',
+              color: '#ffffff', transition: 'all 0.15s',
             }}
           >
             <span style={{ fontSize: 24 }}>🎟</span>
@@ -74,20 +74,20 @@ export default function PointHubPage() {
 
         {/* 최근 내역 */}
         <div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#ccc', marginBottom: 12 }}>최근 내역</p>
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#454545', marginBottom: 12 }}>최근 내역</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {HISTORY.map((item, i) => (
               <div
                 key={i}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 10,
+                  background: '#ffffff', border: '1px solid #ececec', borderRadius: 10,
                   padding: '14px 16px',
                 }}
               >
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: '#e2e2e2', marginBottom: 2 }}>{item.label}</p>
-                  <p style={{ fontSize: 12, color: '#666' }}>{item.date}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#181818', marginBottom: 2 }}>{item.label}</p>
+                  <p style={{ fontSize: 12, color: '#9a9a9a' }}>{item.date}</p>
                 </div>
                 <p style={{ fontSize: 15, fontWeight: 700, color: typeColor[item.type] }}>{item.point}</p>
               </div>

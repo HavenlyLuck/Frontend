@@ -20,11 +20,11 @@ const checkBtnStyle: React.CSSProperties = {
   padding: '0 14px',
   height: 46,
   borderRadius: 8,
-  background: '#ede9ff',
-  color: '#7c6aff',
+  background: '#f0f0f0',
+  color: '#111',
   fontSize: 13,
   fontWeight: 600,
-  border: '1px solid #c4b5fd',
+  border: '1px solid #ccc',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
   flexShrink: 0,
@@ -210,14 +210,14 @@ export default function SignupPage() {
 
           <button
             type="submit"
-            style={{ padding: '13px', borderRadius: 8, background: '#7c6aff', color: '#fff', fontSize: 16, fontWeight: 600, border: 'none', cursor: 'pointer', marginTop: 8 }}
+            style={{ padding: '13px', borderRadius: 8, background: '#111', color: '#fff', fontSize: 16, fontWeight: 600, border: 'none', cursor: 'pointer', marginTop: 8 }}
           >
             회원가입
           </button>
         </form>
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#888' }}>
           이미 계정이 있으신가요?{' '}
-          <Link href="/login" style={{ color: '#7c6aff', fontWeight: 600, textDecoration: 'none' }}>로그인</Link>
+          <Link href="/login" style={{ color: '#111', fontWeight: 600, textDecoration: 'none' }}>로그인</Link>
         </p>
       </div>
     </div>

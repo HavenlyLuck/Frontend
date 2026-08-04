@@ -44,14 +44,14 @@ export default function LoginPage() {
           />
           <button
             type="submit"
-            style={{ padding: '13px', borderRadius: 8, background: '#7c6aff', color: '#fff', fontSize: 16, fontWeight: 600, border: 'none', cursor: 'pointer', marginTop: 4 }}
+            style={{ padding: '13px', borderRadius: 8, background: '#111', color: '#fff', fontSize: 16, fontWeight: 600, border: 'none', cursor: 'pointer', marginTop: 4 }}
           >
             로그인
           </button>
         </form>
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#888' }}>
           아직 계정이 없으신가요?{' '}
-          <Link href="/signup" style={{ color: '#7c6aff', fontWeight: 600, textDecoration: 'none' }}>회원가입</Link>
+          <Link href="/signup" style={{ color: '#111', fontWeight: 600, textDecoration: 'none' }}>회원가입</Link>
         </p>
       </div>
     </div>
