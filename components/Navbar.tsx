@@ -8,13 +8,14 @@ const NAV_CATEGORIES = [
   { label: "🎟 응모", href: "/eungmo" },
   { label: "🎁 쿠지", href: "/kuji" },
   { label: "🏪 상점", href: "/shop" },
+  { label: "📖 설명충", href: "/guide" },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const isMypage = pathname === "/mypage";
-  const isHome = pathname === "/";
+  const isNeon = true;
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // TODO: 실제 API에서 포인트 조회
@@ -32,7 +33,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className={isHome ? "nav-neon" : undefined}>
+    <nav className={isNeon ? "nav-neon" : undefined}>
       <div className="nav-top-row">
         <Link className="logo" href="/">
           <div className="logo-icon">🧧</div>
@@ -43,14 +44,14 @@ export default function Navbar() {
           {isLoggedIn ? (
             <>
               <div className="nav-point-item">
-                <span className="nav-point-label">🎟 응포인트</span>
+                <span className="nav-point-label">🎰 운포인트</span>
                 <span className="nav-point-value">
                   {eungPoint.toLocaleString()}P
                 </span>
                 <Link
                   href="/charge"
                   className="nav-point-plus"
-                  title="응포인트 충전"
+                  title="운포인트 충전"
                 >
                   +
                 </Link>

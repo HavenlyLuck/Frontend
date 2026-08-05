@@ -103,7 +103,7 @@ export default function MyPage() {
   useEffect(() => () => stopConfetti(), [stopConfetti]);
 
   return (
-    <>
+    <><div className="home-neon">
       <div className="mypage-layout">
         {/* 사이드바 */}
         <div className="sidebar">
@@ -409,6 +409,7 @@ export default function MyPage() {
           </div>
         </div>
       </div>
+    </div>
 
       {/* 폭죽 캔버스 */}
       <canvas
@@ -440,7 +441,7 @@ export default function MyPage() {
           <div className="win-product">
             반다이 맥시매틱 젠인 나오야 피규어[미개봉]
             <br />
-            <span style={{ color: "#1477b8", fontWeight: 700 }}>
+            <span style={{ color: "#22d3ee", fontWeight: 700 }}>
               28,000원
             </span>{" "}
             상당의 상품에 당첨!

@@ -52,7 +52,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const thumbEmojis = ['💻', '🖥️', '⌨️']
 
   return (
-    <>
+    <div className="home-neon">
       <div className="container">
         <div className="breadcrumb">
           <span><Link href="/">홈</Link></span>
@@ -260,6 +260,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       <div className={`toast ${showToast ? 'show' : ''}`}>
         🎉 응모가 완료되었습니다! 당첨을 기다려주세요.
       </div>
-    </>
+    </div>
   )
 }

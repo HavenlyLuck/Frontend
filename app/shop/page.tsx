@@ -1,35 +1,135 @@
-import Link from "next/link";
+'use client'
 
-const ITEMS = [
-  { href: "/products/notebook", img: "/images/demo-1.jpg", alt: "굿즈 스티커 세트", badge: "🏪 즉시구매", title: "캐릭터 굿즈 스티커 세트", price: "12,000원" },
-  { href: "/products/notebook", img: "/images/demo-2.jpg", alt: "아크릴 스탠드", badge: "🏪 즉시구매", title: "인기 캐릭터 아크릴 스탠드", price: "18,000원" },
-  { href: "/products/notebook", img: "/images/demo-4.jpg", alt: "미니 피규어", badge: "🏪 즉시구매", title: "데스크용 미니 피규어", price: "25,000원" },
-  { href: "/products/notebook", img: "/images/ps5.jpg", alt: "PS5 무선 컨트롤러", badge: "🏪 즉시구매", title: "PS5 듀얼센스 무선 컨트롤러", price: "78,000원" },
-  { href: "/products/iphone", img: "/images/iphone14pro.jpg", alt: "아이폰 케이스", badge: "🏪 즉시구매", title: "아이폰 14 Pro 투명 케이스", price: "15,000원" },
-  { href: "/products/notebook", img: "/images/demo-3.jpg", alt: "피규어 진열 케이스", badge: "🏪 즉시구매", title: "피규어 먼지방지 진열 케이스", price: "9,000원" },
-];
+import Link from 'next/link'
+import { useState } from 'react'
+
+const EUNG_ITEMS = [
+  { href: '/products/notebook', img: '/images/demo-1.jpg', alt: '굿즈 스티커 세트', badge: '🎰 운포인트 상점', title: '캐릭터 굿즈 스티커 세트', price: '12,000 운포인트', views: 19, wishes: 2, chats: 0 },
+  { href: '/products/notebook', img: '/images/demo-2.jpg', alt: '아크릴 스탠드', badge: '🎰 운포인트 상점', title: '인기 캐릭터 아크릴 스탠드', price: '18,000 운포인트', views: 31, wishes: 6, chats: 1 },
+  { href: '/products/notebook', img: '/images/demo-4.jpg', alt: '미니 피규어', badge: '🎰 운포인트 상점', title: '데스크용 미니 피규어', price: '25,000 운포인트', views: 27, wishes: 4, chats: 0 },
+  { href: '/products/notebook', img: '/images/ps5.jpg', alt: 'PS5 무선 컨트롤러', badge: '🎰 운포인트 상점', title: 'PS5 듀얼센스 무선 컨트롤러', price: '78,000 운포인트', views: 45, wishes: 11, chats: 3 },
+  { href: '/products/iphone', img: '/images/iphone14pro.jpg', alt: '아이폰 케이스', badge: '🎰 운포인트 상점', title: '아이폰 14 Pro 투명 케이스', price: '15,000 운포인트', views: 22, wishes: 3, chats: 0 },
+  { href: '/products/notebook', img: '/images/demo-3.jpg', alt: '피규어 진열 케이스', badge: '🎰 운포인트 상점', title: '피규어 먼지방지 진열 케이스', price: '9,000 운포인트', views: 16, wishes: 1, chats: 0 },
+]
+
+const SSAL_ITEMS = [
+  { href: '/products/notebook', emoji: '🌾', badge: '🌾 쌀포인트 상점', title: '쌀포인트 특별 상품', price: '10,000 쌀포인트', views: 5, wishes: 1, chats: 0 },
+]
+
+const SORTS = ['최신순', '낮은 가격순', '높은 가격순', '인기순']
+
+type StoreTab = '운포인트' | '쌀포인트'
 
 export default function ShopPage() {
-  return (
-    <div className="home-container">
-      <div className="section-header">
-        <div className="section-title">🏪 상점</div>
-      </div>
+  const [sort, setSort] = useState('최신순')
+  const [storeTab, setStoreTab] = useState<StoreTab>('운포인트')
 
-      <div className="product-grid-home">
-        {ITEMS.map((item, i) => (
-          <Link key={i} className="product-card-home" href={item.href}>
-            <div className="card-img">
-              <img src={item.img} alt={item.alt} />
-            </div>
-            <div className="card-body">
-              <div className="card-raffle-badge">{item.badge}</div>
-              <div className="card-title">{item.title}</div>
-              <div className="card-price">{item.price}</div>
-            </div>
-          </Link>
-        ))}
+  return (
+    <div className="home-neon">
+      <div className="home-container">
+
+        {/* 상점 타이틀 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div className="section-title">🏪 상점</div>
+          <a href="/guide#상점" style={{ fontSize: 12, color: '#9c97c9', textDecoration: 'none', border: '1px solid #3a2d66', borderRadius: 8, padding: '4px 12px', background: '#120b28' }}>
+            도움이 필요하다면? 📖
+          </a>
+        </div>
+
+        {/* 상점 탭 + 정렬 버튼 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['운포인트', '쌀포인트'] as StoreTab[]).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setStoreTab(tab)}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: 10,
+                  border: `1px solid ${storeTab === tab ? '#7b5cff99' : '#3a2d66'}`,
+                  background: storeTab === tab ? 'linear-gradient(135deg, #7b5cff44, #22d3ee22)' : '#120b28',
+                  color: storeTab === tab ? '#eafcff' : '#9c97c9',
+                  fontSize: 14,
+                  fontWeight: storeTab === tab ? 700 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {tab === '운포인트' ? '🎰 운포인트 상점' : '🌾 쌀포인트 상점'}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            {SORTS.map(s => (
+              <button
+                key={s}
+                onClick={() => setSort(s)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 8,
+                  border: `1px solid ${sort === s ? '#22d3ee88' : '#3a2d66'}`,
+                  background: sort === s ? '#22d3ee1a' : '#120b28',
+                  color: sort === s ? '#22d3ee' : '#9c97c9',
+                  fontSize: 12,
+                  fontWeight: sort === s ? 700 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 운포인트 상점 */}
+        {storeTab === '운포인트' && (
+          <div className="product-grid-home">
+            {EUNG_ITEMS.map((item, i) => (
+              <Link key={i} className="product-card-home" href={item.href}>
+                <div className="card-img">
+                  <img src={item.img} alt={item.alt} />
+                </div>
+                <div className="card-body">
+                  <div className="card-raffle-badge">{item.badge}</div>
+                  <div className="card-title">{item.title}</div>
+                  <div className="card-price">{item.price}</div>
+                  <div className="card-stats">
+                    <span>👁 {item.views}</span>
+                    <span>🤍 {item.wishes}</span>
+                    <span>💬 {item.chats}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* 쌀포인트 상점 */}
+        {storeTab === '쌀포인트' && (
+          <div className="product-grid-home">
+            {SSAL_ITEMS.map((item, i) => (
+              <Link key={i} className="product-card-home" href={item.href}>
+                <div className="card-img" style={{ fontSize: 72 }}>
+                  {item.emoji}
+                </div>
+                <div className="card-body">
+                  <div className="card-raffle-badge">{item.badge}</div>
+                  <div className="card-title">{item.title}</div>
+                  <div className="card-price">{item.price}</div>
+                  <div className="card-stats">
+                    <span>👁 {item.views}</span>
+                    <span>🤍 {item.wishes}</span>
+                    <span>💬 {item.chats}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
       </div>
     </div>
-  );
+  )
 }
