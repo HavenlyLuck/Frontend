@@ -111,7 +111,7 @@ export default function SellPage() {
   }
 
   return (
-    <>
+    <div className="home-neon">
       <div className="sell-container">
         {/* 헤더 */}
         <div className="sell-page-header">
@@ -360,6 +360,6 @@ export default function SellPage() {
           {toast.type === 'success' ? '✅' : '⚠️'} {toast.msg}
         </div>
       )}
-    </>
+    </div>
   )
 }

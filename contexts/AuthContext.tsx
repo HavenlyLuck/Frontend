@@ -8,7 +8,7 @@ const ADMIN_PW = 'admin1234'
 type Role = 'admin' | 'user' | null
 
 interface Points {
-  eung: number  // 응포인트
+  eung: number  // 운포인트
   ssal: number  // 쌀포인트
 }
 
