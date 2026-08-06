@@ -1,122 +1,424 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useState } from 'react'
 
-interface Product {
-  id: number
-  title: string
-  price: string
-  maxCount: number
-  category: string
-  emoji: string
+interface SaleItem { type: string; title: string; buyer: string; price: string }
+type ProductType = '응모' | '쿠지' | '상점(운포인트)' | '상점(쌀포인트)'
+interface Product { id: number; type: ProductType; title: string; price: string; img: string; active: boolean; stock: number; maxTickets?: number; ticketPrice?: string }
+
+// ── Mock Data ──────────────────────────────────────────────
+const DAILY_REV: Record<string, number> = {
+  '2026-07-01': 389000, '2026-07-02': 612000, '2026-07-03': 478000,
+  '2026-07-04': 325000, '2026-07-05': 189000, '2026-07-06': 534000,
+  '2026-07-07': 721000, '2026-07-08': 398000, '2026-07-09': 265000,
+  '2026-07-10': 489000, '2026-07-11': 634000, '2026-07-12': 312000,
+  '2026-07-13': 578000, '2026-07-14': 423000, '2026-07-15': 267000,
+  '2026-07-16': 541000, '2026-07-17': 398000, '2026-07-18': 712000,
+  '2026-07-19': 289000, '2026-07-20': 456000, '2026-07-21': 623000,
+  '2026-07-22': 345000, '2026-07-23': 578000, '2026-07-24': 234000,
+  '2026-07-25': 467000, '2026-07-26': 312000, '2026-07-27': 689000,
+  '2026-07-28': 384000, '2026-07-29': 521000, '2026-07-30': 293000,
+  '2026-07-31': 617000,
+  '2026-08-01': 748000, '2026-08-02': 432000, '2026-08-03': 195000,
+  '2026-08-04': 863000, '2026-08-05': 576000, '2026-08-06': 941000,
 }
 
-const CATEGORIES = ['💻 디지털/가전', '👕 패션/의류', '⚽ 스포츠/레저', '📚 도서/음반', '🪴 인테리어', '🎁 기타']
+const MONTHLY_REV: Record<string, number> = {
+  '2025-09': 2840000, '2025-10': 3670000, '2025-11': 4320000, '2025-12': 6180000,
+  '2026-01': 5240000, '2026-02': 7810000, '2026-03': 6430000, '2026-04': 9250000,
+  '2026-05': 8120000, '2026-06': 11430000, '2026-07': 10870000, '2026-08': 3760000,
+}
 
-export default function AdminPage() {
-  const { role, logout } = useAuth()
-  const router = useRouter()
-  const [products, setProducts] = useState<Product[]>([])
-  const [form, setForm] = useState({ title: '', price: '', maxCount: 50, category: CATEGORIES[0], emoji: '📦' })
+const DAILY_SALES: Record<string, SaleItem[]> = {
+  '2026-08-06': [
+    { type: '응모', title: '아이폰 14 Pro 256GB 스페이스 블랙', buyer: 'user_2847', price: '650,000 운포인트' },
+    { type: '상점', title: '인기 캐릭터 아크릴 스탠드', buyer: 'user_1023', price: '18,000 운포인트' },
+    { type: '쿠지', title: '주술회전 나오야 젠인 쿠지', buyer: 'user_3391', price: '10,000 운포인트' },
+    { type: '응모', title: '플레이스테이션 5 디스크 에디션', buyer: 'user_0584', price: '450,000 운포인트' },
+    { type: '상점', title: '캐릭터 굿즈 스티커 세트', buyer: 'user_2210', price: '12,000 운포인트' },
+  ],
+  '2026-08-05': [
+    { type: '쿠지', title: '원피스 A상 루피 쿠지', buyer: 'user_1748', price: '10,000 운포인트' },
+    { type: '응모', title: '에어팟 프로 2세대', buyer: 'user_3902', price: '180,000 운포인트' },
+    { type: '상점', title: 'PS5 듀얼센스 무선 컨트롤러', buyer: 'user_0091', price: '78,000 운포인트' },
+  ],
+  '2026-08-04': [
+    { type: '응모', title: '닌텐도 스위치 OLED', buyer: 'user_2215', price: '280,000 운포인트' },
+    { type: '쿠지', title: '귀멸의 칼날 최애의 쿠지', buyer: 'user_4412', price: '10,000 운포인트' },
+    { type: '상점', title: '데스크용 미니 피규어', buyer: 'user_1902', price: '25,000 운포인트' },
+    { type: '응모', title: '갤럭시 워치 6 클래식', buyer: 'user_0773', price: '220,000 운포인트' },
+  ],
+  '2026-08-02': [
+    { type: '상점', title: '아이폰 14 Pro 투명 케이스', buyer: 'user_2984', price: '15,000 운포인트' },
+    { type: '쿠지', title: '산리오 캐릭터즈 쿠지', buyer: 'user_3315', price: '10,000 운포인트' },
+  ],
+  '2026-08-01': [
+    { type: '쿠지', title: '명탐정 코난 랜덤 쿠지', buyer: 'user_1188', price: '10,000 운포인트' },
+    { type: '응모', title: '소니 WH-1000XM5', buyer: 'user_2241', price: '250,000 운포인트' },
+  ],
+  '2026-07-31': [
+    { type: '응모', title: '소니 ZV-E10 미러리스', buyer: 'user_1122', price: '380,000 운포인트' },
+    { type: '쿠지', title: '드래곤볼 갓 오브 데스티니 쿠지', buyer: 'user_3387', price: '10,000 운포인트' },
+  ],
+  '2026-07-30': [
+    { type: '상점', title: '인기 캐릭터 아크릴 스탠드', buyer: 'user_0441', price: '18,000 운포인트' },
+    { type: '응모', title: '아이패드 Air 5세대', buyer: 'user_2819', price: '480,000 운포인트' },
+  ],
+}
 
-  useEffect(() => {
-    if (role !== 'admin') {
-      router.replace('/')
-    }
-  }, [role, router])
+const TODAY = '2026-08-06'
+const TYPE_COLOR: Record<string, string> = { '응모': '#ff2fd0', '쿠지': '#22d3ee', '상점': '#a78bfa' }
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 
-  if (role !== 'admin') return null
-
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault()
-    const newProduct: Product = {
-      id: Date.now(),
-      title: form.title,
-      price: form.price,
-      maxCount: form.maxCount,
-      category: form.category,
-      emoji: form.emoji,
-    }
-    setProducts(prev => [newProduct, ...prev])
-    setForm({ title: '', price: '', maxCount: 50, category: CATEGORIES[0], emoji: '📦' })
+// ── Helpers ───────────────────────────────────────────────
+function getDailyWindow(endDate: string) {
+  const result: { label: string; fullDate: string; amount: number }[] = []
+  const end = new Date(endDate + 'T00:00:00')
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(end)
+    d.setDate(d.getDate() - i)
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    const fullDate = `${d.getFullYear()}-${mm}-${dd}`
+    result.push({ label: `${mm}-${dd}`, fullDate, amount: DAILY_REV[fullDate] ?? 0 })
   }
+  return result
+}
 
-  const handleDelete = (id: number) => {
-    setProducts(prev => prev.filter(p => p.id !== id))
+function getMonthlyWindow(year: string) {
+  return Array.from({ length: 12 }, (_, i) => {
+    const m = `${year}-${String(i + 1).padStart(2, '0')}`
+    return { label: `${i + 1}월`, fullDate: m, amount: MONTHLY_REV[m] ?? 0 }
+  })
+}
+
+// ── Calendar Components ────────────────────────────────────
+const popupStyle: React.CSSProperties = {
+  position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 300,
+  background: 'linear-gradient(160deg, #1a1035, #0d0820)',
+  border: '1px solid #3a2d66', borderRadius: 14, padding: 16,
+  boxShadow: '0 8px 32px #00000099',
+}
+const navBtn: React.CSSProperties = {
+  background: 'none', border: 'none', color: '#9c97c9',
+  fontSize: 18, cursor: 'pointer', padding: '2px 10px', borderRadius: 6,
+}
+
+function DayCalendar({ selected, onSelect, highlighted }: {
+  selected: string; onSelect: (d: string) => void; highlighted: Set<string>
+}) {
+  const [vy, setVy] = useState(() => parseInt(selected.slice(0, 4)))
+  const [vm, setVm] = useState(() => parseInt(selected.slice(5, 7)) - 1)
+
+  function prev() { if (vm === 0) { setVy(y => y - 1); setVm(11) } else setVm(m => m - 1) }
+  function next() { if (vm === 11) { setVy(y => y + 1); setVm(0) } else setVm(m => m + 1) }
+
+  const firstDow = new Date(vy, vm, 1).getDay()
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate()
+  const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  return (
+    <div style={{ width: 252 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <button style={navBtn} onClick={prev}>‹</button>
+        <span style={{ color: '#eafcff', fontWeight: 700, fontSize: 14 }}>{vy}년 {MONTH_NAMES[vm]}</span>
+        <button style={navBtn} onClick={next}>›</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+        {WEEKDAYS.map((w, i) => (
+          <div key={w} style={{ textAlign: 'center', fontSize: 10, padding: '2px 0', color: i === 0 ? '#f8717188' : i === 6 ? '#60a5fa88' : '#6d67a0' }}>{w}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} style={{ aspectRatio: '1' }} />
+          const ds = `${vy}-${String(vm + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          const isSel = ds === selected
+          const isToday = ds === TODAY
+          const hasDot = highlighted.has(ds)
+          return (
+            <button key={i} onClick={() => onSelect(ds)} style={{
+              position: 'relative', aspectRatio: '1', borderRadius: 6, cursor: 'pointer',
+              border: isToday && !isSel ? '1px solid #7b5cff88' : 'none',
+              background: isSel ? 'linear-gradient(135deg, #7b5cff, #22d3ee)' : 'transparent',
+              color: isSel ? '#fff' : i % 7 === 0 ? '#f87171' : i % 7 === 6 ? '#60a5fa' : '#c4b5fd',
+              fontSize: 12, fontWeight: isSel || isToday ? 700 : 400,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {day}
+              {hasDot && !isSel && (
+                <span style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 3, height: 3, borderRadius: '50%', background: '#22d3ee' }} />
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function MonthCalendar({ selected, onSelect, highlighted }: {
+  selected: string; onSelect: (m: string) => void; highlighted: Set<string>
+}) {
+  const [vy, setVy] = useState(() => parseInt(selected.slice(0, 4)))
+  return (
+    <div style={{ width: 220 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <button style={navBtn} onClick={() => setVy(y => y - 1)}>‹</button>
+        <span style={{ color: '#eafcff', fontWeight: 700, fontSize: 14 }}>{vy}년</span>
+        <button style={navBtn} onClick={() => setVy(y => y + 1)}>›</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+        {MONTH_NAMES.map((mn, i) => {
+          const ms = `${vy}-${String(i + 1).padStart(2, '0')}`
+          const isSel = ms === selected
+          const hasData = highlighted.has(ms)
+          return (
+            <button key={mn} onClick={() => hasData && onSelect(ms)} style={{
+              padding: '10px 4px', borderRadius: 8, fontSize: 13,
+              border: isSel ? 'none' : hasData ? '1px solid #3a2d66' : 'none',
+              background: isSel ? 'linear-gradient(135deg, #7b5cff, #22d3ee)' : hasData ? '#1a1035' : 'transparent',
+              color: isSel ? '#fff' : hasData ? '#c4b5fd' : '#2a1f3d',
+              fontWeight: isSel ? 700 : 400, cursor: hasData ? 'pointer' : 'default',
+            }}>{mn}</button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Product Data ───────────────────────────────────────────
+const INIT_PRODUCTS: Product[] = [
+  { id: 1, type: '응모', title: '아이폰 14 Pro 256GB 스페이스 블랙', price: '650,000 운포인트', img: '/images/iphone14pro.jpg', active: true, stock: 3, maxTickets: 50, ticketPrice: '1,000 운포인트' },
+  { id: 2, type: '응모', title: '플레이스테이션 5 디스크 에디션', price: '450,000 운포인트', img: '/images/ps5.jpg', active: true, stock: 2, maxTickets: 50, ticketPrice: '1,000 운포인트' },
+  { id: 3, type: '응모', title: '에어팟 프로 2세대', price: '180,000 운포인트', img: '/images/demo-4.jpg', active: true, stock: 5, maxTickets: 50, ticketPrice: '1,000 운포인트' },
+  { id: 4, type: '쿠지', title: '주술회전 나오야 젠인 쿠지', price: '10,000 운포인트', img: '/images/naoya.jpg', active: true, stock: 2, maxTickets: 50, ticketPrice: '10,000 운포인트' },
+  { id: 5, type: '쿠지', title: '원피스 A상 루피 쿠지', price: '10,000 운포인트', img: '/images/demo-5.jpg', active: true, stock: 1, maxTickets: 50, ticketPrice: '10,000 운포인트' },
+  { id: 6, type: '상점(운포인트)', title: '캐릭터 굿즈 스티커 세트', price: '12,000 운포인트', img: '/images/demo-1.jpg', active: true, stock: 15 },
+  { id: 7, type: '상점(운포인트)', title: '인기 캐릭터 아크릴 스탠드', price: '18,000 운포인트', img: '/images/demo-2.jpg', active: true, stock: 8 },
+  { id: 9, type: '상점(운포인트)', title: '데스크용 미니 피규어', price: '25,000 운포인트', img: '/images/demo-4.jpg', active: true, stock: 0 },
+  { id: 8, type: '상점(쌀포인트)', title: '쌀포인트 특별 상품', price: '10,000 쌀포인트', img: '', active: true, stock: 20 },
+]
+const PRODUCT_TABS: ProductType[] = ['응모', '쿠지', '상점(운포인트)', '상점(쌀포인트)']
+const TAB_EMOJI: Record<ProductType, string> = { '응모': '🎟', '쿠지': '🎁', '상점(운포인트)': '🎰', '상점(쌀포인트)': '🌾' }
+const darkInput: React.CSSProperties = { background: '#120b28', border: '1px solid #3a2d66', borderRadius: 8, color: '#eafcff', padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
+
+// ── Main ───────────────────────────────────────────────────
+export default function AdminPage() {
+  const [revenueTab, setRevenueTab] = useState<'일별' | '월별'>('일별')
+  const [revDate, setRevDate] = useState(TODAY)
+  const [revMonth, setRevMonth] = useState('2026-08')
+  const [showRevCal, setShowRevCal] = useState(false)
+  const [saleDate, setSaleDate] = useState(TODAY)
+  const [showSalCal, setShowSalCal] = useState(false)
+  const [productTab, setProductTab] = useState<ProductType>('응모')
+  const [products, setProducts] = useState<Product[]>(INIT_PRODUCTS)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [nextId, setNextId] = useState(100)
+  const [newP, setNewP] = useState({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트' })
+
+  const chartData = revenueTab === '일별' ? getDailyWindow(revDate) : getMonthlyWindow(revMonth.slice(0, 4))
+  const maxAmt = Math.max(...chartData.map(d => d.amount), 1)
+
+  const dailyRevDates = new Set(Object.keys(DAILY_REV))
+  const monthlyRevMonths = new Set(Object.keys(MONTHLY_REV))
+  const saleDates = new Set(Object.keys(DAILY_SALES))
+  const currentSales = DAILY_SALES[saleDate] ?? []
+  const filtered = products.filter(p => p.type === productTab)
+
+  const calBtn: React.CSSProperties = {
+    padding: '5px 12px', borderRadius: 8, border: '1px solid #3a2d66',
+    background: '#120b28', color: '#9c97c9', fontSize: 13, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', gap: 6,
   }
 
   return (
-    <div className="admin-wrap">
-      <div className="admin-header">
-        <h1>🛠 관리자 페이지</h1>
-        <button className="nav-btn" onClick={() => { logout(); router.push('/') }}>로그아웃</button>
-      </div>
+    <div className="home-neon">
+      <div className="home-container" style={{ maxWidth: 960 }}>
 
-      <div className="admin-body">
-        <div className="admin-form-box">
-          <h2>상품 등록</h2>
-          <form onSubmit={handleAdd} className="admin-form">
-            <input
-              className="login-input"
-              placeholder="상품명"
-              value={form.title}
-              onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-              required
-            />
-            <input
-              className="login-input"
-              placeholder="응모 금액 (예: 650,000원)"
-              value={form.price}
-              onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
-              required
-            />
-            <input
-              className="login-input"
-              placeholder="이모지 (예: 📱)"
-              value={form.emoji}
-              onChange={e => setForm(p => ({ ...p, emoji: e.target.value }))}
-            />
-            <input
-              className="login-input"
-              type="number"
-              placeholder="최대 응모 인원"
-              value={form.maxCount}
-              onChange={e => setForm(p => ({ ...p, maxCount: Number(e.target.value) }))}
-              min={1}
-              required
-            />
-            <select
-              className="login-input"
-              value={form.category}
-              onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
-            >
-              {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-            </select>
-            <button className="btn-primary" type="submit">+ 상품 등록</button>
-          </form>
+        <h1 style={{ fontSize: 32, fontWeight: 800, color: '#eafcff', marginBottom: 36, textShadow: '0 0 20px #7b5cff88' }}>⚙️ 관리자 메뉴</h1>
+
+        {/* 스탯 카드 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 36 }}>
+          {[
+            { label: '현재 이용자 수', value: '1,247명', icon: '👥', color: '#22d3ee' },
+            { label: '오늘 매출', value: (DAILY_REV[TODAY] ?? 0).toLocaleString() + '원', icon: '📅', color: '#a78bfa' },
+            { label: '이번 달 매출', value: (MONTHLY_REV['2026-08'] ?? 0).toLocaleString() + '원', icon: '📆', color: '#ff2fd0' },
+          ].map(c => (
+            <div key={c.label} style={{ background: 'linear-gradient(160deg, #150f2e, #0d0820)', border: '1px solid #3a2d66', borderRadius: 14, padding: '20px 24px' }}>
+              <div style={{ fontSize: 22, marginBottom: 8 }}>{c.icon}</div>
+              <div style={{ color: '#9c97c9', fontSize: 13, marginBottom: 6 }}>{c.label}</div>
+              <div style={{ color: c.color, fontSize: 22, fontWeight: 800 }}>{c.value}</div>
+            </div>
+          ))}
         </div>
 
-        <div className="admin-list-box">
-          <h2>등록된 상품 ({products.length}개)</h2>
-          {products.length === 0 ? (
-            <p className="admin-empty">등록된 상품이 없습니다.</p>
-          ) : (
-            <ul className="admin-product-list">
-              {products.map(p => (
-                <li key={p.id} className="admin-product-item">
-                  <span className="admin-product-emoji">{p.emoji}</span>
-                  <div className="admin-product-info">
-                    <div className="admin-product-title">{p.title}</div>
-                    <div className="admin-product-meta">{p.price} · 최대 {p.maxCount}명 · {p.category}</div>
-                  </div>
-                  <button className="admin-delete-btn" onClick={() => handleDelete(p.id)}>삭제</button>
-                </li>
+        {/* 매출 차트 */}
+        <div style={{ background: 'linear-gradient(160deg, #150f2e, #0d0820)', border: '1px solid #3a2d66', borderRadius: 14, padding: 24, marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div style={{ color: '#eafcff', fontWeight: 700, fontSize: 16 }}>📊 매출 현황</div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {(['일별', '월별'] as const).map(t => (
+                <button key={t} onClick={() => { setRevenueTab(t); setShowRevCal(false) }} style={{
+                  padding: '5px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer',
+                  border: `1px solid ${revenueTab === t ? '#7b5cff99' : '#3a2d66'}`,
+                  background: revenueTab === t ? '#7b5cff33' : '#120b28',
+                  color: revenueTab === t ? '#eafcff' : '#9c97c9',
+                  fontWeight: revenueTab === t ? 700 : 400,
+                }}>{t}</button>
               ))}
-            </ul>
-          )}
+              <div style={{ position: 'relative' }}>
+                <button onClick={() => setShowRevCal(v => !v)} style={calBtn}>
+                  📅 {revenueTab === '일별' ? revDate.slice(5) : revMonth}
+                </button>
+                {showRevCal && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 299 }} onClick={() => setShowRevCal(false)} />
+                    <div style={popupStyle}>
+                      {revenueTab === '일별'
+                        ? <DayCalendar selected={revDate} onSelect={d => { setRevDate(d); setShowRevCal(false) }} highlighted={dailyRevDates} />
+                        : <MonthCalendar selected={revMonth} onSelect={m => { setRevMonth(m); setShowRevCal(false) }} highlighted={monthlyRevMonths} />
+                      }
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 160 }}>
+            {chartData.map((d, i) => {
+              const pct = d.amount / maxAmt
+              const isSel = revenueTab === '일별' ? d.fullDate === revDate : d.fullDate === revMonth
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
+                  {d.amount > 0 && <div style={{ color: '#9c97c9', fontSize: 9, whiteSpace: 'nowrap' }}>{(d.amount / 10000).toFixed(0)}만</div>}
+                  <div style={{
+                    width: '100%', borderRadius: '4px 4px 0 0', transition: 'height 0.3s',
+                    height: d.amount > 0 ? `${Math.max(pct * 120, 4)}px` : '2px',
+                    background: isSel ? 'linear-gradient(180deg, #ff2fd0, #7b5cff)' : d.amount > 0 ? 'linear-gradient(180deg, #7b5cff88, #3a2d66)' : '#2a1f3d',
+                    boxShadow: isSel ? '0 0 12px #ff2fd066' : undefined,
+                  }} />
+                  <div style={{ color: isSel ? '#c4b5fd' : '#4a3a6a', fontSize: 9, whiteSpace: 'nowrap' }}>{d.label}</div>
+                </div>
+              )
+            })}
+          </div>
         </div>
+
+        {/* 판매 내역 */}
+        <div style={{ background: 'linear-gradient(160deg, #150f2e, #0d0820)', border: '1px solid #3a2d66', borderRadius: 14, padding: 24, marginBottom: 36 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div style={{ color: '#eafcff', fontWeight: 700, fontSize: 16 }}>🛍 일별 판매 내역</div>
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setShowSalCal(v => !v)} style={calBtn}>
+                📅 {saleDate.slice(5)}
+              </button>
+              {showSalCal && (
+                <>
+                  <div style={{ position: 'fixed', inset: 0, zIndex: 299 }} onClick={() => setShowSalCal(false)} />
+                  <div style={popupStyle}>
+                    <DayCalendar selected={saleDate} onSelect={d => { setSaleDate(d); setShowSalCal(false) }} highlighted={saleDates} />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          {currentSales.length === 0
+            ? <div style={{ color: '#6d67a0', textAlign: 'center', padding: '24px 0' }}>{saleDate.slice(5)} 판매 내역이 없습니다.</div>
+            : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {currentSales.map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 10, background: '#0d082088', border: '1px solid #2a1f3d' }}>
+                    <div style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0, background: `${TYPE_COLOR[item.type]}18`, color: TYPE_COLOR[item.type], border: `1px solid ${TYPE_COLOR[item.type]}44` }}>{item.type}</div>
+                    <div style={{ flex: 1, color: '#eafcff', fontSize: 14 }}>{item.title}</div>
+                    <div style={{ color: '#6d67a0', fontSize: 12, flexShrink: 0 }}>{item.buyer}</div>
+                    <div style={{ color: '#a78bfa', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{item.price}</div>
+                  </div>
+                ))}
+              </div>
+          }
+        </div>
+
+        {/* 상품 관리 */}
+        <div style={{ color: '#eafcff', fontWeight: 700, fontSize: 18, marginBottom: 18 }}>📦 상품 관리</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+          {PRODUCT_TABS.map(t => (
+            <button key={t} onClick={() => { setProductTab(t); setShowAddForm(false) }} style={{
+              padding: '9px 20px', borderRadius: 10, fontSize: 14, cursor: 'pointer',
+              border: `1px solid ${productTab === t ? '#7b5cff99' : '#3a2d66'}`,
+              background: productTab === t ? 'linear-gradient(135deg, #7b5cff44, #22d3ee22)' : '#120b28',
+              color: productTab === t ? '#eafcff' : '#9c97c9',
+              fontWeight: productTab === t ? 700 : 400,
+            }}>{TAB_EMOJI[t]} {t}</button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+          {filtered.length === 0 && (
+            <div style={{ color: '#6d67a0', textAlign: 'center', padding: '40px 0', border: '1px dashed #3a2d66', borderRadius: 12 }}>등록된 상품이 없습니다.</div>
+          )}
+          {filtered.map(p => (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', borderRadius: 12, border: `1px solid ${p.active ? '#3a2d66' : '#2a1f3d'}`, background: p.active ? '#150f2e' : '#0d0820', opacity: p.active ? 1 : 0.55, transition: 'all 0.2s' }}>
+              <div style={{ width: 56, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#0a0620', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
+                {p.img ? <img src={p.img} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🌾'}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: '#eafcff', fontWeight: 600, fontSize: 15, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
+                <div style={{ color: '#9c97c9', fontSize: 13 }}>
+                  {p.price}
+                  {p.maxTickets && <span style={{ marginLeft: 12, color: '#6d67a0' }}>최대 {p.maxTickets}장</span>}
+                  {p.ticketPrice && <span style={{ marginLeft: 8, color: '#6d67a0' }}>· 응모권 {p.ticketPrice}</span>}
+                </div>
+              </div>
+              {/* 재고 */}
+              <div style={{ flexShrink: 0, textAlign: 'center' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: p.stock === 0 ? '#f87171' : p.stock <= 3 ? '#fb923c' : '#4ade80' }}>{p.stock}</span>
+                <span style={{ fontSize: 11, color: '#6d67a0', marginLeft: 2 }}>개</span>
+              </div>
+              <div style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, flexShrink: 0, background: p.active ? '#22d3ee18' : '#3a2d6655', color: p.active ? '#22d3ee' : '#6d67a0', border: `1px solid ${p.active ? '#22d3ee44' : '#3a2d66'}` }}>{p.active ? '활성' : '비활성'}</div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button onClick={() => setProducts(prev => prev.map(x => x.id === p.id ? { ...x, active: !x.active } : x))} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${p.active ? '#ff2fd066' : '#22d3ee66'}`, background: p.active ? '#ff2fd018' : '#22d3ee18', color: p.active ? '#ff2fd0' : '#22d3ee' }}>{p.active ? '내리기' : '올리기'}</button>
+                <button onClick={() => setProducts(prev => prev.filter(x => x.id !== p.id))} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid #4a1a2a', background: '#2a0f1a', color: '#f87171' }}>삭제</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {!showAddForm ? (
+          <button onClick={() => setShowAddForm(true)} style={{ width: '100%', padding: '14px', borderRadius: 12, border: '1px dashed #7b5cff88', background: '#120b28', color: '#c4b5fd', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
+            + 새 {productTab} 상품 추가
+          </button>
+        ) : (
+          <div style={{ border: '1px solid #7b5cff55', borderRadius: 14, background: 'linear-gradient(160deg, #150f2e, #0d0820)', padding: '24px 24px 20px' }}>
+            <div style={{ color: '#eafcff', fontWeight: 700, fontSize: 16, marginBottom: 18 }}>{TAB_EMOJI[productTab]} {productTab} 상품 추가</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div><div style={{ color: '#9c97c9', fontSize: 12, marginBottom: 5 }}>상품명 *</div><input style={darkInput} placeholder="상품 이름 입력" value={newP.title} onChange={e => setNewP(p => ({ ...p, title: e.target.value }))} /></div>
+              <div><div style={{ color: '#9c97c9', fontSize: 12, marginBottom: 5 }}>가격 *</div><input style={darkInput} placeholder="예: 50,000 운포인트" value={newP.price} onChange={e => setNewP(p => ({ ...p, price: e.target.value }))} /></div>
+              <div><div style={{ color: '#9c97c9', fontSize: 12, marginBottom: 5 }}>이미지 경로 (선택)</div><input style={darkInput} placeholder="예: /images/product.jpg" value={newP.img} onChange={e => setNewP(p => ({ ...p, img: e.target.value }))} /></div>
+              <div><div style={{ color: '#9c97c9', fontSize: 12, marginBottom: 5 }}>수량 *</div><input style={darkInput} placeholder="올릴 수량 입력 (예: 10)" type="number" min="1" value={newP.stock} onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))} /></div>
+              {(productTab === '응모' || productTab === '쿠지') && (
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}><div style={{ color: '#9c97c9', fontSize: 12, marginBottom: 5 }}>최대 응모권 수</div><input style={darkInput} placeholder="기본값: 50" type="number" value={newP.maxTickets} onChange={e => setNewP(p => ({ ...p, maxTickets: e.target.value }))} /></div>
+                  <div style={{ flex: 1 }}><div style={{ color: '#9c97c9', fontSize: 12, marginBottom: 5 }}>응모권 가격</div><input style={darkInput} placeholder="기본값: 1,000 운포인트" value={newP.ticketPrice} onChange={e => setNewP(p => ({ ...p, ticketPrice: e.target.value }))} /></div>
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+              <button onClick={() => {
+                if (!newP.title.trim() || !newP.price.trim()) return
+                setProducts(prev => [...prev, { id: nextId, type: productTab, title: newP.title, price: newP.price, img: newP.img, active: true, stock: Number(newP.stock) || 1, ...(productTab === '응모' || productTab === '쿠지' ? { maxTickets: newP.maxTickets ? Number(newP.maxTickets) : 50, ticketPrice: newP.ticketPrice || '1,000 운포인트' } : {}) } as Product])
+                setNextId(n => n + 1)
+                setNewP({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트' })
+                setShowAddForm(false)
+              }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #7b5cff, #22d3ee)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>추가하기</button>
+              <button onClick={() => { setShowAddForm(false); setNewP({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트' }) }} style={{ padding: '11px 24px', borderRadius: 10, border: '1px solid #3a2d66', background: '#120b28', color: '#9c97c9', fontSize: 14, cursor: 'pointer' }}>취소</button>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )
