@@ -9,6 +9,7 @@ const NAV_CATEGORIES = [
   { label: "🎁 쿠지", href: "/kuji" },
   { label: "🏪 상점", href: "/shop" },
   { label: "📖 설명충", href: "/guide" },
+  { label: "💬 후기/문의", href: "/review" },
 ];
 
 export default function Navbar() {
@@ -16,6 +17,7 @@ export default function Navbar() {
   const router = useRouter();
   const isMypage = pathname === "/mypage";
   const isNeon = true;
+  const hideTabsRow = pathname === "/login" || pathname === "/signup";
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // TODO: 실제 API에서 포인트 조회
@@ -90,7 +92,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      <div className="nav-tabs-row">
+      {!hideTabsRow && <div className="nav-tabs-row">
         <div className="search-bar">
           <span>🔍</span>
           <input type="text" placeholder="원하는 상품을 검색해보세요" />
@@ -107,7 +109,16 @@ export default function Navbar() {
             </Link>
           ))}
         </div>
-      </div>
+        {isLoggedIn && (
+          <Link
+            href="/admin"
+            className={`nav-cat-tab ${pathname === "/admin" ? "active" : ""}`}
+            style={{ color: '#c4b5fd', marginLeft: 'auto' }}
+          >
+            ⚙️ 관리자
+          </Link>
+        )}
+      </div>}
     </nav>
   );
 }

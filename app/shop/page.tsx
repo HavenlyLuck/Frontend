@@ -4,12 +4,12 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 const EUNG_ITEMS = [
-  { href: '/products/notebook', img: '/images/demo-1.jpg', alt: '굿즈 스티커 세트', badge: '🎰 운포인트 상점', title: '캐릭터 굿즈 스티커 세트', price: '12,000 운포인트', views: 19, wishes: 2, chats: 0 },
-  { href: '/products/notebook', img: '/images/demo-2.jpg', alt: '아크릴 스탠드', badge: '🎰 운포인트 상점', title: '인기 캐릭터 아크릴 스탠드', price: '18,000 운포인트', views: 31, wishes: 6, chats: 1 },
-  { href: '/products/notebook', img: '/images/demo-4.jpg', alt: '미니 피규어', badge: '🎰 운포인트 상점', title: '데스크용 미니 피규어', price: '25,000 운포인트', views: 27, wishes: 4, chats: 0 },
-  { href: '/products/notebook', img: '/images/ps5.jpg', alt: 'PS5 무선 컨트롤러', badge: '🎰 운포인트 상점', title: 'PS5 듀얼센스 무선 컨트롤러', price: '78,000 운포인트', views: 45, wishes: 11, chats: 3 },
-  { href: '/products/iphone', img: '/images/iphone14pro.jpg', alt: '아이폰 케이스', badge: '🎰 운포인트 상점', title: '아이폰 14 Pro 투명 케이스', price: '15,000 운포인트', views: 22, wishes: 3, chats: 0 },
-  { href: '/products/notebook', img: '/images/demo-3.jpg', alt: '피규어 진열 케이스', badge: '🎰 운포인트 상점', title: '피규어 먼지방지 진열 케이스', price: '9,000 운포인트', views: 16, wishes: 1, chats: 0 },
+  { href: '/products/notebook', img: '/images/demo-1.jpg', alt: '굿즈 스티커 세트', badge: '🎰 운포인트 상점', title: '캐릭터 굿즈 스티커 세트', price: '12,000 운포인트', views: 19, wishes: 2, chats: 0, stock: 15 },
+  { href: '/products/notebook', img: '/images/demo-2.jpg', alt: '아크릴 스탠드', badge: '🎰 운포인트 상점', title: '인기 캐릭터 아크릴 스탠드', price: '18,000 운포인트', views: 31, wishes: 6, chats: 1, stock: 8 },
+  { href: '/products/notebook', img: '/images/demo-4.jpg', alt: '미니 피규어', badge: '🎰 운포인트 상점', title: '데스크용 미니 피규어', price: '25,000 운포인트', views: 27, wishes: 4, chats: 0, stock: 0 },
+  { href: '/products/notebook', img: '/images/ps5.jpg', alt: 'PS5 무선 컨트롤러', badge: '🎰 운포인트 상점', title: 'PS5 듀얼센스 무선 컨트롤러', price: '78,000 운포인트', views: 45, wishes: 11, chats: 3, stock: 4 },
+  { href: '/products/iphone', img: '/images/iphone14pro.jpg', alt: '아이폰 케이스', badge: '🎰 운포인트 상점', title: '아이폰 14 Pro 투명 케이스', price: '15,000 운포인트', views: 22, wishes: 3, chats: 0, stock: 12 },
+  { href: '/products/notebook', img: '/images/demo-3.jpg', alt: '피규어 진열 케이스', badge: '🎰 운포인트 상점', title: '피규어 먼지방지 진열 케이스', price: '9,000 운포인트', views: 16, wishes: 1, chats: 0, stock: 5 },
 ]
 
 const SSAL_ITEMS = [
@@ -87,14 +87,19 @@ export default function ShopPage() {
         {storeTab === '운포인트' && (
           <div className="product-grid-home">
             {EUNG_ITEMS.map((item, i) => (
-              <Link key={i} className="product-card-home" href={item.href}>
-                <div className="card-img">
-                  <img src={item.img} alt={item.alt} />
+              <Link key={i} className="product-card-home" href={item.stock === 0 ? '#' : item.href} onClick={item.stock === 0 ? e => e.preventDefault() : undefined}>
+                <div className="card-img" style={{ position: 'relative' }}>
+                  <img src={item.img} alt={item.alt} style={{ filter: item.stock === 0 ? 'blur(3px) brightness(0.45)' : undefined }} />
+                  {item.stock === 0 && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ color: '#fff', fontWeight: 800, fontSize: 15, letterSpacing: 3, padding: '5px 14px', borderRadius: 6, border: '2px solid #ffffff66', background: 'rgba(7,2,18,0.45)', textShadow: '0 0 12px #fff8' }}>SOLD OUT</span>
+                    </div>
+                  )}
                 </div>
                 <div className="card-body">
                   <div className="card-raffle-badge">{item.badge}</div>
-                  <div className="card-title">{item.title}</div>
-                  <div className="card-price">{item.price}</div>
+                  <div className="card-title" style={{ color: item.stock === 0 ? '#6d67a0' : undefined }}>{item.title}</div>
+                  <div className="card-price" style={{ color: item.stock === 0 ? '#4a3a6a' : undefined }}>{item.price}</div>
                   <div className="card-stats">
                     <span>👁 {item.views}</span>
                     <span>🤍 {item.wishes}</span>
