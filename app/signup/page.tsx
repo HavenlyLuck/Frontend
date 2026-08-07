@@ -3,8 +3,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { signup, checkDuplicate, ApiError, DuplCheckField } from '@/lib/api'
 
-type CheckState = 'idle' | 'ok' | 'fail'
+type CheckState = 'idle' | 'checking' | 'ok' | 'fail'
+
+const DUPL_CHECK_FIELDS: Record<'nickname' | 'userId' | 'email', DuplCheckField> = {
+  nickname: 'nickname',
+  userId: 'login_id',
+  email: 'email',
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const inputStyle: React.CSSProperties = {
   flex: 1,
@@ -32,11 +41,11 @@ const checkBtnStyle: React.CSSProperties = {
   flexShrink: 0,
 }
 
-function StatusMsg({ state }: { state: CheckState }) {
-  if (state === 'idle') return null
+function StatusMsg({ state, message }: { state: CheckState; message: string }) {
+  if (state === 'idle' || state === 'checking') return null
   return (
     <p style={{ margin: '2px 0 0', fontSize: 12, color: state === 'ok' ? '#4ade80' : '#f87171' }}>
-      {state === 'ok' ? '사용 가능합니다.' : '이미 사용 중입니다.'}
+      {message}
     </p>
   )
 }
@@ -47,32 +56,74 @@ export default function SignupPage() {
   const [checks, setChecks] = useState<{ nickname: CheckState; userId: CheckState; email: CheckState }>({
     nickname: 'idle', userId: 'idle', email: 'idle',
   })
+  const [checkMessages, setCheckMessages] = useState({ nickname: '', userId: '', email: '' })
   const [phoneCertified, setPhoneCertified] = useState(false)
+  const [phoneVerifiedAt, setPhoneVerifiedAt] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
-    if (name in checks) setChecks(prev => ({ ...prev, [name]: 'idle' }))
+    if (name in checks) {
+      setChecks(prev => ({ ...prev, [name]: 'idle' }))
+      setCheckMessages(prev => ({ ...prev, [name]: '' }))
+    }
     if (name === 'phone') setPhoneCertified(false)
   }
 
-  function handleCheck(field: keyof typeof checks) {
-    setChecks(prev => ({ ...prev, [field]: 'ok' }))
+  async function handleCheck(field: keyof typeof checks) {
+    const value = form[field]
+    if (!value.trim()) {
+      alert('값을 입력한 뒤 중복확인을 눌러주세요.')
+      return
+    }
+    if (field === 'email' && !EMAIL_REGEX.test(value)) {
+      setChecks(prev => ({ ...prev, email: 'fail' }))
+      setCheckMessages(prev => ({ ...prev, email: '올바른 이메일 형식이 아닙니다.' }))
+      return
+    }
+    setChecks(prev => ({ ...prev, [field]: 'checking' }))
+    try {
+      const res = await checkDuplicate(DUPL_CHECK_FIELDS[field], value)
+      setChecks(prev => ({ ...prev, [field]: res.available ? 'ok' : 'fail' }))
+      setCheckMessages(prev => ({ ...prev, [field]: res.message }))
+    } catch (err) {
+      setChecks(prev => ({ ...prev, [field]: 'idle' }))
+      alert(err instanceof ApiError ? err.message : '중복확인 중 오류가 발생했습니다.')
+    }
   }
 
   function handlePhoneCert() {
     setPhoneCertified(true)
+    setPhoneVerifiedAt(new Date().toISOString())
     alert('본인인증이 완료되었습니다.')
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (form.password !== form.confirm) { alert('비밀번호가 일치하지 않습니다.'); return }
     if (checks.nickname !== 'ok' || checks.userId !== 'ok' || checks.email !== 'ok') {
       alert('닉네임, 아이디, 이메일 중복확인을 완료해주세요.'); return
     }
     if (!phoneCertified) { alert('핸드폰 본인인증을 완료해주세요.'); return }
-    router.push('/login')
+
+    setSubmitting(true)
+    try {
+      await signup({
+        login_id: form.userId,
+        nickname: form.nickname,
+        email: form.email,
+        password: form.password,
+        phone: form.phone,
+        phone_verified_at: phoneVerifiedAt,
+      })
+      alert('회원가입이 완료되었습니다. 로그인해주세요.')
+      router.push('/login')
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : '회원가입 중 오류가 발생했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -85,18 +136,22 @@ export default function SignupPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', gap: 8 }}>
               <input name="nickname" type="text" placeholder="닉네임" value={form.nickname} onChange={handleChange} required style={inputStyle} />
-              <button type="button" style={checkBtnStyle} onClick={() => handleCheck('nickname')}>중복확인</button>
+              <button type="button" disabled={checks.nickname === 'checking'} style={checkBtnStyle} onClick={() => handleCheck('nickname')}>
+                {checks.nickname === 'checking' ? '확인 중...' : '중복확인'}
+              </button>
             </div>
-            <StatusMsg state={checks.nickname} />
+            <StatusMsg state={checks.nickname} message={checkMessages.nickname} />
           </div>
 
           {/* 아이디 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', gap: 8 }}>
               <input name="userId" type="text" placeholder="아이디" value={form.userId} onChange={handleChange} required style={inputStyle} />
-              <button type="button" style={checkBtnStyle} onClick={() => handleCheck('userId')}>중복확인</button>
+              <button type="button" disabled={checks.userId === 'checking'} style={checkBtnStyle} onClick={() => handleCheck('userId')}>
+                {checks.userId === 'checking' ? '확인 중...' : '중복확인'}
+              </button>
             </div>
-            <StatusMsg state={checks.userId} />
+            <StatusMsg state={checks.userId} message={checkMessages.userId} />
           </div>
 
           {/* 비밀번호 */}
@@ -116,9 +171,11 @@ export default function SignupPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', gap: 8 }}>
               <input name="email" type="email" placeholder="이메일" value={form.email} onChange={handleChange} required style={inputStyle} />
-              <button type="button" style={checkBtnStyle} onClick={() => handleCheck('email')}>중복확인</button>
+              <button type="button" disabled={checks.email === 'checking'} style={checkBtnStyle} onClick={() => handleCheck('email')}>
+                {checks.email === 'checking' ? '확인 중...' : '중복확인'}
+              </button>
             </div>
-            <StatusMsg state={checks.email} />
+            <StatusMsg state={checks.email} message={checkMessages.email} />
           </div>
 
           {/* 핸드폰 번호 */}
@@ -132,9 +189,10 @@ export default function SignupPage() {
 
           <button
             type="submit"
-            style={{ padding: '13px', borderRadius: 8, background: 'linear-gradient(135deg, #7b5cff, #22d3ee)', color: '#fff', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer', marginTop: 8 }}
+            disabled={submitting}
+            style={{ padding: '13px', borderRadius: 8, background: 'linear-gradient(135deg, #7b5cff, #22d3ee)', color: '#fff', fontSize: 16, fontWeight: 700, border: 'none', cursor: submitting ? 'default' : 'pointer', marginTop: 8, opacity: submitting ? 0.7 : 1 }}
           >
-            회원가입
+            {submitting ? '가입 중...' : '회원가입'}
           </button>
         </form>
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#9c97c9' }}>
