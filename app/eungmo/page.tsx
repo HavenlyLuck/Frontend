@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 const ITEMS = [
-  { href: '/products/iphone', img: '/images/iphone14pro.jpg', alt: '아이폰 14 Pro', badge: '🎟 응모 진행 중', title: '아이폰 14 Pro 256GB 스페이스 블랙', price: '650,000원', pct: 76, count: 38, max: 50, time: '⏱ 8시간 남음', views: 88, wishes: 21, chats: 9 },
+  { href: '/products/iphone', img: '/images/naoya.jpg', alt: '나오야 젠인 피규어', badge: '🎟 응모 진행 중', title: '주술회전 나오야 젠인 피규어', price: '120,000원', pct: 76, count: 38, max: 50, time: '⏱ 8시간 남음', views: 88, wishes: 21, chats: 9 },
   { href: '/products/notebook', img: '/images/ps5.jpg', alt: '플레이스테이션 5', badge: '🎟 응모 진행 중', title: '플레이스테이션 5 디스크 에디션', price: '450,000원', pct: 92, count: 46, max: 50, time: '⏱ 12시간 남음', views: 134, wishes: 33, chats: 14 },
   { href: '/products/notebook', img: '/images/demo-4.jpg', alt: '에어팟 프로 2세대', badge: '🎟 응모 진행 중', title: '에어팟 프로 2세대', price: '180,000원', pct: 22, count: 11, max: 50, time: '⏱ 5일 남음', views: 55, wishes: 8, chats: 2 },
   { href: '/products/notebook', img: '/images/demo-5.jpg', alt: '닌텐도 스위치 OLED', badge: '🎟 응모 진행 중', title: '닌텐도 스위치 OLED', price: '280,000원', pct: 65, count: 32, max: 50, time: '⏱ 23시간 남음', views: 72, wishes: 19, chats: 6 },
@@ -20,12 +20,12 @@ export default function EungmoPage() {
   const [sort, setSort] = useState('최신순')
 
   return (
-    <div className="home-neon">
+    <div>
       <div className="home-container">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div className="section-title">🎟 응모상품</div>
-          <a href="/guide#응모" style={{ fontSize: 12, color: '#9c97c9', textDecoration: 'none', border: '1px solid #3a2d66', borderRadius: 8, padding: '4px 12px', background: '#120b28' }}>
-            도움이 필요하다면? 📖
+          <div className="section-title"><span className="emoji">🎟</span> 응모상품</div>
+          <a href="/guide#응모" style={{ fontSize: 12, color: '#767676', textDecoration: 'none', border: '1px solid #e2e2e4', borderRadius: 8, padding: '4px 12px', background: '#f5f6f7' }}>
+            도움이 필요하다면?
           </a>
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 28 }}>
@@ -36,9 +36,9 @@ export default function EungmoPage() {
               style={{
                 padding: '6px 14px',
                 borderRadius: 8,
-                border: `1px solid ${sort === s ? '#22d3ee88' : '#3a2d66'}`,
-                background: sort === s ? '#22d3ee1a' : '#120b28',
-                color: sort === s ? '#22d3ee' : '#9c97c9',
+                border: `1px solid ${sort === s ? '#4fa8e888' : '#e2e2e4'}`,
+                background: sort === s ? '#eaf6fd' : '#ffffff',
+                color: sort === s ? '#1477b8' : '#767676',
                 fontSize: 12,
                 fontWeight: sort === s ? 700 : 400,
                 cursor: 'pointer',
