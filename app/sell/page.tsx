@@ -111,7 +111,7 @@ export default function SellPage() {
   }
 
   return (
-    <div className="home-neon">
+    <div>
       <div className="sell-container">
         {/* 헤더 */}
         <div className="sell-page-header">

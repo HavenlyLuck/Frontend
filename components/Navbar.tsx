@@ -5,18 +5,18 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const NAV_CATEGORIES = [
-  { label: "🎟 응모", href: "/eungmo" },
-  { label: "🎁 쿠지", href: "/kuji" },
-  { label: "🏪 상점", href: "/shop" },
-  { label: "📖 설명충", href: "/guide" },
-  { label: "💬 후기/문의", href: "/review" },
+  { emoji: "🎟", label: "응모", href: "/eungmo" },
+  { emoji: "🎁", label: "쿠지", href: "/kuji" },
+  { emoji: "🏪", label: "상점", href: "/shop" },
+  { emoji: "📖", label: "설명충", href: "/guide" },
+  { emoji: "💬", label: "후기/문의", href: "/review" },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const isMypage = pathname === "/mypage";
-  const isNeon = true;
+  const isNeon = false;
   const hideTabsRow = pathname === "/login" || pathname === "/signup";
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -105,7 +105,7 @@ export default function Navbar() {
               href={cat.href}
               className={`nav-cat-tab ${pathname === cat.href ? "active" : ""}`}
             >
-              {cat.label}
+              <span className="emoji">{cat.emoji}</span> {cat.label}
             </Link>
           ))}
         </div>
@@ -113,9 +113,9 @@ export default function Navbar() {
           <Link
             href="/admin"
             className={`nav-cat-tab ${pathname === "/admin" ? "active" : ""}`}
-            style={{ color: '#c4b5fd', marginLeft: 'auto' }}
+            style={{ marginLeft: 'auto' }}
           >
-            ⚙️ 관리자
+            <span className="emoji">⚙️</span> 관리자
           </Link>
         )}
       </div>}

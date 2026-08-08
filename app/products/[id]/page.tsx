@@ -52,7 +52,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const thumbEmojis = ['💻', '🖥️', '⌨️']
 
   return (
-    <div className="home-neon">
+    <div>
       <div className="container">
         <div className="breadcrumb">
           <span><Link href="/">홈</Link></span>
@@ -90,18 +90,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   )}
                 </div>
               ))}
-            </div>
-
-            <div className="seller-card">
-              <div className="seller-avatar">{product.seller.avatar}</div>
-              <div className="seller-info">
-                <div className="seller-name">{product.seller.name}</div>
-                <div className="seller-meta">
-                  <span>📦 거래 {product.seller.trades}회</span>
-                  <span>📍 {product.seller.location}</span>
-                </div>
-              </div>
-              <div className="seller-rating">⭐ {product.seller.rating}</div>
             </div>
           </div>
 

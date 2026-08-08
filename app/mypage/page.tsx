@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { getReadyStorageCount } from "@/lib/storage";
 
 const CONFETTI_COLORS = [
   "#7c6aff",
@@ -103,7 +104,7 @@ export default function MyPage() {
   useEffect(() => () => stopConfetti(), [stopConfetti]);
 
   return (
-    <><div className="home-neon">
+    <><div>
       <div className="mypage-layout">
         {/* 사이드바 */}
         <div className="sidebar">
@@ -111,12 +112,8 @@ export default function MyPage() {
             <div className="profile-avatar">🐔</div>
             <div className="profile-name">경호소인</div>
             <div className="profile-email">wkcpq103100@gmail.com</div>
-            <div className="profile-rating">⭐ 4.9 · 매너온도 38°C</div>
+            <div className="profile-rating">⭐ 4.9</div>
             <div className="profile-stats">
-              <div className="profile-stat">
-                <div className="profile-stat-value">12</div>
-                <div className="profile-stat-label">거래 완료</div>
-              </div>
               <div className="profile-stat">
                 <div className="profile-stat-value">7</div>
                 <div className="profile-stat-label">판매 중</div>
@@ -136,21 +133,35 @@ export default function MyPage() {
             {[
               { icon: "🏠", label: "내 활동 요약", active: true },
               { icon: "🎟", label: "응모 내역", badge: 5 },
-              { icon: "🛍️", label: "판매 내역" },
+              { icon: "📦", label: "보관함", href: "/mypage/storage", badge: getReadyStorageCount() },
               { icon: "🤍", label: "관심 상품" },
               { icon: "🔔", label: "알림", badge: 3 },
-              { icon: "💬", label: "채팅 목록" },
               { icon: "⚙️", label: "설정" },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className={`menu-item ${item.active ? "active" : ""}`}
-              >
-                <span className="menu-icon">{item.icon}</span>
-                {item.label}
-                {item.badge && <span className="menu-badge">{item.badge}</span>}
-              </div>
-            ))}
+            ].map((item) => {
+              const content = (
+                <>
+                  <span className="menu-icon">{item.icon}</span>
+                  {item.label}
+                  {item.badge && <span className="menu-badge">{item.badge}</span>}
+                </>
+              );
+              return item.href ? (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={`menu-item ${item.active ? "active" : ""}`}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div
+                  key={item.label}
+                  className={`menu-item ${item.active ? "active" : ""}`}
+                >
+                  {content}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -441,7 +452,7 @@ export default function MyPage() {
           <div className="win-product">
             반다이 맥시매틱 젠인 나오야 피규어[미개봉]
             <br />
-            <span style={{ color: "#22d3ee", fontWeight: 700 }}>
+            <span style={{ color: "#1477b8", fontWeight: 700 }}>
               28,000원
             </span>{" "}
             상당의 상품에 당첨!

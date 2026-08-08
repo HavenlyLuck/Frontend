@@ -18,12 +18,12 @@ export default function KujiPage() {
   const [sort, setSort] = useState('최신순')
 
   return (
-    <div className="home-neon">
+    <div>
       <div className="home-container">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div className="section-title">🎁 쿠지상품</div>
-          <a href="/guide#쿠지" style={{ fontSize: 12, color: '#9c97c9', textDecoration: 'none', border: '1px solid #3a2d66', borderRadius: 8, padding: '4px 12px', background: '#120b28' }}>
-            도움이 필요하다면? 📖
+          <div className="section-title"><span className="emoji">🎁</span> 쿠지상품</div>
+          <a href="/guide#쿠지" style={{ fontSize: 12, color: '#767676', textDecoration: 'none', border: '1px solid #e2e2e4', borderRadius: 8, padding: '4px 12px', background: '#f5f6f7' }}>
+            도움이 필요하다면?
           </a>
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 28 }}>
@@ -34,9 +34,9 @@ export default function KujiPage() {
               style={{
                 padding: '6px 14px',
                 borderRadius: 8,
-                border: `1px solid ${sort === s ? '#22d3ee88' : '#3a2d66'}`,
-                background: sort === s ? '#22d3ee1a' : '#120b28',
-                color: sort === s ? '#22d3ee' : '#9c97c9',
+                border: `1px solid ${sort === s ? '#4fa8e888' : '#e2e2e4'}`,
+                background: sort === s ? '#eaf6fd' : '#ffffff',
+                color: sort === s ? '#1477b8' : '#767676',
                 fontSize: 12,
                 fontWeight: sort === s ? 700 : 400,
                 cursor: 'pointer',

@@ -18,13 +18,6 @@ export interface Product {
   description: string
   image: string | null
   emoji: string
-  seller: {
-    name: string
-    avatar: string
-    rating: number
-    trades: number
-    location: string
-  }
   raffle: {
     totalSlots: number
     currentEntries: number
@@ -49,7 +42,6 @@ export const products: Product[] = [
     description: '깨끗하게 사용했습니다. 구매 후 6개월 사용, 외관 스크래치 없음.\n배터리 상태 양호, 충전기 포함. 직거래 서울 강남구 가능합니다.',
     image: null,
     emoji: '💻',
-    seller: { name: '갬블마켓', avatar: '🐔', rating: 4.9, trades: 12, location: '서울 강남구' },
     raffle: { totalSlots: 50, currentEntries: 19, remainingSeconds: 2 * 86400 + 14 * 3600 + 32 * 60 + 7, urgent: false },
     relatedProducts: [
       { id: 'iphone', title: '아이폰 14 Pro 256GB', price: '650,000원', emoji: '📱', views: 88, wishes: 12, badge: '🎟 응모 중' },
@@ -64,32 +56,31 @@ export const products: Product[] = [
   },
   {
     id: 'iphone',
-    title: '아이폰 14 Pro 256GB\n스페이스 블랙',
-    price: '650,000원',
-    category: '디지털/가전',
-    subcategory: '스마트폰',
-    description: '자급제 구매 후 8개월 사용했습니다. 케이스 항상 착용하여 외관 깨끗합니다.\n배터리 잔량 91%, 정품 충전기 + 케이블 포함. 직거래 서울 마포구 가능.',
-    image: '/images/iphone14pro.jpg',
-    emoji: '📱',
-    seller: { name: '테크마켓Pro', avatar: '🦊', rating: 4.8, trades: 47, location: '서울 마포구' },
+    title: '주술회전 나오야 젠인 피규어',
+    price: '120,000원',
+    category: '피규어/굿즈',
+    subcategory: '피규어',
+    description: '미개봉 새제품입니다. 정품 박스 그대로 보관하였으며, 파손 없이 안전 포장하여 발송합니다.',
+    image: '/images/naoya.jpg',
+    emoji: '🎎',
     raffle: { totalSlots: 50, currentEntries: 38, remainingSeconds: 8 * 3600 + 24 * 60 + 31, urgent: true },
     specs: [
-      { key: '모델', val: 'iPhone 14 Pro A2890' },
-      { key: '저장용량', val: '256GB' },
-      { key: '배터리', val: '91% (양호)' },
-      { key: '색상', val: '스페이스 블랙' },
-      { key: '개통 여부', val: '자급제 (미개통 가능)' },
+      { key: '시리즈', val: '주술회전' },
+      { key: '캐릭터', val: '나오야 젠인' },
+      { key: '재질', val: 'PVC' },
+      { key: '높이', val: '약 25cm' },
+      { key: '박스 상태', val: '미개봉' },
     ],
     relatedProducts: [
-      { id: 'notebook', title: '맥북 에어 M2 256GB', price: '850,000원', emoji: '💻', views: 112, wishes: 24, badge: '🎟 응모 중' },
-      { id: 'notebook', title: '에어팟 맥스 실버', price: '320,000원', emoji: '🎧', views: 67, wishes: 14, badge: '🎟 응모 중' },
-      { id: 'notebook', title: '애플워치 SE 2세대', price: '180,000원', emoji: '⌚', views: 43, wishes: 9, badge: '판매 완료', sold: true },
-      { id: 'notebook', title: '아이패드 Pro 11인치', price: '560,000원', emoji: '🖥️', views: 79, wishes: 18, badge: '🎟 응모 중' },
+      { id: 'notebook', title: '귀멸의 칼날 렌고쿠 피규어', price: '135,000원', emoji: '🎎', views: 112, wishes: 24, badge: '🎟 응모 중' },
+      { id: 'notebook', title: '원피스 루피 기어5 피규어', price: '98,000원', emoji: '🎎', views: 67, wishes: 14, badge: '🎟 응모 중' },
+      { id: 'notebook', title: '원신 라이덴 쇼군 피규어', price: '150,000원', emoji: '🎎', views: 43, wishes: 9, badge: '판매 완료', sold: true },
+      { id: 'notebook', title: '체인소맨 파워 피규어', price: '110,000원', emoji: '🎎', views: 79, wishes: 18, badge: '🎟 응모 중' },
     ],
     meta: { chats: 9, wishes: 21, views: 88, time: '5시간 전' },
-    thumbs: ['/images/iphone14pro.jpg', null, null, null],
-    modalIcon: '📱',
-    relatedLabel: '판매자의 다른 상품',
+    thumbs: ['/images/naoya.jpg', null, null],
+    modalIcon: '🎎',
+    relatedLabel: '이런 상품은 어때요',
   },
 ]
 

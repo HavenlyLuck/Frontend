@@ -19,9 +19,9 @@ const inputStyle: React.CSSProperties = {
   flex: 1,
   padding: '12px 14px',
   borderRadius: 8,
-  border: '1px solid #3a2d66',
-  background: '#120b28',
-  color: '#eafcff',
+  border: '1px solid #e2e2e4',
+  background: '#ffffff',
+  color: '#181818',
   fontSize: 15,
   outline: 'none',
   minWidth: 0,
@@ -31,11 +31,11 @@ const checkBtnStyle: React.CSSProperties = {
   padding: '0 14px',
   height: 46,
   borderRadius: 8,
-  background: '#1c1440',
-  color: '#9c97c9',
+  background: '#f5f6f7',
+  color: '#454545',
   fontSize: 13,
   fontWeight: 600,
-  border: '1px solid #3a2d66',
+  border: '1px solid #e2e2e4',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
   flexShrink: 0,
@@ -44,7 +44,7 @@ const checkBtnStyle: React.CSSProperties = {
 function StatusMsg({ state, message }: { state: CheckState; message: string }) {
   if (state === 'idle' || state === 'checking') return null
   return (
-    <p style={{ margin: '2px 0 0', fontSize: 12, color: state === 'ok' ? '#4ade80' : '#f87171' }}>
+    <p style={{ margin: '2px 0 0', fontSize: 12, color: state === 'ok' ? '#16a34a' : '#e14d72' }}>
       {message}
     </p>
   )
@@ -127,9 +127,9 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="home-neon" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
-      <div style={{ width: '100%', maxWidth: 460, padding: '40px 32px', background: 'linear-gradient(160deg, #150f2ee6, #0d0820e6)', border: '1px solid #7b5cff55', borderRadius: 16, boxShadow: '0 0 40px -8px #ff2fd04d' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: 28, fontSize: 24, fontWeight: 700, color: '#eafcff' }}>회원가입</h2>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px', background: '#f5f6f7' }}>
+      <div style={{ width: '100%', maxWidth: 460, padding: '40px 32px', background: '#ffffff', border: '1px solid #ececec', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: 28, fontSize: 24, fontWeight: 700, color: '#181818' }}>회원가입</h2>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
           {/* 닉네임 */}
@@ -161,7 +161,7 @@ export default function SignupPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <input name="confirm" type="password" placeholder="비밀번호 확인" value={form.confirm} onChange={handleChange} required style={inputStyle} />
             {form.confirm && (
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: form.password === form.confirm ? '#4ade80' : '#f87171' }}>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: form.password === form.confirm ? '#16a34a' : '#e14d72' }}>
                 {form.password === form.confirm ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
               </p>
             )}
@@ -184,20 +184,20 @@ export default function SignupPage() {
               <input name="phone" type="tel" placeholder="핸드폰 번호 (- 없이 입력)" value={form.phone} onChange={handleChange} required style={inputStyle} />
               <button type="button" style={checkBtnStyle} onClick={handlePhoneCert}>본인인증</button>
             </div>
-            {phoneCertified && <p style={{ margin: '2px 0 0', fontSize: 12, color: '#4ade80' }}>본인인증이 완료되었습니다.</p>}
+            {phoneCertified && <p style={{ margin: '2px 0 0', fontSize: 12, color: '#16a34a' }}>본인인증이 완료되었습니다.</p>}
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            style={{ padding: '13px', borderRadius: 8, background: 'linear-gradient(135deg, #7b5cff, #22d3ee)', color: '#fff', fontSize: 16, fontWeight: 700, border: 'none', cursor: submitting ? 'default' : 'pointer', marginTop: 8, opacity: submitting ? 0.7 : 1 }}
+            style={{ padding: '13px', borderRadius: 8, background: '#181818', color: '#fff', fontSize: 16, fontWeight: 700, border: 'none', cursor: submitting ? 'default' : 'pointer', marginTop: 8, opacity: submitting ? 0.7 : 1 }}
           >
             {submitting ? '가입 중...' : '회원가입'}
           </button>
         </form>
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#9c97c9' }}>
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#767676' }}>
           이미 계정이 있으신가요?{' '}
-          <Link href="/login" style={{ color: '#22d3ee', fontWeight: 600, textDecoration: 'none' }}>로그인</Link>
+          <Link href="/login" style={{ color: '#4fa8e8', fontWeight: 600, textDecoration: 'none' }}>로그인</Link>
         </p>
       </div>
     </div>

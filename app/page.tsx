@@ -497,7 +497,7 @@ export default function HomePage() {
   );
 
   return (
-    <div className="home-neon">
+    <div>
       {/* 히어로 */}
       <section className="hero">
         <div className="hero-tag">🧧 응모형 이커머스 플랫폼</div>
@@ -619,7 +619,7 @@ export default function HomePage() {
 
         {/* 응모상품 */}
         <div className="section-header">
-          <div className="section-title">🎟 응모상품</div>
+          <div className="section-title"><span className="emoji">🎟</span> 응모상품</div>
           <div className="see-all">전체보기 →</div>
         </div>
 
@@ -631,7 +631,7 @@ export default function HomePage() {
 
         {/* 쿠지상품 */}
         <div className="section-header">
-          <div className="section-title">🎁 쿠지상품</div>
+          <div className="section-title"><span className="emoji">🎁</span> 쿠지상품</div>
           <div className="see-all">전체보기 →</div>
         </div>
 
@@ -643,7 +643,7 @@ export default function HomePage() {
 
         {/* 상점 */}
         <div className="section-header">
-          <div className="section-title">🏪 상점</div>
+          <div className="section-title"><span className="emoji">🏪</span> 상점</div>
           <div className="see-all">전체보기 →</div>
         </div>
 
