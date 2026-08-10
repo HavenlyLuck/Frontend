@@ -75,7 +75,7 @@ export default function ShopProductPage({ params }: { params: { id: string } }) 
 
             <div style={{ marginTop: 24 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#181818', marginBottom: 10 }}>구매 수량</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, border: '1px solid #e2e2e4', borderRadius: 10, padding: '8px 16px' }}>
                   <button
                     onClick={() => changeQty(-1)}
