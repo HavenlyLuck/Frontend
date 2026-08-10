@@ -3012,6 +3012,48 @@ nav {
     padding: 0 16px;
   }
 
+  .nav-actions {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .nav-actions::-webkit-scrollbar {
+    display: none;
+  }
+  .nav-btn,
+  .nav-point-item {
+    flex-shrink: 0;
+  }
+
+  .nav-tabs-row {
+    flex-wrap: wrap;
+    height: auto;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    row-gap: 10px;
+  }
+  .search-bar {
+    max-width: none;
+    flex-basis: 100%;
+  }
+  .nav-categories {
+    flex: 1;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav-categories::-webkit-scrollbar {
+    display: none;
+  }
+  .nav-cat-tab {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+
   .hero {
     padding: 48px 24px;
     min-height: 420px;
@@ -3045,9 +3087,6 @@ nav {
   }
   .carousel-arrow.next {
     right: 8px;
-  }
-  .nav-categories {
-    display: none;
   }
 
   .hot-grid {
@@ -3096,6 +3135,105 @@ nav {
   }
   .category-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── 모바일(작은 화면) ── */
+@media (max-width: 480px) {
+  .nav-top-row {
+    height: 56px;
+    gap: 12px;
+  }
+  .logo {
+    font-size: 15px;
+  }
+  .logo-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+  }
+  .nav-point-label {
+    display: none;
+  }
+  .nav-point-item {
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .nav-btn {
+    padding: 3px 12px 0;
+    font-size: 12px;
+  }
+  .nav-btn span:last-child {
+    display: none;
+  }
+  .nav-btn.sell span:last-child,
+  .nav-btn.active-nav span:last-child {
+    display: inline;
+  }
+
+  .home-container {
+    padding: 28px 16px;
+  }
+  .hero {
+    padding: 32px 16px;
+    min-height: 340px;
+  }
+  .hero h1 {
+    font-size: 26px;
+  }
+  .hero-tag {
+    font-size: 12px;
+  }
+
+  .product-grid-home,
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .container {
+    padding: 0 16px;
+  }
+  .product-title {
+    font-size: 21px;
+  }
+  .price {
+    font-size: 23px;
+  }
+  .cta-row {
+    flex-wrap: wrap;
+  }
+  .btn-raffle {
+    flex-basis: 100%;
+  }
+
+  .mypage-layout {
+    margin: 24px auto;
+    padding: 0 16px;
+  }
+  .profile-stats {
+    grid-template-columns: 1fr;
+  }
+  .summary-grid,
+  .wish-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sell-container {
+    padding: 0 16px;
+  }
+  .photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kuji-ticket-grid {
+    grid-template-columns: repeat(8, 1fr) !important;
+    gap: 4px !important;
+  }
+  .kuji-draw-modal-body {
+    padding: 12px !important;
+  }
+  .category-grid {
+    grid-template-columns: 1fr;
   }
 }
 

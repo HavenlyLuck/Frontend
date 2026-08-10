@@ -29,7 +29,7 @@ export default function ShopPage() {
       <div className="home-container">
 
         {/* 상점 타이틀 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
           <div className="section-title"><span className="emoji">🏪</span> 상점</div>
           <a href="/guide#상점" style={{ fontSize: 12, color: '#767676', textDecoration: 'none', border: '1px solid #e2e2e4', borderRadius: 8, padding: '4px 12px', background: '#f5f6f7' }}>
             도움이 필요하다면?
@@ -37,8 +37,8 @@ export default function ShopPage() {
         </div>
 
         {/* 상점 탭 + 정렬 버튼 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 28 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {(['운포인트', '쌀포인트'] as StoreTab[]).map(tab => (
               <button
                 key={tab}
@@ -60,7 +60,7 @@ export default function ShopPage() {
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {SORTS.map(s => (
               <button
                 key={s}

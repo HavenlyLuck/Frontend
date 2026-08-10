@@ -115,10 +115,6 @@ export default function MyPage() {
             <div className="profile-rating">⭐ 4.9</div>
             <div className="profile-stats">
               <div className="profile-stat">
-                <div className="profile-stat-value">7</div>
-                <div className="profile-stat-label">판매 중</div>
-              </div>
-              <div className="profile-stat">
                 <div className="profile-stat-value">23</div>
                 <div className="profile-stat-label">응모 내역</div>
               </div>
@@ -128,228 +124,10 @@ export default function MyPage() {
               </div>
             </div>
           </div>
-
-          <div className="sidebar-menu">
-            {[
-              { icon: "🏠", label: "내 활동 요약", active: true },
-              { icon: "🎟", label: "응모 내역", badge: 5 },
-              { icon: "📦", label: "보관함", href: "/mypage/storage", badge: getReadyStorageCount() },
-              { icon: "🤍", label: "관심 상품" },
-              { icon: "🔔", label: "알림", badge: 3 },
-              { icon: "⚙️", label: "설정" },
-            ].map((item) => {
-              const content = (
-                <>
-                  <span className="menu-icon">{item.icon}</span>
-                  {item.label}
-                  {item.badge && <span className="menu-badge">{item.badge}</span>}
-                </>
-              );
-              return item.href ? (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`menu-item ${item.active ? "active" : ""}`}
-                >
-                  {content}
-                </Link>
-              ) : (
-                <div
-                  key={item.label}
-                  className={`menu-item ${item.active ? "active" : ""}`}
-                >
-                  {content}
-                </div>
-              );
-            })}
-          </div>
         </div>
 
         {/* 메인 콘텐츠 */}
         <div className="main-content">
-          {/* 요약 통계 */}
-          <div className="summary-grid">
-            <div className="summary-card">
-              <div className="summary-icon">🎟</div>
-              <div className="summary-value">
-                2 <span>건</span>
-              </div>
-              <div className="summary-label">진행 중인 응모</div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-icon">🏆</div>
-              <div className="summary-value">
-                3 <span>회</span>
-              </div>
-              <div className="summary-label">누적 당첨</div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-icon">💸</div>
-              <div className="summary-value">
-                8,000 <span>원</span>
-              </div>
-              <div className="summary-label">이번 달 응모 금액</div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-icon">🤍</div>
-              <div className="summary-value">
-                8 <span>개</span>
-              </div>
-              <div className="summary-label">관심 상품</div>
-            </div>
-          </div>
-
-          {/* 최근 응모 내역 */}
-          <div className="mypage-section-header">
-            <div className="mypage-section-title">🎟 최근 응모 내역</div>
-            <div className="see-all">전체보기 →</div>
-          </div>
-
-          <div className="entry-list">
-            <Link className="entry-item" href="/products/notebook">
-              <div className="entry-emoji">
-                <img src="/images/naoya.jpg" alt="나오야 피규어" />
-              </div>
-              <div className="entry-info">
-                <div className="entry-title">
-                  반다이 맥시매틱 젠인 나오야 피규어[미개봉]
-                </div>
-                <div className="entry-meta">
-                  <span>🎟 1장 응모</span>
-                  <span>📅 어제</span>
-                  <span className="meta-done">🏁 추첨 완료</span>
-                </div>
-              </div>
-              <div className="entry-status">
-                <button className="btn-win-confirm" onClick={openWinModal}>
-                  🎉 당첨확인
-                </button>
-                <div className="entry-price">1,000원</div>
-              </div>
-            </Link>
-
-            <Link className="entry-item" href="/products/iphone">
-              <div className="entry-emoji">
-                <img src="/images/iphone14pro.jpg" alt="아이폰 14 Pro" />
-              </div>
-              <div className="entry-info">
-                <div className="entry-title">
-                  아이폰 14 Pro 256GB 스페이스 블랙
-                </div>
-                <div className="entry-meta">
-                  <span>🎟 2장 응모</span>
-                  <span>📅 오늘</span>
-                  <span className="meta-urgent">⏱ 8시간 남음</span>
-                </div>
-              </div>
-              <div className="entry-status">
-                <div className="status-badge waiting">대기 중</div>
-                <div className="entry-price">2,000원</div>
-              </div>
-            </Link>
-
-            <Link className="entry-item" href="/products/notebook">
-              <div className="entry-emoji">
-                <img src="/images/ps5.jpg" alt="플레이스테이션 5" />
-              </div>
-              <div className="entry-info">
-                <div className="entry-title">
-                  플레이스테이션 5 디스크 에디션
-                </div>
-                <div className="entry-meta">
-                  <span>🎟 2장 응모</span>
-                  <span>📅 3일 전</span>
-                  <span className="meta-warning">⏳ 1일 남음</span>
-                </div>
-              </div>
-              <div className="entry-status">
-                <div className="status-badge waiting">대기 중</div>
-                <div className="entry-price">2,000원</div>
-              </div>
-            </Link>
-
-            <Link className="entry-item" href="/products/notebook">
-              <div className="entry-emoji">🎧</div>
-              <div className="entry-info">
-                <div className="entry-title">에어팟 프로 2세대</div>
-                <div className="entry-meta">
-                  <span>🎟 1장 응모</span>
-                  <span>📅 5일 전</span>
-                  <span className="meta-done">🏁 추첨 완료</span>
-                </div>
-              </div>
-              <div className="entry-status">
-                <div className="status-badge lose">미당첨</div>
-                <div className="entry-price">1,000원</div>
-              </div>
-            </Link>
-
-            <Link className="entry-item" href="/products/notebook">
-              <div className="entry-emoji">⌚</div>
-              <div className="entry-info">
-                <div className="entry-title">갤럭시 워치 6 클래식</div>
-                <div className="entry-meta">
-                  <span>🎟 1장 응모</span>
-                  <span>📅 1주일 전</span>
-                  <span className="meta-done">🏁 추첨 완료</span>
-                </div>
-              </div>
-              <div className="entry-status">
-                <div className="status-badge lose">미당첨</div>
-                <div className="entry-price">2,000원</div>
-              </div>
-            </Link>
-          </div>
-
-          {/* 관심 상품 */}
-          <div
-            className="mypage-section-header"
-            id="wishlist"
-            style={{ scrollMarginTop: "80px" }}
-          >
-            <div className="mypage-section-title">🤍 관심 상품</div>
-            <div className="see-all">전체보기 →</div>
-          </div>
-
-          <div className="wish-grid">
-            {[
-              {
-                emoji: "🎵",
-                title: "소니 WH-1000XM5 헤드폰",
-                price: "250,000원",
-                badge: "🎟 응모 중 · 4일 남음",
-              },
-              {
-                emoji: "📷",
-                title: "소니 ZV-E10 미러리스 카메라",
-                price: "380,000원",
-                badge: "🎟 응모 중 · 7일 남음",
-              },
-              {
-                emoji: "🖥️",
-                title: "아이패드 Air 5세대 64GB",
-                price: "480,000원",
-                badge: "🎟 응모 중 · 6일 남음",
-              },
-            ].map((item) => (
-              <Link
-                key={item.title}
-                className="wish-card"
-                href="/products/notebook"
-              >
-                <div className="wish-img">
-                  {item.emoji}
-                  <span className="wish-heart">❤️</span>
-                </div>
-                <div className="wish-body">
-                  <div className="wish-title">{item.title}</div>
-                  <div className="wish-price">{item.price}</div>
-                  <div className="wish-badge">{item.badge}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
           {/* 최근 알림 */}
           <div className="mypage-section-header">
             <div className="mypage-section-title">🔔 최근 알림</div>
@@ -388,7 +166,7 @@ export default function MyPage() {
               <div className="notif-icon">🎟</div>
               <div className="notif-text">
                 <div className="notif-title">
-                  관심 상품 <strong>소니 WH-1000XM5</strong>에 새로운 응모자가
+                  찜한 상품 <strong>소니 WH-1000XM5</strong>에 새로운 응모자가
                   15명 추가되었습니다.
                 </div>
                 <div className="notif-time">1일 전</div>
@@ -417,6 +195,43 @@ export default function MyPage() {
                 <div className="notif-time">5일 전</div>
               </div>
             </div>
+          </div>
+
+          <div className="sidebar-menu" style={{ marginTop: 24 }}>
+            {[
+              { icon: "🏠", label: "내 활동 요약", active: true },
+              { icon: "🎟", label: "응모 내역", badge: 5 },
+              { icon: "📦", label: "보관함", href: "/mypage/storage", badge: getReadyStorageCount() },
+              { icon: "❤️", label: "찜한 상품", id: "wishlist" },
+              { icon: "⚙️", label: "설정" },
+            ].map((item) => {
+              const content = (
+                <>
+                  <span className="menu-icon">{item.icon}</span>
+                  {item.label}
+                  {item.badge && <span className="menu-badge">{item.badge}</span>}
+                </>
+              );
+              return item.href ? (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  id={item.id}
+                  className={`menu-item ${item.active ? "active" : ""}`}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div
+                  key={item.label}
+                  id={item.id}
+                  className={`menu-item ${item.active ? "active" : ""}`}
+                  style={{ scrollMarginTop: 80 }}
+                >
+                  {content}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
