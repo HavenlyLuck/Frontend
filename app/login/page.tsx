@@ -35,6 +35,7 @@ export default function LoginPage() {
       const res = await login({ login_id: form.userId, password: form.password })
       localStorage.setItem('token', res.access_token)
       localStorage.setItem('userId', form.userId)
+      localStorage.setItem('isAdmin', String(res.is_admin))
       router.push('/')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '로그인 중 오류가 발생했습니다.')

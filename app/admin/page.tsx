@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { verifyAdmin, ApiError } from '@/lib/api'
 
 interface SaleItem { type: string; title: string; buyer: string; price: string }
 type ProductType = '응모' | '쿠지' | '상점(운포인트)' | '상점(쌀포인트)'
@@ -208,6 +210,25 @@ const lightInput: React.CSSProperties = { background: '#ffffff', border: '1px so
 
 // ── Main ───────────────────────────────────────────────────
 export default function AdminPage() {
+  const router = useRouter()
+  const [authChecked, setAuthChecked] = useState(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      router.replace('/login')
+      return
+    }
+    verifyAdmin(token)
+      .then(() => setAuthChecked(true))
+      .catch((err) => {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          localStorage.removeItem('isAdmin')
+        }
+        router.replace('/')
+      })
+  }, [router])
+
   const [revenueTab, setRevenueTab] = useState<'일별' | '월별'>('일별')
   const [revDate, setRevDate] = useState(TODAY)
   const [revMonth, setRevMonth] = useState('2026-08')
@@ -234,6 +255,8 @@ export default function AdminPage() {
     background: '#ffffff', color: '#454545', fontSize: 13, cursor: 'pointer',
     display: 'flex', alignItems: 'center', gap: 6,
   }
+
+  if (!authChecked) return null
 
   return (
     <div>
