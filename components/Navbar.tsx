@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useMyPoints } from "@/hooks/useMyPoints";
 
 const NAV_CATEGORIES = [
   { emoji: "🎟", label: "응모", href: "/eungmo" },
@@ -19,18 +20,21 @@ export default function Navbar() {
   const isNeon = false;
   const hideTabsRow = pathname === "/login" || pathname === "/signup";
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // TODO: 실제 API에서 포인트 조회
-  const eungPoint = 12500;
-  const ssalPoint = 3000;
+  const { eungPoint, ssalPoint } = useMyPoints();
 
   useEffect(() => {
     setIsLoggedIn(!!localStorage.getItem("token"));
+    setIsAdmin(localStorage.getItem("isAdmin") === "true");
   }, [pathname]);
 
   function handleLogout() {
     localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("isAdmin");
     setIsLoggedIn(false);
+    setIsAdmin(false);
     router.push("/");
   }
 
@@ -109,7 +113,7 @@ export default function Navbar() {
             </Link>
           ))}
         </div>
-        {isLoggedIn && (
+        {isAdmin && (
           <Link
             href="/admin"
             className={`nav-cat-tab ${pathname === "/admin" ? "active" : ""}`}

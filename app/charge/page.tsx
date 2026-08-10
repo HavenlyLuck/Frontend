@@ -1,10 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-
-const eungPoint = 12500
-const ssalPoint = 3000
-const totalPoint = eungPoint + ssalPoint
+import { useMyPoints } from '@/hooks/useMyPoints'
 
 const HISTORY = [
   { type: 'deposit', label: '운포인트 충전', date: '2026.06.20', point: '+10,000P' },
@@ -21,6 +18,9 @@ const typeColor: Record<string, string> = {
 }
 
 export default function PointHubPage() {
+  const { eungPoint, ssalPoint } = useMyPoints()
+  const totalPoint = eungPoint + ssalPoint
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '60px 16px', background: '#f5f6f7' }}>
       <div style={{ width: '100%', maxWidth: 480 }}>

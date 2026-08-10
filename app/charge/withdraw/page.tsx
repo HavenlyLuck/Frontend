@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useMyPoints } from '@/hooks/useMyPoints'
 
 const BANKS = ['카카오뱅크', '토스뱅크', '국민은행', '신한은행', '우리은행', '하나은행', '농협은행', '기업은행']
 
@@ -17,7 +18,7 @@ export default function WithdrawPage() {
   const [bank, setBank] = useState('')
   const [account, setAccount] = useState('')
   const [holder, setHolder] = useState('')
-  const eungPoint = 12500
+  const { eungPoint } = useMyPoints()
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

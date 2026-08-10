@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useMyPoints } from '@/hooks/useMyPoints'
 
 const PRESET_AMOUNTS = [5000, 10000, 30000, 50000, 100000]
 
@@ -23,7 +24,7 @@ export default function DepositPage() {
   const router = useRouter()
   const [amount, setAmount] = useState<number | ''>('')
   const [method, setMethod] = useState('card')
-  const eungPoint = 12500
+  const { eungPoint } = useMyPoints()
 
   function handlePreset(val: number) {
     setAmount(prev => (typeof prev === 'number' ? prev + val : val))

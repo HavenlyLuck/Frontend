@@ -56,6 +56,7 @@ export interface LoginPayload {
 export interface LoginResponse {
   access_token: string
   token_type: string
+  is_admin: boolean
 }
 
 export function signup(payload: SignupPayload) {
@@ -83,5 +84,22 @@ export function checkDuplicate(field: DuplCheckField, value: string) {
   return request<DuplCheckResponse>('/users/duplCheck', {
     method: 'POST',
     body: JSON.stringify({ field, value }),
+  })
+}
+
+export function verifyAdmin(token: string) {
+  return request<{ is_admin: boolean }>('/admin/verify', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export interface PointsResponse {
+  woon_point: number
+  ssal_point: number
+}
+
+export function getMyPoints(token: string) {
+  return request<PointsResponse>('/points/me', {
+    headers: { Authorization: `Bearer ${token}` },
   })
 }
