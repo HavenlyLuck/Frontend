@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getProduct } from '@/lib/data'
+import { isWished, toggleWishlist } from '@/lib/wishlist'
 
 function formatCountdown(seconds: number, urgent: boolean): string {
   if (seconds <= 0) return '마감'
@@ -20,8 +21,9 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const product = getProduct(params.id)
   if (!product) notFound()
 
+  const wishId = `raffle-${product.id}`
   const [ticketCount, setTicketCount] = useState(1)
-  const [isLiked, setIsLiked] = useState(false)
+  const [isLiked, setIsLiked] = useState(() => isWished(wishId))
   const [modalOpen, setModalOpen] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [entryCount, setEntryCount] = useState(product.raffle.currentEntries)
@@ -165,7 +167,14 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </button>
               <button
                 className={`btn-wish ${isLiked ? 'liked' : ''}`}
-                onClick={() => setIsLiked(prev => !prev)}
+                onClick={() => setIsLiked(toggleWishlist({
+                  id: wishId,
+                  href: `/products/${product.id}`,
+                  title: product.title.replace('\n', ' '),
+                  image: product.image,
+                  emoji: product.emoji,
+                  subtitle: product.price,
+                }))}
               >
                 <span className="heart">{isLiked ? '❤️' : '🤍'}</span>
               </button>

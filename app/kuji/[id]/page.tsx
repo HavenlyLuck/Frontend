@@ -11,6 +11,7 @@ import {
   type KujiTicket,
 } from '@/lib/kujiData'
 import { addStorageItem } from '@/lib/storage'
+import { isWished, toggleWishlist } from '@/lib/wishlist'
 
 type DrawResult = ReturnType<typeof drawKujiTickets>
 
@@ -18,10 +19,12 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
   const product = getKujiProduct(params.id)
   if (!product) notFound()
 
+  const wishId = `kuji-${product.id}`
   const [, bump] = useState(0)
   const rerender = () => bump(n => n + 1)
 
   const [qty, setQty] = useState(1)
+  const [isLiked, setIsLiked] = useState(() => isWished(wishId))
   const [drawOpen, setDrawOpen] = useState(false)
   const [selected, setSelected] = useState<number[]>([])
   const [results, setResults] = useState<DrawResult | null>(null)
@@ -158,18 +161,32 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
               <div style={{ fontSize: 12, color: '#9a9a9a', marginBottom: 8 }}>
                 총 {(product.pricePerTicket * qty).toLocaleString()} 운포인트 (최대 {maxQty}장)
               </div>
-              <button
-                onClick={openDraw}
-                disabled={remaining === 0}
-                style={{
-                  padding: '14px 28px', borderRadius: 12, border: 'none',
-                  background: remaining === 0 ? '#e2e2e4' : '#181818',
-                  color: remaining === 0 ? '#9a9a9a' : '#fff',
-                  fontSize: 15, fontWeight: 700, cursor: remaining === 0 ? 'default' : 'pointer',
-                }}
-              >
-                {remaining === 0 ? '품절되었습니다' : '🎟 뽑기 시작'}
-              </button>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  className={`btn-wish ${isLiked ? 'liked' : ''}`}
+                  onClick={() => setIsLiked(toggleWishlist({
+                    id: wishId,
+                    href: `/kuji/${product.id}`,
+                    title: product.title,
+                    image: product.banner,
+                    subtitle: `${product.pricePerTicket.toLocaleString()} 운포인트 / 1장`,
+                  }))}
+                >
+                  <span className="heart">{isLiked ? '❤️' : '🤍'}</span>
+                </button>
+                <button
+                  onClick={openDraw}
+                  disabled={remaining === 0}
+                  style={{
+                    padding: '14px 28px', borderRadius: 12, border: 'none',
+                    background: remaining === 0 ? '#e2e2e4' : '#181818',
+                    color: remaining === 0 ? '#9a9a9a' : '#fff',
+                    fontSize: 15, fontWeight: 700, cursor: remaining === 0 ? 'default' : 'pointer',
+                  }}
+                >
+                  {remaining === 0 ? '품절되었습니다' : '🎟 뽑기 시작'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

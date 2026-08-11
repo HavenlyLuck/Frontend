@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMyPoints } from "@/hooks/useMyPoints";
+import { getReadyStorageCount } from "@/lib/storage";
 
 const NAV_CATEGORIES = [
   { emoji: "🎟", label: "응모", href: "/eungmo" },
@@ -68,7 +69,14 @@ export default function Navbar() {
                   {ssalPoint.toLocaleString()}P
                 </span>
               </div>
-              <Link href="/mypage#wishlist" className="nav-btn">
+              <Link href="/mypage/storage" className="nav-btn">
+                <span>📦</span>
+                <span>보관함</span>
+                {getReadyStorageCount() > 0 && (
+                  <span className="nav-btn-badge">{getReadyStorageCount()}</span>
+                )}
+              </Link>
+              <Link href="/wishlist" className="nav-btn">
                 <span>❤️</span>
                 <span>찜한 상품</span>
               </Link>
