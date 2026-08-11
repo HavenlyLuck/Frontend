@@ -5,13 +5,15 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getShopProduct } from '@/lib/shopData'
 import { addStorageItem } from '@/lib/storage'
+import { isWished, toggleWishlist } from '@/lib/wishlist'
 
 export default function ShopProductPage({ params }: { params: { id: string } }) {
   const product = getShopProduct(params.id)
   if (!product) notFound()
 
+  const wishId = `shop-${product.id}`
   const [qty, setQty] = useState(1)
-  const [isLiked, setIsLiked] = useState(false)
+  const [isLiked, setIsLiked] = useState(() => isWished(wishId))
   const [modalOpen, setModalOpen] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -111,7 +113,14 @@ export default function ShopProductPage({ params }: { params: { id: string } }) 
               </button>
               <button
                 className={`btn-wish ${isLiked ? 'liked' : ''}`}
-                onClick={() => setIsLiked(prev => !prev)}
+                onClick={() => setIsLiked(toggleWishlist({
+                  id: wishId,
+                  href: `/shop/${product.id}`,
+                  title: product.title,
+                  image: product.image,
+                  emoji: product.emoji,
+                  subtitle: `${product.price.toLocaleString()} ${product.currency}`,
+                }))}
               >
                 <span className="heart">{isLiked ? '❤️' : '🤍'}</span>
               </button>

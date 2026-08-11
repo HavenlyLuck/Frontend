@@ -202,7 +202,7 @@ export default function MyPage() {
               { icon: "🏠", label: "내 활동 요약", active: true },
               { icon: "🎟", label: "응모 내역", badge: 5 },
               { icon: "📦", label: "보관함", href: "/mypage/storage", badge: getReadyStorageCount() },
-              { icon: "❤️", label: "찜한 상품", id: "wishlist" },
+              { icon: "❤️", label: "찜한 상품", href: "/wishlist" },
               { icon: "⚙️", label: "설정" },
             ].map((item) => {
               const content = (
@@ -216,7 +216,6 @@ export default function MyPage() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  id={item.id}
                   className={`menu-item ${item.active ? "active" : ""}`}
                 >
                   {content}
@@ -224,9 +223,7 @@ export default function MyPage() {
               ) : (
                 <div
                   key={item.label}
-                  id={item.id}
                   className={`menu-item ${item.active ? "active" : ""}`}
-                  style={{ scrollMarginTop: 80 }}
                 >
                   {content}
                 </div>
