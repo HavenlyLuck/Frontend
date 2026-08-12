@@ -6,7 +6,8 @@ import { verifyAdmin, ApiError } from '@/lib/api'
 
 interface SaleItem { type: string; title: string; buyer: string; price: string }
 type ProductType = '응모' | '쿠지' | '상점(운포인트)' | '상점(쌀포인트)'
-interface Product { id: number; type: ProductType; title: string; price: string; img: string; active: boolean; stock: number; maxTickets?: number; ticketPrice?: string }
+interface KujiItem { name: string; img: string }
+interface Product { id: number; type: ProductType; title: string; price: string; img: string; active: boolean; stock: number; maxTickets?: number; ticketPrice?: string; description?: string; durationDays?: number; kujiItems?: KujiItem[]; lowerCount?: number }
 
 // ── Mock Data ──────────────────────────────────────────────
 const DAILY_REV: Record<string, number> = {
@@ -239,7 +240,16 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>(INIT_PRODUCTS)
   const [showAddForm, setShowAddForm] = useState(false)
   const [nextId, setNextId] = useState(100)
-  const [newP, setNewP] = useState({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트' })
+  const [newP, setNewP] = useState({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' })
+  const autoMaxTickets = Math.floor((Number(newP.price.replace(/[^0-9]/g, '')) || 0) / 1000)
+  const [kujiItems, setKujiItems] = useState<KujiItem[]>([{ name: '', img: '' }])
+  const kujiItemCount = kujiItems.filter(it => it.name.trim()).length
+  const kujiLowerCount = Number(newP.stock) || 0
+  const kujiTotalPapers = kujiItemCount + kujiLowerCount
+  const addKujiItem = () => setKujiItems(prev => [...prev, { name: '', img: '' }])
+  const removeKujiItem = (idx: number) => setKujiItems(prev => prev.filter((_, i) => i !== idx))
+  const updateKujiItem = (idx: number, patch: Partial<KujiItem>) =>
+    setKujiItems(prev => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
 
   const chartData = revenueTab === '일별' ? getDailyWindow(revDate) : getMonthlyWindow(revMonth.slice(0, 4))
   const maxAmt = Math.max(...chartData.map(d => d.amount), 1)
@@ -392,8 +402,12 @@ export default function AdminPage() {
                 <div style={{ color: '#181818', fontWeight: 600, fontSize: 15, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
                 <div style={{ color: '#767676', fontSize: 13 }}>
                   {p.price}
-                  {p.maxTickets && <span style={{ marginLeft: 12, color: '#9a9a9a' }}>최대 {p.maxTickets}장</span>}
+                  {p.maxTickets && <span style={{ marginLeft: 12, color: '#9a9a9a' }}>{p.type === '쿠지' ? '총' : '최대'} {p.maxTickets}장</span>}
                   {p.ticketPrice && <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· 응모권 {p.ticketPrice}</span>}
+                  {p.durationDays && <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· {p.durationDays}일간 판매</span>}
+                  {p.type === '쿠지' && p.kujiItems && (
+                    <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· 상품 {p.kujiItems.length}개 · 하위상 {p.lowerCount ?? 0}개</span>
+                  )}
                 </div>
               </div>
               {/* 재고 */}
@@ -418,13 +432,129 @@ export default function AdminPage() {
           <div style={{ border: '1px solid #ececec', borderRadius: 14, background: '#ffffff', padding: '24px 24px 20px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             <div style={{ color: '#181818', fontWeight: 700, fontSize: 16, marginBottom: 18 }}>{TAB_EMOJI[productTab]} {productTab} 상품 추가</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div><div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>상품명 *</div><input style={lightInput} placeholder="상품 이름 입력" value={newP.title} onChange={e => setNewP(p => ({ ...p, title: e.target.value }))} /></div>
-              <div><div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>가격 *</div><input style={lightInput} placeholder="예: 50,000 운포인트" value={newP.price} onChange={e => setNewP(p => ({ ...p, price: e.target.value }))} /></div>
-              <div><div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>이미지 경로 (선택)</div><input style={lightInput} placeholder="예: /images/product.jpg" value={newP.img} onChange={e => setNewP(p => ({ ...p, img: e.target.value }))} /></div>
-              <div><div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>수량 *</div><input style={lightInput} placeholder="올릴 수량 입력 (예: 10)" type="number" min="1" value={newP.stock} onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))} /></div>
-              {(productTab === '응모' || productTab === '쿠지') && (
+              <div>
+                <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>{productTab === '쿠지' ? '쿠지 이름 *' : '상품명 *'}</div>
+                <input style={lightInput} placeholder={productTab === '쿠지' ? '예: 주술회전 나오야 젠인 쿠지' : '상품 이름 입력'} value={newP.title} onChange={e => setNewP(p => ({ ...p, title: e.target.value }))} />
+              </div>
+              <div>
+                <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>가격 *{productTab === '응모' && ' (정산용, 응모권 수 계산에도 사용)'}</div>
+                <input style={lightInput} placeholder={productTab === '응모' ? undefined : '예: 50,000 운포인트'} value={newP.price} onChange={e => setNewP(p => ({ ...p, price: e.target.value }))} />
+              </div>
+              {productTab !== '쿠지' && (
+                <div>
+                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>상품 이미지 (선택)</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {newP.img && (
+                      <img src={newP.img} alt="미리보기" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', border: '1px solid #e2e2e4', flexShrink: 0 }} />
+                    )}
+                    <label style={{ ...lightInput, width: 'auto', display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: newP.img ? '#181818' : '#9a9a9a' }}>
+                      {newP.img ? '이미지 변경' : '📎 이미지 파일 선택'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const reader = new FileReader()
+                          reader.onload = () => setNewP(p => ({ ...p, img: typeof reader.result === 'string' ? reader.result : '' }))
+                          reader.readAsDataURL(file)
+                        }}
+                      />
+                    </label>
+                    {newP.img && (
+                      <button type="button" onClick={() => setNewP(p => ({ ...p, img: '' }))} style={{ border: 'none', background: 'none', color: '#e14d72', fontSize: 12, cursor: 'pointer' }}>제거</button>
+                    )}
+                  </div>
+                </div>
+              )}
+              {productTab === '쿠지' && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ color: '#767676', fontSize: 12 }}>상품명 (상위상, 이미지 포함) *</div>
+                    <button type="button" onClick={addKujiItem} style={{ border: '1px solid #bfe3fb', background: '#eaf6fd', color: '#1477b8', borderRadius: 8, width: 24, height: 24, fontSize: 15, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}>+</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {kujiItems.map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #ececec', borderRadius: 10, padding: 10 }}>
+                        {item.img ? (
+                          <img src={item.img} alt="미리보기" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                        ) : (
+                          <div style={{ width: 40, height: 40, borderRadius: 6, background: '#f5f6f7', flexShrink: 0 }} />
+                        )}
+                        <input
+                          style={{ ...lightInput, flex: 1 }}
+                          placeholder={`상품명 ${idx + 1} (예: 나오야 젠인 피규어)`}
+                          value={item.name}
+                          onChange={e => updateKujiItem(idx, { name: e.target.value })}
+                        />
+                        <label style={{ ...lightInput, width: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: item.img ? '#181818' : '#9a9a9a', fontSize: 12, padding: '8px 10px' }}>
+                          📎 이미지
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={e => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              const reader = new FileReader()
+                              reader.onload = () => updateKujiItem(idx, { img: typeof reader.result === 'string' ? reader.result : '' })
+                              reader.readAsDataURL(file)
+                            }}
+                          />
+                        </label>
+                        {kujiItems.length > 1 && (
+                          <button type="button" onClick={() => removeKujiItem(idx)} style={{ border: 'none', background: 'none', color: '#e14d72', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>삭제</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {productTab === '응모' && (
+                <div>
+                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>상품 설명</div>
+                  <textarea
+                    style={{ ...lightInput, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }}
+                    placeholder="상품 상태, 구성품, 유의사항 등을 적어주세요"
+                    value={newP.description}
+                    onChange={e => setNewP(p => ({ ...p, description: e.target.value }))}
+                  />
+                </div>
+              )}
+              {productTab === '쿠지' && (
+                <div><div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>하위상 갯수 *</div><input style={lightInput} placeholder="예: 40" type="number" min="0" value={newP.stock} onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))} /></div>
+              )}
+              {productTab !== '응모' && productTab !== '쿠지' && (
+                <div><div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>수량 *</div><input style={lightInput} placeholder="올릴 수량 입력 (예: 10)" type="number" min="1" value={newP.stock} onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))} /></div>
+              )}
+              {productTab === '응모' && (
+                <div>
+                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>최대 응모권 수 (자동 계산: 가격 ÷ 1,000)</div>
+                  <div style={{ ...lightInput, background: '#f5f6f7', color: autoMaxTickets ? '#181818' : '#9a9a9a' }}>
+                    {autoMaxTickets ? `${autoMaxTickets.toLocaleString()}장` : '가격을 입력하면 자동으로 계산돼요'}
+                  </div>
+                </div>
+              )}
+              {productTab === '응모' && (
+                <div>
+                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>판매 기간 (일) *</div>
+                  <input style={lightInput} placeholder="예: 3" type="number" min="1" value={newP.durationDays} onChange={e => setNewP(p => ({ ...p, durationDays: e.target.value }))} />
+                  <p style={{ margin: '6px 0 0', fontSize: 12, color: '#9a9a9a' }}>
+                    {Number(newP.durationDays) > 0
+                      ? `등록 시점부터 ${newP.durationDays}일 뒤, ${new Date(Date.now() + Number(newP.durationDays) * 86400000).toLocaleDateString('ko-KR')}에 마감됩니다.`
+                      : '기간이 지나면 자동으로 응모가 마감돼요.'}
+                  </p>
+                </div>
+              )}
+              {productTab === '쿠지' && (
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{ flex: 1 }}><div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>최대 응모권 수</div><input style={lightInput} placeholder="기본값: 50" type="number" value={newP.maxTickets} onChange={e => setNewP(p => ({ ...p, maxTickets: e.target.value }))} /></div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>총 쿠지 종이 수 (자동 계산: 상품 수 + 하위상 갯수)</div>
+                    <div style={{ ...lightInput, background: '#f5f6f7', color: kujiTotalPapers ? '#181818' : '#9a9a9a' }}>
+                      {kujiTotalPapers ? `${kujiTotalPapers.toLocaleString()}장 (상품 ${kujiItemCount}개 + 하위상 ${kujiLowerCount}개)` : '상품명과 하위상 갯수를 입력하면 계산돼요'}
+                    </div>
+                  </div>
                   <div style={{ flex: 1 }}><div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>응모권 가격</div><input style={lightInput} placeholder="기본값: 1,000 운포인트" value={newP.ticketPrice} onChange={e => setNewP(p => ({ ...p, ticketPrice: e.target.value }))} /></div>
                 </div>
               )}
@@ -432,12 +562,25 @@ export default function AdminPage() {
             <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
               <button onClick={() => {
                 if (!newP.title.trim() || !newP.price.trim()) return
-                setProducts(prev => [...prev, { id: nextId, type: productTab, title: newP.title, price: newP.price, img: newP.img, active: true, stock: Number(newP.stock) || 1, ...(productTab === '응모' || productTab === '쿠지' ? { maxTickets: newP.maxTickets ? Number(newP.maxTickets) : 50, ticketPrice: newP.ticketPrice || '1,000 운포인트' } : {}) } as Product])
+                if (productTab === '쿠지' && kujiItemCount === 0) return
+                const kujiThumb = kujiItems.find(it => it.name.trim() && it.img)?.img || ''
+                setProducts(prev => [...prev, {
+                  id: nextId, type: productTab, title: newP.title, price: newP.price,
+                  img: productTab === '쿠지' ? kujiThumb : newP.img,
+                  active: true,
+                  stock: productTab === '응모' ? 1 : (Number(newP.stock) || 1),
+                  ...(productTab === '응모'
+                    ? { maxTickets: autoMaxTickets || 50, ticketPrice: '1,000 운포인트', description: newP.description, durationDays: Number(newP.durationDays) || 3 }
+                    : productTab === '쿠지'
+                    ? { maxTickets: kujiTotalPapers || 50, ticketPrice: newP.ticketPrice || '1,000 운포인트', kujiItems: kujiItems.filter(it => it.name.trim()), lowerCount: kujiLowerCount }
+                    : {}),
+                } as Product])
                 setNextId(n => n + 1)
-                setNewP({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트' })
+                setNewP({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' })
+                setKujiItems([{ name: '', img: '' }])
                 setShowAddForm(false)
               }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: '#181818', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>추가하기</button>
-              <button onClick={() => { setShowAddForm(false); setNewP({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트' }) }} style={{ padding: '11px 24px', borderRadius: 10, border: '1px solid #e2e2e4', background: '#f5f6f7', color: '#767676', fontSize: 14, cursor: 'pointer' }}>취소</button>
+              <button onClick={() => { setShowAddForm(false); setNewP({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' }); setKujiItems([{ name: '', img: '' }]) }} style={{ padding: '11px 24px', borderRadius: 10, border: '1px solid #e2e2e4', background: '#f5f6f7', color: '#767676', fontSize: 14, cursor: 'pointer' }}>취소</button>
             </div>
           </div>
         )}

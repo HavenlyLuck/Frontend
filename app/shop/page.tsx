@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { isLoggedIn } from '@/lib/auth'
 
 const EUNG_ITEMS = [
   { href: '/shop/sticker-set', img: '/images/demo-1.jpg', alt: '굿즈 스티커 세트', badge: '🎰 운포인트 상점', title: '캐릭터 굿즈 스티커 세트', price: '12,000 운포인트', views: 19, wishes: 2, chats: 0, stock: 15 },
@@ -21,8 +23,17 @@ const SORTS = ['최신순', '낮은 가격순', '높은 가격순', '인기순']
 type StoreTab = '운포인트' | '쌀포인트'
 
 export default function ShopPage() {
+  const router = useRouter()
   const [sort, setSort] = useState('최신순')
   const [storeTab, setStoreTab] = useState<StoreTab>('운포인트')
+
+  const requireLogin = (e: React.MouseEvent) => {
+    if (!isLoggedIn()) {
+      e.preventDefault()
+      alert('로그인 후 이용해주세요.')
+      router.push('/login')
+    }
+  }
 
   return (
     <div>
@@ -87,7 +98,15 @@ export default function ShopPage() {
         {storeTab === '운포인트' && (
           <div className="product-grid-home">
             {EUNG_ITEMS.map((item, i) => (
-              <Link key={i} className="product-card-home" href={item.stock === 0 ? '#' : item.href} onClick={item.stock === 0 ? e => e.preventDefault() : undefined}>
+              <Link
+                key={i}
+                className="product-card-home"
+                href={item.stock === 0 ? '#' : item.href}
+                onClick={e => {
+                  if (item.stock === 0) { e.preventDefault(); return }
+                  requireLogin(e)
+                }}
+              >
                 <div className="card-img" style={{ position: 'relative' }}>
                   <img src={item.img} alt={item.alt} style={{ filter: item.stock === 0 ? 'blur(3px) brightness(0.45)' : undefined }} />
                   {item.stock === 0 && (
@@ -115,7 +134,7 @@ export default function ShopPage() {
         {storeTab === '쌀포인트' && (
           <div className="product-grid-home">
             {SSAL_ITEMS.map((item, i) => (
-              <Link key={i} className="product-card-home" href={item.href}>
+              <Link key={i} className="product-card-home" href={item.href} onClick={requireLogin}>
                 <div className="card-img" style={{ fontSize: 72 }}>
                   {item.emoji}
                 </div>

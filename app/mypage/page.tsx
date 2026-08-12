@@ -203,7 +203,7 @@ export default function MyPage() {
               { icon: "🎟", label: "응모 내역", badge: 5 },
               { icon: "📦", label: "보관함", href: "/mypage/storage", badge: getReadyStorageCount() },
               { icon: "❤️", label: "찜한 상품", href: "/wishlist" },
-              { icon: "⚙️", label: "설정" },
+              { icon: "⚙️", label: "설정", href: "/mypage/settings" },
             ].map((item) => {
               const content = (
                 <>

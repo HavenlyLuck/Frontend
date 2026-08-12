@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, useRouter } from 'next/navigation'
 import { getProduct } from '@/lib/data'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
+import { isLoggedIn } from '@/lib/auth'
 
 function formatCountdown(seconds: number, urgent: boolean): string {
   if (seconds <= 0) return '마감'
@@ -20,6 +21,14 @@ function formatCountdown(seconds: number, urgent: boolean): string {
 export default function ProductPage({ params }: { params: { id: string } }) {
   const product = getProduct(params.id)
   if (!product) notFound()
+
+  const router = useRouter()
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      alert('로그인 후 이용해주세요.')
+      router.replace('/login')
+    }
+  }, [router])
 
   const wishId = `raffle-${product.id}`
   const [ticketCount, setTicketCount] = useState(1)

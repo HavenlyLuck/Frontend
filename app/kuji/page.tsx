@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { isLoggedIn } from '@/lib/auth'
 
 const ITEMS = [
   { href: '/kuji/naoya', img: '/images/naoya.jpg', alt: '나오야 젠인 쿠지', badge: '🎁 쿠지 진행 중', title: '주술회전 나오야 젠인 쿠지', price: '10,000 운포인트 / 1장', pct: 60, count: 60, max: 100, views: 51, wishes: 9, chats: 2 },
@@ -15,7 +17,16 @@ const ITEMS = [
 const SORTS = ['최신순', '마감임박순', '참여율 높은순', '참여율 낮은순']
 
 export default function KujiPage() {
+  const router = useRouter()
   const [sort, setSort] = useState('최신순')
+
+  const requireLogin = (e: React.MouseEvent) => {
+    if (!isLoggedIn()) {
+      e.preventDefault()
+      alert('로그인 후 이용해주세요.')
+      router.push('/login')
+    }
+  }
 
   return (
     <div>
@@ -50,7 +61,7 @@ export default function KujiPage() {
 
         <div className="product-grid-home">
           {ITEMS.map((item, i) => (
-            <Link key={i} className="product-card-home" href={item.href}>
+            <Link key={i} className="product-card-home" href={item.href} onClick={requireLogin}>
               <div className="card-img">
                 <img src={item.img} alt={item.alt} />
               </div>
