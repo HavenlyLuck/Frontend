@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, useRouter } from 'next/navigation'
 import {
   getKujiProduct,
   getRemainingTickets,
@@ -12,12 +12,21 @@ import {
 } from '@/lib/kujiData'
 import { addStorageItem } from '@/lib/storage'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
+import { isLoggedIn } from '@/lib/auth'
 
 type DrawResult = ReturnType<typeof drawKujiTickets>
 
 export default function KujiProductPage({ params }: { params: { id: string } }) {
   const product = getKujiProduct(params.id)
   if (!product) notFound()
+
+  const router = useRouter()
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      alert('로그인 후 이용해주세요.')
+      router.replace('/login')
+    }
+  }, [router])
 
   const wishId = `kuji-${product.id}`
   const [, bump] = useState(0)

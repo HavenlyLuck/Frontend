@@ -1,15 +1,24 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, useRouter } from 'next/navigation'
 import { getShopProduct } from '@/lib/shopData'
 import { addStorageItem } from '@/lib/storage'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
+import { isLoggedIn } from '@/lib/auth'
 
 export default function ShopProductPage({ params }: { params: { id: string } }) {
   const product = getShopProduct(params.id)
   if (!product) notFound()
+
+  const router = useRouter()
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      alert('로그인 후 이용해주세요.')
+      router.replace('/login')
+    }
+  }, [router])
 
   const wishId = `shop-${product.id}`
   const [qty, setQty] = useState(1)
