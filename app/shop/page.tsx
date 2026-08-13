@@ -9,7 +9,7 @@ const EUNG_ITEMS = [
   { href: '/shop/sticker-set', img: '/images/demo-1.jpg', alt: '굿즈 스티커 세트', badge: '🎰 운포인트 상점', title: '캐릭터 굿즈 스티커 세트', price: '12,000 운포인트', views: 19, wishes: 2, chats: 0, stock: 15 },
   { href: '/shop/acrylic-stand', img: '/images/demo-2.jpg', alt: '아크릴 스탠드', badge: '🎰 운포인트 상점', title: '인기 캐릭터 아크릴 스탠드', price: '18,000 운포인트', views: 31, wishes: 6, chats: 1, stock: 8 },
   { href: '/shop/mini-figure', img: '/images/demo-4.jpg', alt: '미니 피규어', badge: '🎰 운포인트 상점', title: '데스크용 미니 피규어', price: '25,000 운포인트', views: 27, wishes: 4, chats: 0, stock: 0 },
-  { href: '/shop/ps5-controller', img: '/images/ps5.jpg', alt: 'PS5 무선 컨트롤러', badge: '🎰 운포인트 상점', title: 'PS5 듀얼센스 무선 컨트롤러', price: '78,000 운포인트', views: 45, wishes: 11, chats: 3, stock: 4 },
+  { href: '/shop/ps5-controller', img: '/images/ps5.jpg', alt: 'PS5 무선 컨트롤러', badge: '🎰 운포인트 상점', title: 'PS5 듀얼센스 무선 컨트롤러', price: '78,000 운포인트', views: 45, wishes: 11, chats: 3, stock: 3 },
   { href: '/shop/iphone-case', img: '/images/iphone14pro.jpg', alt: '아이폰 케이스', badge: '🎰 운포인트 상점', title: '아이폰 14 Pro 투명 케이스', price: '15,000 운포인트', views: 22, wishes: 3, chats: 0, stock: 12 },
   { href: '/shop/figure-case', img: '/images/demo-3.jpg', alt: '피규어 진열 케이스', badge: '🎰 운포인트 상점', title: '피규어 먼지방지 진열 케이스', price: '9,000 운포인트', views: 16, wishes: 1, chats: 0, stock: 5 },
 ]
@@ -118,7 +118,14 @@ export default function ShopPage() {
                 <div className="card-body">
                   <div className="card-raffle-badge">{item.badge}</div>
                   <div className="card-title" style={{ color: item.stock === 0 ? '#b0b0b0' : undefined }}>{item.title}</div>
-                  <div className="card-price" style={{ color: item.stock === 0 ? '#c8c8c8' : undefined }}>{item.price}</div>
+                  <div className="card-price" style={{ color: item.stock === 0 ? '#c8c8c8' : undefined, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span>{item.price}</span>
+                    {item.stock > 0 && item.stock <= 3 && (
+                      <span style={{ background: '#4fa8e8', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, flexShrink: 0 }}>
+                        재고 {item.stock}개 남음
+                      </span>
+                    )}
+                  </div>
                   <div className="card-stats">
                     <span>👁 {item.views}</span>
                     <span>🤍 {item.wishes}</span>

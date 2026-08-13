@@ -76,8 +76,7 @@ export default function KujiPage() {
                   <span className="card-progress-pct">{item.pct}%</span>
                 </div>
                 <div className="card-progress-label">
-                  <span><span className="cnt">{item.count}명</span> 참여</span>
-                  <span>최대 {item.max}명</span>
+                  <span>총 {item.max}장 중 <span className="cnt">{item.count}장</span> 소진</span>
                 </div>
                 <div className="card-stats">
                   <span>👁 {item.views}</span>
