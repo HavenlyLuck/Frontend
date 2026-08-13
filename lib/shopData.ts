@@ -73,7 +73,7 @@ export const shopProducts: ShopProduct[] = [
     image: '/images/ps5.jpg',
     currency: '운포인트',
     price: 78000,
-    stock: 4,
+    stock: 3,
     meta: { views: 45, wishes: 11, chats: 3, time: '5시간 전' },
     relatedProducts: [],
   },
