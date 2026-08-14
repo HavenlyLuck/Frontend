@@ -511,7 +511,7 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
-              {productTab === '응모' && (
+              {productTab !== '쿠지' && (
                 <div>
                   <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>상품 설명</div>
                   <textarea
@@ -573,7 +573,7 @@ export default function AdminPage() {
                     ? { maxTickets: autoMaxTickets || 50, ticketPrice: '1,000 운포인트', description: newP.description, durationDays: Number(newP.durationDays) || 3 }
                     : productTab === '쿠지'
                     ? { maxTickets: kujiTotalPapers || 50, ticketPrice: newP.ticketPrice || '1,000 운포인트', kujiItems: kujiItems.filter(it => it.name.trim()), lowerCount: kujiLowerCount }
-                    : {}),
+                    : { description: newP.description }),
                 } as Product])
                 setNextId(n => n + 1)
                 setNewP({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' })

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { getReadyStorageCount } from "@/lib/storage";
+import { getOngoingEntries, getParticipationCount, getWinCount } from "@/lib/raffleEntries";
 
 const CONFETTI_COLORS = [
   "#7c6aff",
@@ -115,11 +116,11 @@ export default function MyPage() {
             <div className="profile-rating">⭐ 4.9</div>
             <div className="profile-stats">
               <div className="profile-stat">
-                <div className="profile-stat-value">23</div>
+                <div className="profile-stat-value">{getParticipationCount()}</div>
                 <div className="profile-stat-label">응모 내역</div>
               </div>
               <div className="profile-stat">
-                <div className="profile-stat-value">3</div>
+                <div className="profile-stat-value">{getWinCount()}</div>
                 <div className="profile-stat-label">당첨 횟수</div>
               </div>
             </div>
@@ -200,7 +201,7 @@ export default function MyPage() {
           <div className="sidebar-menu" style={{ marginTop: 24 }}>
             {[
               { icon: "🏠", label: "내 활동 요약", active: true },
-              { icon: "🎟", label: "응모 내역", badge: 5 },
+              { icon: "🎟", label: "응모 내역", href: "/mypage/entries", badge: getOngoingEntries().length },
               { icon: "📦", label: "보관함", href: "/mypage/storage", badge: getReadyStorageCount() },
               { icon: "❤️", label: "찜한 상품", href: "/wishlist" },
               { icon: "⚙️", label: "설정", href: "/mypage/settings" },
