@@ -85,7 +85,7 @@ export default function WithdrawPage() {
           </div>
 
           <button type="submit"
-            style={{ padding: '14px', borderRadius: 10, background: '#181818', color: '#ffffff', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+            style={{ padding: '14px', borderRadius: 10, background: '#ffffff', color: '#181818', fontSize: 16, fontWeight: 700, border: '1px solid #e2e2e4', cursor: 'pointer' }}>
             {amount ? `${Number(amount).toLocaleString()}P 인출 신청` : '인출 신청'}
           </button>
         </form>

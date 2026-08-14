@@ -25,7 +25,7 @@ export default function GuidePage() {
 
         <section style={{ marginBottom: 56 }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, color: '#181818', marginBottom: 16 }}>
-            <span className="emoji">🎟</span> 포인트
+            <span className="emoji">🎰</span> 포인트
           </h2>
           <div style={box('#F2F2F2')}>
             <span style={sentenceStyle}>저희는 크게 🎰 운포인트와 🌾 쌀포인트로 나뉘어져 있습니다.</span>
@@ -42,7 +42,7 @@ export default function GuidePage() {
 
         <section id="응모" style={{ marginBottom: 56, scrollMarginTop: 140 }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, color: '#181818', marginBottom: 16 }}>
-            <span className="emoji">🎰</span> 응모
+            <span className="emoji">🎟</span> 응모
           </h2>
           <div style={box('#F2F2F2')}>
             <span style={sentenceStyle}>저희의 주된 시스템인 응모 시스템입니다.</span>
