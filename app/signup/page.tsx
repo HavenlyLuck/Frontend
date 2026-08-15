@@ -14,6 +14,7 @@ const DUPL_CHECK_FIELDS: Record<'nickname' | 'userId' | 'email', DuplCheckField>
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,20}$/
 
 const inputStyle: React.CSSProperties = {
   flex: 1,
@@ -101,6 +102,10 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!PASSWORD_REGEX.test(form.password)) {
+      alert('비밀번호는 영문 대문자, 소문자, 숫자, 특수문자를 모두 포함한 8~20자여야 합니다.')
+      return
+    }
     if (form.password !== form.confirm) { alert('비밀번호가 일치하지 않습니다.'); return }
     if (checks.nickname !== 'ok' || checks.userId !== 'ok' || checks.email !== 'ok') {
       alert('닉네임, 아이디, 이메일 중복확인을 완료해주세요.'); return
@@ -155,7 +160,12 @@ export default function SignupPage() {
           </div>
 
           {/* 비밀번호 */}
-          <input name="password" type="password" placeholder="비밀번호" value={form.password} onChange={handleChange} required style={inputStyle} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <input name="password" type="password" placeholder="비밀번호" value={form.password} onChange={handleChange} required maxLength={20} style={inputStyle} />
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: !form.password ? '#9a9a9a' : PASSWORD_REGEX.test(form.password) ? '#16a34a' : '#e14d72' }}>
+              영문 대소문자, 숫자, 특수문자를 모두 포함한 8~20자
+            </p>
+          </div>
 
           {/* 비밀번호 확인 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

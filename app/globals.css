@@ -12,7 +12,7 @@ body {
   width: 100%;
   background: #ffffff;
   color: #181818;
-  font-family: "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
   min-height: 100vh;
 }
 

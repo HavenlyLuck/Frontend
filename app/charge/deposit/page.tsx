@@ -91,7 +91,7 @@ export default function DepositPage() {
           </div>
 
           <button type="submit"
-            style={{ padding: '14px', borderRadius: 10, background: '#181818', color: '#ffffff', fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+            style={{ padding: '14px', borderRadius: 10, background: '#ffffff', color: '#181818', fontSize: 16, fontWeight: 700, border: '1px solid #e2e2e4', cursor: 'pointer' }}>
             {amount ? `${Number(amount).toLocaleString()}원 충전하기` : '충전하기'}
           </button>
         </form>

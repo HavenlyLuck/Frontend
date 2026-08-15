@@ -55,7 +55,7 @@ export default function PointHubPage() {
           </Link>
           <Link
             href="/charge/deposit"
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0', borderRadius: 12, border: 'none', background: '#181818', textDecoration: 'none', color: '#ffffff', transition: 'all 0.15s' }}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0', borderRadius: 12, border: '1px solid #e2e2e4', background: '#ffffff', textDecoration: 'none', color: '#454545', transition: 'all 0.15s' }}
           >
             <span style={{ fontSize: 24 }}>🎟</span>
             <span style={{ fontSize: 14, fontWeight: 600 }}>포인트 충전</span>

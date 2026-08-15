@@ -2,74 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { verifyAdmin, ApiError } from '@/lib/api'
+import { TODAY, DAILY_REV, MONTHLY_REV, DAILY_SALES } from '@/lib/adminStats'
+import {
+  PRODUCTS, PRODUCT_TABS, TAB_EMOJI, addProduct, removeProduct, toggleProductActive,
+  type ProductType, type KujiItem, type Product,
+} from '@/lib/adminProducts'
 
-interface SaleItem { type: string; title: string; buyer: string; price: string }
-type ProductType = '응모' | '쿠지' | '상점(운포인트)' | '상점(쌀포인트)'
-interface KujiItem { name: string; img: string }
-interface Product { id: number; type: ProductType; title: string; price: string; img: string; active: boolean; stock: number; maxTickets?: number; ticketPrice?: string; description?: string; durationDays?: number; kujiItems?: KujiItem[]; lowerCount?: number }
-
-// ── Mock Data ──────────────────────────────────────────────
-const DAILY_REV: Record<string, number> = {
-  '2026-07-01': 389000, '2026-07-02': 612000, '2026-07-03': 478000,
-  '2026-07-04': 325000, '2026-07-05': 189000, '2026-07-06': 534000,
-  '2026-07-07': 721000, '2026-07-08': 398000, '2026-07-09': 265000,
-  '2026-07-10': 489000, '2026-07-11': 634000, '2026-07-12': 312000,
-  '2026-07-13': 578000, '2026-07-14': 423000, '2026-07-15': 267000,
-  '2026-07-16': 541000, '2026-07-17': 398000, '2026-07-18': 712000,
-  '2026-07-19': 289000, '2026-07-20': 456000, '2026-07-21': 623000,
-  '2026-07-22': 345000, '2026-07-23': 578000, '2026-07-24': 234000,
-  '2026-07-25': 467000, '2026-07-26': 312000, '2026-07-27': 689000,
-  '2026-07-28': 384000, '2026-07-29': 521000, '2026-07-30': 293000,
-  '2026-07-31': 617000,
-  '2026-08-01': 748000, '2026-08-02': 432000, '2026-08-03': 195000,
-  '2026-08-04': 863000, '2026-08-05': 576000, '2026-08-06': 941000,
-}
-
-const MONTHLY_REV: Record<string, number> = {
-  '2025-09': 2840000, '2025-10': 3670000, '2025-11': 4320000, '2025-12': 6180000,
-  '2026-01': 5240000, '2026-02': 7810000, '2026-03': 6430000, '2026-04': 9250000,
-  '2026-05': 8120000, '2026-06': 11430000, '2026-07': 10870000, '2026-08': 3760000,
-}
-
-const DAILY_SALES: Record<string, SaleItem[]> = {
-  '2026-08-06': [
-    { type: '응모', title: '아이폰 14 Pro 256GB 스페이스 블랙', buyer: 'user_2847', price: '650,000 운포인트' },
-    { type: '상점', title: '인기 캐릭터 아크릴 스탠드', buyer: 'user_1023', price: '18,000 운포인트' },
-    { type: '쿠지', title: '주술회전 나오야 젠인 쿠지', buyer: 'user_3391', price: '10,000 운포인트' },
-    { type: '응모', title: '플레이스테이션 5 디스크 에디션', buyer: 'user_0584', price: '450,000 운포인트' },
-    { type: '상점', title: '캐릭터 굿즈 스티커 세트', buyer: 'user_2210', price: '12,000 운포인트' },
-  ],
-  '2026-08-05': [
-    { type: '쿠지', title: '원피스 A상 루피 쿠지', buyer: 'user_1748', price: '10,000 운포인트' },
-    { type: '응모', title: '에어팟 프로 2세대', buyer: 'user_3902', price: '180,000 운포인트' },
-    { type: '상점', title: 'PS5 듀얼센스 무선 컨트롤러', buyer: 'user_0091', price: '78,000 운포인트' },
-  ],
-  '2026-08-04': [
-    { type: '응모', title: '닌텐도 스위치 OLED', buyer: 'user_2215', price: '280,000 운포인트' },
-    { type: '쿠지', title: '귀멸의 칼날 최애의 쿠지', buyer: 'user_4412', price: '10,000 운포인트' },
-    { type: '상점', title: '데스크용 미니 피규어', buyer: 'user_1902', price: '25,000 운포인트' },
-    { type: '응모', title: '갤럭시 워치 6 클래식', buyer: 'user_0773', price: '220,000 운포인트' },
-  ],
-  '2026-08-02': [
-    { type: '상점', title: '아이폰 14 Pro 투명 케이스', buyer: 'user_2984', price: '15,000 운포인트' },
-    { type: '쿠지', title: '산리오 캐릭터즈 쿠지', buyer: 'user_3315', price: '10,000 운포인트' },
-  ],
-  '2026-08-01': [
-    { type: '쿠지', title: '명탐정 코난 랜덤 쿠지', buyer: 'user_1188', price: '10,000 운포인트' },
-    { type: '응모', title: '소니 WH-1000XM5', buyer: 'user_2241', price: '250,000 운포인트' },
-  ],
-  '2026-07-31': [
-    { type: '응모', title: '소니 ZV-E10 미러리스', buyer: 'user_1122', price: '380,000 운포인트' },
-    { type: '쿠지', title: '드래곤볼 갓 오브 데스티니 쿠지', buyer: 'user_3387', price: '10,000 운포인트' },
-  ],
-  '2026-07-30': [
-    { type: '상점', title: '인기 캐릭터 아크릴 스탠드', buyer: 'user_0441', price: '18,000 운포인트' },
-    { type: '응모', title: '아이패드 Air 5세대', buyer: 'user_2819', price: '480,000 운포인트' },
-  ],
-}
-
-const TODAY = '2026-08-06'
 const TYPE_COLOR: Record<string, string> = { '응모': '#e14d72', '쿠지': '#4fa8e8', '상점': '#7c3aed' }
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
@@ -193,20 +133,6 @@ function MonthCalendar({ selected, onSelect, highlighted }: {
   )
 }
 
-// ── Product Data ───────────────────────────────────────────
-const INIT_PRODUCTS: Product[] = [
-  { id: 1, type: '응모', title: '아이폰 14 Pro 256GB 스페이스 블랙', price: '650,000 운포인트', img: '/images/iphone14pro.jpg', active: true, stock: 3, maxTickets: 50, ticketPrice: '1,000 운포인트' },
-  { id: 2, type: '응모', title: '플레이스테이션 5 디스크 에디션', price: '450,000 운포인트', img: '/images/ps5.jpg', active: true, stock: 2, maxTickets: 50, ticketPrice: '1,000 운포인트' },
-  { id: 3, type: '응모', title: '에어팟 프로 2세대', price: '180,000 운포인트', img: '/images/demo-4.jpg', active: true, stock: 5, maxTickets: 50, ticketPrice: '1,000 운포인트' },
-  { id: 4, type: '쿠지', title: '주술회전 나오야 젠인 쿠지', price: '10,000 운포인트', img: '/images/naoya.jpg', active: true, stock: 2, maxTickets: 50, ticketPrice: '10,000 운포인트' },
-  { id: 5, type: '쿠지', title: '원피스 A상 루피 쿠지', price: '10,000 운포인트', img: '/images/demo-5.jpg', active: true, stock: 1, maxTickets: 50, ticketPrice: '10,000 운포인트' },
-  { id: 6, type: '상점(운포인트)', title: '캐릭터 굿즈 스티커 세트', price: '12,000 운포인트', img: '/images/demo-1.jpg', active: true, stock: 15 },
-  { id: 7, type: '상점(운포인트)', title: '인기 캐릭터 아크릴 스탠드', price: '18,000 운포인트', img: '/images/demo-2.jpg', active: true, stock: 8 },
-  { id: 9, type: '상점(운포인트)', title: '데스크용 미니 피규어', price: '25,000 운포인트', img: '/images/demo-4.jpg', active: true, stock: 0 },
-  { id: 8, type: '상점(쌀포인트)', title: '쌀포인트 특별 상품', price: '10,000 쌀포인트', img: '', active: true, stock: 20 },
-]
-const PRODUCT_TABS: ProductType[] = ['응모', '쿠지', '상점(운포인트)', '상점(쌀포인트)']
-const TAB_EMOJI: Record<ProductType, string> = { '응모': '🎟', '쿠지': '🎁', '상점(운포인트)': '🎰', '상점(쌀포인트)': '🌾' }
 const lightInput: React.CSSProperties = { background: '#ffffff', border: '1px solid #e2e2e4', borderRadius: 8, color: '#181818', padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
 
 // ── Main ───────────────────────────────────────────────────
@@ -237,16 +163,16 @@ export default function AdminPage() {
   const [saleDate, setSaleDate] = useState(TODAY)
   const [showSalCal, setShowSalCal] = useState(false)
   const [productTab, setProductTab] = useState<ProductType>('응모')
-  const [products, setProducts] = useState<Product[]>(INIT_PRODUCTS)
+  const [products, setProducts] = useState<Product[]>(() => [...PRODUCTS])
   const [showAddForm, setShowAddForm] = useState(false)
   const [nextId, setNextId] = useState(100)
-  const [newP, setNewP] = useState({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' })
+  const [newP, setNewP] = useState({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' })
   const autoMaxTickets = Math.floor((Number(newP.price.replace(/[^0-9]/g, '')) || 0) / 1000)
-  const [kujiItems, setKujiItems] = useState<KujiItem[]>([{ name: '', img: '' }])
-  const kujiItemCount = kujiItems.filter(it => it.name.trim()).length
+  const [kujiItems, setKujiItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1', cost: '' }])
+  const kujiItemCount = kujiItems.filter(it => it.name.trim()).reduce((sum, it) => sum + (Number(it.count) || 1), 0)
   const kujiLowerCount = Number(newP.stock) || 0
   const kujiTotalPapers = kujiItemCount + kujiLowerCount
-  const addKujiItem = () => setKujiItems(prev => [...prev, { name: '', img: '' }])
+  const addKujiItem = () => setKujiItems(prev => [...prev, { name: '', img: '', count: '1', cost: '' }])
   const removeKujiItem = (idx: number) => setKujiItems(prev => prev.filter((_, i) => i !== idx))
   const updateKujiItem = (idx: number, patch: Partial<KujiItem>) =>
     setKujiItems(prev => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
@@ -375,6 +301,20 @@ export default function AdminPage() {
           }
         </div>
 
+        {/* 자금 관리 바로가기 */}
+        <Link href="/admin/finance" style={{ textDecoration: 'none' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: '#181818', borderRadius: 14, padding: '20px 24px', marginBottom: 36, cursor: 'pointer',
+          }}>
+            <div>
+              <div style={{ color: '#ffffff', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>💰 자금 관리</div>
+              <div style={{ color: '#9a9a9a', fontSize: 13 }}>부대비용을 기록하고 일별 · 주별 · 월별 · 년도별 순이익을 확인하세요</div>
+            </div>
+            <span style={{ color: '#ffffff', fontSize: 20 }}>→</span>
+          </div>
+        </Link>
+
         {/* 상품 관리 */}
         <div style={{ color: '#181818', fontWeight: 700, fontSize: 18, marginBottom: 18 }}>📦 상품 관리</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -402,6 +342,7 @@ export default function AdminPage() {
                 <div style={{ color: '#181818', fontWeight: 600, fontSize: 15, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
                 <div style={{ color: '#767676', fontSize: 13 }}>
                   {p.price}
+                  {p.cost && <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· 제품 원가 {p.cost}</span>}
                   {p.maxTickets && <span style={{ marginLeft: 12, color: '#9a9a9a' }}>{p.type === '쿠지' ? '총' : '최대'} {p.maxTickets}장</span>}
                   {p.ticketPrice && <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· 응모권 {p.ticketPrice}</span>}
                   {p.durationDays && <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· {p.durationDays}일간 판매</span>}
@@ -417,8 +358,8 @@ export default function AdminPage() {
               </div>
               <div style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, flexShrink: 0, background: p.active ? '#eaf6fd' : '#f0f0f0', color: p.active ? '#1477b8' : '#9a9a9a', border: `1px solid ${p.active ? '#bfe3fb' : '#e2e2e4'}` }}>{p.active ? '활성' : '비활성'}</div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button onClick={() => setProducts(prev => prev.map(x => x.id === p.id ? { ...x, active: !x.active } : x))} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${p.active ? '#fecdd3' : '#bfe3fb'}`, background: p.active ? '#fff0f4' : '#eaf6fd', color: p.active ? '#e14d72' : '#1477b8' }}>{p.active ? '내리기' : '올리기'}</button>
-                <button onClick={() => setProducts(prev => prev.filter(x => x.id !== p.id))} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid #fecdd3', background: '#fff0f4', color: '#e14d72' }}>삭제</button>
+                <button onClick={() => { toggleProductActive(p.id); setProducts(prev => prev.map(x => x.id === p.id ? { ...x, active: !x.active } : x)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${p.active ? '#fecdd3' : '#bfe3fb'}`, background: p.active ? '#fff0f4' : '#eaf6fd', color: p.active ? '#e14d72' : '#1477b8' }}>{p.active ? '내리기' : '올리기'}</button>
+                <button onClick={() => { removeProduct(p.id); setProducts(prev => prev.filter(x => x.id !== p.id)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid #fecdd3', background: '#fff0f4', color: '#e14d72' }}>삭제</button>
               </div>
             </div>
           ))}
@@ -436,10 +377,18 @@ export default function AdminPage() {
                 <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>{productTab === '쿠지' ? '쿠지 이름 *' : '상품명 *'}</div>
                 <input style={lightInput} placeholder={productTab === '쿠지' ? '예: 주술회전 나오야 젠인 쿠지' : '상품 이름 입력'} value={newP.title} onChange={e => setNewP(p => ({ ...p, title: e.target.value }))} />
               </div>
-              <div>
-                <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>가격 *{productTab === '응모' && ' (정산용, 응모권 수 계산에도 사용)'}</div>
-                <input style={lightInput} placeholder={productTab === '응모' ? undefined : '예: 50,000 운포인트'} value={newP.price} onChange={e => setNewP(p => ({ ...p, price: e.target.value }))} />
-              </div>
+              {productTab !== '쿠지' && (
+                <div>
+                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>판매가격 *</div>
+                  <input style={lightInput} placeholder={productTab === '응모' ? undefined : '예: 50,000 운포인트'} value={newP.price} onChange={e => setNewP(p => ({ ...p, price: e.target.value }))} />
+                </div>
+              )}
+              {productTab !== '쿠지' && (
+                <div>
+                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>제품 원가</div>
+                  <input style={lightInput} placeholder="예: 30,000원" value={newP.cost} onChange={e => setNewP(p => ({ ...p, cost: e.target.value }))} />
+                </div>
+              )}
               {productTab !== '쿠지' && (
                 <div>
                   <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>상품 이미지 (선택)</div>
@@ -488,6 +437,25 @@ export default function AdminPage() {
                           value={item.name}
                           onChange={e => updateKujiItem(idx, { name: e.target.value })}
                         />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                          <input
+                            style={{ ...lightInput, width: 56, textAlign: 'center', padding: '8px 6px' }}
+                            type="number"
+                            min="1"
+                            placeholder="1"
+                            value={item.count}
+                            onChange={e => updateKujiItem(idx, { count: e.target.value })}
+                          />
+                          <span style={{ fontSize: 12, color: '#9a9a9a' }}>개</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                          <input
+                            style={{ ...lightInput, width: 84, textAlign: 'center', padding: '8px 6px' }}
+                            placeholder="제품 원가"
+                            value={item.cost}
+                            onChange={e => updateKujiItem(idx, { cost: e.target.value })}
+                          />
+                        </div>
                         <label style={{ ...lightInput, width: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: item.img ? '#181818' : '#9a9a9a', fontSize: 12, padding: '8px 10px' }}>
                           📎 이미지
                           <input
@@ -511,7 +479,7 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
-              {productTab === '응모' && (
+              {productTab !== '쿠지' && (
                 <div>
                   <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>상품 설명</div>
                   <textarea
@@ -561,11 +529,15 @@ export default function AdminPage() {
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
               <button onClick={() => {
-                if (!newP.title.trim() || !newP.price.trim()) return
+                if (!newP.title.trim()) return
+                if (productTab !== '쿠지' && !newP.price.trim()) return
                 if (productTab === '쿠지' && kujiItemCount === 0) return
                 const kujiThumb = kujiItems.find(it => it.name.trim() && it.img)?.img || ''
-                setProducts(prev => [...prev, {
-                  id: nextId, type: productTab, title: newP.title, price: newP.price,
+                const newProduct = {
+                  id: nextId, type: productTab,
+                  title: newP.title,
+                  price: productTab === '쿠지' ? (newP.ticketPrice || '1,000 운포인트') : newP.price,
+                  cost: productTab === '쿠지' ? undefined : newP.cost,
                   img: productTab === '쿠지' ? kujiThumb : newP.img,
                   active: true,
                   stock: productTab === '응모' ? 1 : (Number(newP.stock) || 1),
@@ -573,14 +545,16 @@ export default function AdminPage() {
                     ? { maxTickets: autoMaxTickets || 50, ticketPrice: '1,000 운포인트', description: newP.description, durationDays: Number(newP.durationDays) || 3 }
                     : productTab === '쿠지'
                     ? { maxTickets: kujiTotalPapers || 50, ticketPrice: newP.ticketPrice || '1,000 운포인트', kujiItems: kujiItems.filter(it => it.name.trim()), lowerCount: kujiLowerCount }
-                    : {}),
-                } as Product])
+                    : { description: newP.description }),
+                } as Product
+                addProduct(newProduct)
+                setProducts(prev => [...prev, newProduct])
                 setNextId(n => n + 1)
-                setNewP({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' })
-                setKujiItems([{ name: '', img: '' }])
+                setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' })
+                setKujiItems([{ name: '', img: '', count: '1', cost: '' }])
                 setShowAddForm(false)
               }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: '#181818', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>추가하기</button>
-              <button onClick={() => { setShowAddForm(false); setNewP({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' }); setKujiItems([{ name: '', img: '' }]) }} style={{ padding: '11px 24px', borderRadius: 10, border: '1px solid #e2e2e4', background: '#f5f6f7', color: '#767676', fontSize: 14, cursor: 'pointer' }}>취소</button>
+              <button onClick={() => { setShowAddForm(false); setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' }); setKujiItems([{ name: '', img: '', count: '1', cost: '' }]) }} style={{ padding: '11px 24px', borderRadius: 10, border: '1px solid #e2e2e4', background: '#f5f6f7', color: '#767676', fontSize: 14, cursor: 'pointer' }}>취소</button>
             </div>
           </div>
         )}
