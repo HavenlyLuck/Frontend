@@ -2,6 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import {
+  EyeIcon,
+  FlameIcon,
+  ChatCircleIcon,
+  GiftIcon,
+  HeartIcon,
+  StorefrontIcon,
+  TicketIcon,
+} from "@phosphor-icons/react";
 import { getRaffleProducts, type RaffleProductResponse } from "@/lib/api";
 
 // 마감임박 섹션과 히어로 캐러셀은 아직 "준비중" 상태로 표시 (응모상품 섹션만 백엔드 연동됨)
@@ -17,18 +26,23 @@ function formatRaffleCountdown(seconds: number): string {
 
 function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; remainingSeconds: number }) {
   return (
-    <Link className="product-card-home" href="/eungmo">
+    <Link className="product-card-home" href={`/eungmo/${rp.raffle_product_id}`}>
       <div className="card-img">
         {rp.image_url && <img src={rp.image_url} alt={rp.product_name} />}
         <div className="card-time-badge">⏱ {formatRaffleCountdown(remainingSeconds)}</div>
       </div>
       <div className="card-body">
-        <div className="card-raffle-badge">🎟 응모 진행 중</div>
+        <div className="card-raffle-badge"><TicketIcon size={11} weight="fill" /> 응모 진행 중</div>
         <div className="card-title">{rp.product_name}</div>
-        <div className="card-price">{rp.price_krw.toLocaleString()} 운포인트</div>
-        <div className="card-progress-label" style={{ marginBottom: 0 }}>
-          <span>응모권 {rp.ticket_price.toLocaleString()} 운포인트</span>
-          <span>최대 {rp.total_slots.toLocaleString()}명</span>
+        <div className="card-price">{rp.ticket_price.toLocaleString()} 운포인트 <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-tertiary)' }}>/ 장당</span></div>
+        <div className="card-progress-row">
+          <div className="card-progress-bar">
+            <div className="card-progress-fill" style={{ width: '0%' }} />
+          </div>
+        </div>
+        <div className="card-progress-label">
+          <span style={{ color: 'var(--text-tertiary)' }}>집계 준비 중</span>
+          <span>총 {rp.total_slots.toLocaleString()}장</span>
         </div>
       </div>
     </Link>
@@ -37,10 +51,10 @@ function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; r
 
 const KUJI_ITEMS = [
   {
-    href: "/products/notebook",
+    href: "/kuji/naoya",
     img: "/images/naoya.jpg",
     alt: "나오야 젠인 쿠지",
-    badge: "🎁 쿠지 진행 중",
+    badge: "쿠지 진행 중",
     title: "주술회전 나오야 젠인 쿠지",
     price: "10,000 운포인트",
     pct: 42,
@@ -51,10 +65,10 @@ const KUJI_ITEMS = [
     chats: 2,
   },
   {
-    href: "/products/notebook",
+    href: "/kuji/onepiece",
     img: "/images/demo-5.jpg",
     alt: "원피스 쿠지",
-    badge: "🎁 쿠지 진행 중",
+    badge: "쿠지 진행 중",
     title: "원피스 A상 루피 쿠지",
     price: "10,000 운포인트",
     pct: 68,
@@ -65,10 +79,10 @@ const KUJI_ITEMS = [
     chats: 6,
   },
   {
-    href: "/products/notebook",
+    href: "/kuji/kimetsu",
     img: "/images/demo-6.jpg",
     alt: "귀멸의 칼날 쿠지",
-    badge: "🎁 쿠지 진행 중",
+    badge: "쿠지 진행 중",
     title: "귀멸의 칼날 최애의 쿠지",
     price: "10,000 운포인트",
     pct: 25,
@@ -79,10 +93,10 @@ const KUJI_ITEMS = [
     chats: 1,
   },
   {
-    href: "/products/notebook",
+    href: "/kuji/dragonball",
     img: "/images/demo-7.jpg",
     alt: "드래곤볼 쿠지",
-    badge: "🎁 쿠지 진행 중",
+    badge: "쿠지 진행 중",
     title: "드래곤볼 갓 오브 데스티니 쿠지",
     price: "10,000 운포인트",
     pct: 55,
@@ -93,10 +107,10 @@ const KUJI_ITEMS = [
     chats: 4,
   },
   {
-    href: "/products/notebook",
+    href: "/kuji/conan",
     img: "/images/demo-8.jpg",
     alt: "명탐정 코난 쿠지",
-    badge: "🎁 쿠지 진행 중",
+    badge: "쿠지 진행 중",
     title: "명탐정 코난 랜덤 쿠지",
     price: "10,000 운포인트",
     pct: 18,
@@ -107,10 +121,10 @@ const KUJI_ITEMS = [
     chats: 1,
   },
   {
-    href: "/products/notebook",
+    href: "/kuji/sanrio",
     img: "/images/demo-9.jpg",
     alt: "산리오 쿠지",
-    badge: "🎁 쿠지 진행 중",
+    badge: "쿠지 진행 중",
     title: "산리오 캐릭터즈 쿠지",
     price: "10,000 운포인트",
     pct: 61,
@@ -124,10 +138,10 @@ const KUJI_ITEMS = [
 
 const SHOP_ITEMS = [
   {
-    href: "/products/notebook",
+    href: "/shop/sticker-set",
     img: "/images/demo-1.jpg",
     alt: "굿즈 스티커 세트",
-    badge: "🏪 즉시구매",
+    badge: "즉시구매",
     title: "캐릭터 굿즈 스티커 세트",
     price: "12,000원",
     views: 19,
@@ -135,10 +149,10 @@ const SHOP_ITEMS = [
     chats: 0,
   },
   {
-    href: "/products/notebook",
+    href: "/shop/acrylic-stand",
     img: "/images/demo-2.jpg",
     alt: "아크릴 스탠드",
-    badge: "🏪 즉시구매",
+    badge: "즉시구매",
     title: "인기 캐릭터 아크릴 스탠드",
     price: "18,000원",
     views: 31,
@@ -146,10 +160,10 @@ const SHOP_ITEMS = [
     chats: 1,
   },
   {
-    href: "/products/notebook",
+    href: "/shop/mini-figure",
     img: "/images/demo-4.jpg",
     alt: "미니 피규어",
-    badge: "🏪 즉시구매",
+    badge: "즉시구매",
     title: "데스크용 미니 피규어",
     price: "25,000원",
     views: 27,
@@ -157,10 +171,10 @@ const SHOP_ITEMS = [
     chats: 0,
   },
   {
-    href: "/products/notebook",
+    href: "/shop/ps5-controller",
     img: "/images/ps5.jpg",
     alt: "PS5 무선 컨트롤러",
-    badge: "🏪 즉시구매",
+    badge: "즉시구매",
     title: "PS5 듀얼센스 무선 컨트롤러",
     price: "78,000원",
     views: 45,
@@ -168,10 +182,10 @@ const SHOP_ITEMS = [
     chats: 3,
   },
   {
-    href: "/products/iphone",
+    href: "/shop/iphone-case",
     img: "/images/iphone14pro.jpg",
     alt: "아이폰 케이스",
-    badge: "🏪 즉시구매",
+    badge: "즉시구매",
     title: "아이폰 14 Pro 투명 케이스",
     price: "15,000원",
     views: 22,
@@ -179,10 +193,10 @@ const SHOP_ITEMS = [
     chats: 0,
   },
   {
-    href: "/products/notebook",
+    href: "/shop/figure-case",
     img: "/images/demo-3.jpg",
     alt: "피규어 진열 케이스",
-    badge: "🏪 즉시구매",
+    badge: "즉시구매",
     title: "피규어 먼지방지 진열 케이스",
     price: "9,000원",
     views: 16,
@@ -200,6 +214,7 @@ type HomeItem = (typeof KUJI_ITEMS)[number] | (typeof SHOP_ITEMS)[number];
 
 function HomeProductCard({ item }: { item: HomeItem }) {
   const pct = "pct" in item ? item.pct : undefined;
+  const isKuji = pct !== undefined;
 
   return (
     <Link className="product-card-home" href={item.href}>
@@ -207,7 +222,10 @@ function HomeProductCard({ item }: { item: HomeItem }) {
         <img src={item.img} alt={item.alt} />
       </div>
       <div className="card-body">
-        <div className="card-raffle-badge">{item.badge}</div>
+        <div className="card-raffle-badge">
+          {isKuji ? <GiftIcon size={11} weight="fill" /> : <StorefrontIcon size={11} weight="fill" />}
+          {item.badge}
+        </div>
         <div className="card-title">{item.title}</div>
         <div className="card-price">{item.price}</div>
         {pct !== undefined && "count" in item && (
@@ -230,9 +248,9 @@ function HomeProductCard({ item }: { item: HomeItem }) {
           </>
         )}
         <div className="card-stats">
-          <span>👁 {item.views}</span>
-          <span>🤍 {item.wishes}</span>
-          <span>💬 {item.chats}</span>
+          <span><EyeIcon size={12} /> {item.views}</span>
+          <span><HeartIcon size={12} /> {item.wishes}</span>
+          <span><ChatCircleIcon size={12} /> {item.chats}</span>
         </div>
       </div>
     </Link>
@@ -280,7 +298,7 @@ export default function HomePage() {
     <div>
       {/* 히어로 */}
       <section className="hero">
-        <div className="hero-tag">🧧 응모형 이커머스 플랫폼</div>
+        <div className="hero-tag">응모형 중고 마켓</div>
         <h1>
           천원으로 행운을,
           <br />
@@ -289,7 +307,7 @@ export default function HomePage() {
 
         <div className="hero-carousel">
           <div className="coming-soon-box large">
-            <div className="emoji">🎟</div>
+            <div className="emoji"><TicketIcon size={32} weight="light" /></div>
             <div className="title">응모 상품을 준비하고 있어요</div>
             <div className="desc">조금만 기다려주세요, 곧 만나요!</div>
           </div>
@@ -303,25 +321,25 @@ export default function HomePage() {
           ref={productsRef}
           style={{ scrollMarginTop: "80px" }}
         >
-          <div className="section-title">🔥 마감 임박</div>
+          <div className="section-title"><FlameIcon size={18} weight="fill" color="var(--warn)" /> 마감 임박</div>
           <div className="see-all">전체보기 →</div>
         </div>
 
         <div className="coming-soon-box">
-          <div className="emoji">🔥</div>
+          <div className="emoji"><FlameIcon size={28} weight="light" /></div>
           <div className="title">상품 준비중</div>
           <div className="desc">마감 임박 응모 상품이 곧 올라올 예정이에요</div>
         </div>
 
         {/* 응모상품 */}
         <div className="section-header">
-          <div className="section-title"><span className="emoji">🎟</span> 응모상품</div>
+          <div className="section-title"><TicketIcon size={18} weight="fill" color="var(--accent)" /> 응모상품</div>
           <Link className="see-all" href="/eungmo">전체보기 →</Link>
         </div>
 
         {openRaffleItems.length === 0 ? (
           <div className="coming-soon-box">
-            <div className="emoji">🎟</div>
+            <div className="emoji"><TicketIcon size={28} weight="light" /></div>
             <div className="title">상품 준비중</div>
             <div className="desc">응모 상품을 준비하고 있어요</div>
           </div>
@@ -335,7 +353,7 @@ export default function HomePage() {
 
         {/* 쿠지상품 */}
         <div className="section-header">
-          <div className="section-title"><span className="emoji">🎁</span> 쿠지상품</div>
+          <div className="section-title"><GiftIcon size={18} weight="fill" color="var(--accent)" /> 쿠지상품</div>
           <div className="see-all">전체보기 →</div>
         </div>
 
@@ -347,7 +365,7 @@ export default function HomePage() {
 
         {/* 상점 */}
         <div className="section-header">
-          <div className="section-title"><span className="emoji">🏪</span> 상점</div>
+          <div className="section-title"><StorefrontIcon size={18} weight="fill" color="var(--accent)" /> 상점</div>
           <div className="see-all">전체보기 →</div>
         </div>
 

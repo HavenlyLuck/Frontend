@@ -3,6 +3,17 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { notFound, useRouter } from 'next/navigation'
+import {
+  CalendarIcon,
+  CheckCircleIcon,
+  ChatCircleIcon,
+  ClockIcon,
+  EyeIcon,
+  FlameIcon,
+  HeartIcon,
+  TicketIcon,
+  WarningIcon,
+} from '@phosphor-icons/react'
 import { getProduct } from '@/lib/data'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
 import { isLoggedIn } from '@/lib/auth'
@@ -14,8 +25,8 @@ function formatCountdown(seconds: number, urgent: boolean): string {
   const m = Math.floor((seconds % 3600) / 60)
   const s = seconds % 60
   const pad = (n: number) => String(n).padStart(2, '0')
-  if (urgent || d === 0) return `🔥 ${pad(h)}:${pad(m)}:${pad(s)} 남음`
-  return `⏱ ${d}일 ${pad(h)}:${pad(m)}:${pad(s)} 남음`
+  if (urgent || d === 0) return `${pad(h)}:${pad(m)}:${pad(s)} 남음`
+  return `${d}일 ${pad(h)}:${pad(m)}:${pad(s)} 남음`
 }
 
 export default function ProductPage({ params }: { params: { id: string } }) {
@@ -80,7 +91,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               ) : (
                 <div className="image-placeholder">
                   <span className="cam">{product.emoji}</span>
-                  <span style={{ fontSize: '14px', color: '#8a8a8a' }}>
+                  <span style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
                     {product.title.replace('\n', ' ')}
                   </span>
                 </div>
@@ -108,8 +119,8 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           <div className="info-panel">
             <div className="status-row">
               <span className="badge on-sale">판매 중</span>
-              <span className="badge raffle">🎟 응모 진행 중</span>
-              {product.raffle.urgent && <span className="badge urgent">🔥 마감 임박</span>}
+              <span className="badge raffle"><TicketIcon size={12} weight="fill" /> 응모 진행 중</span>
+              {product.raffle.urgent && <span className="badge urgent"><FlameIcon size={12} weight="fill" /> 마감 임박</span>}
             </div>
 
             <div className="product-title">{product.title}</div>
@@ -134,8 +145,9 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             {/* 응모 현황 */}
             <div className="raffle-section">
               <div className="raffle-header">
-                <div className="raffle-title">🎟 응모 현황</div>
+                <div className="raffle-title"><TicketIcon size={16} weight="fill" /> 응모 현황</div>
                 <div className={`raffle-countdown ${product.raffle.urgent ? 'urgent-cd' : ''}`}>
+                  {product.raffle.urgent ? <FlameIcon size={14} weight="fill" /> : <ClockIcon size={14} weight="bold" />}
                   {countdownText}
                 </div>
               </div>
@@ -172,7 +184,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             {/* CTA */}
             <div className="cta-row">
               <button className="btn-raffle" onClick={() => setModalOpen(true)}>
-                🎟 응모하기
+                <TicketIcon size={17} weight="fill" /> 응모하기
               </button>
               <button
                 className={`btn-wish ${isLiked ? 'liked' : ''}`}
@@ -185,15 +197,15 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   subtitle: product.price,
                 }))}
               >
-                <span className="heart">{isLiked ? '❤️' : '🤍'}</span>
+                <HeartIcon size={19} weight={isLiked ? 'fill' : 'regular'} color={isLiked ? 'var(--danger)' : 'var(--text-tertiary)'} />
               </button>
             </div>
 
             <div className="meta-stats">
-              <span>💬 채팅 {product.meta.chats}</span>
-              <span>🤍 관심 {product.meta.wishes}</span>
-              <span>👁 조회 {product.meta.views}</span>
-              <span>📅 {product.meta.time}</span>
+              <span><ChatCircleIcon size={13} /> 채팅 {product.meta.chats}</span>
+              <span><HeartIcon size={13} /> 관심 {product.meta.wishes}</span>
+              <span><EyeIcon size={13} /> 조회 {product.meta.views}</span>
+              <span><CalendarIcon size={13} /> {product.meta.time}</span>
             </div>
           </div>
         </div>
@@ -213,8 +225,8 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   <div className="card-title-sm">{rp.title}</div>
                   <div className="card-price-sm">{rp.price}</div>
                   <div className="card-meta-sm">
-                    <span>👁 {rp.views}</span>
-                    <span>🤍 {rp.wishes}</span>
+                    <span><EyeIcon size={12} /> {rp.views}</span>
+                    <span><HeartIcon size={12} /> {rp.wishes}</span>
                   </div>
                   <div className={`card-badge ${rp.sold ? 'sold' : ''}`}>{rp.badge}</div>
                 </div>
@@ -235,7 +247,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           <div className="modal-sub">
             {product.title.replace('\n', ' ')}<br />
             응모권 1장당{' '}
-            <strong style={{ color: '#181818' }}>1,000원</strong>이며 추첨일에 당첨자를 발표합니다.
+            <strong style={{ color: 'var(--text)' }}>1,000원</strong>이며 추첨일에 당첨자를 발표합니다.
           </div>
 
           <div className="ticket-count">
@@ -252,19 +264,20 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           </div>
 
           <div className="modal-notice">
-            응모권 구매 후 취소 및 환불이 불가합니다. 추첨 결과는 마감일 기준 24시간 이내에 알림으로 발송됩니다.
+            <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <span>응모권 구매 후 취소 및 환불이 불가합니다. 추첨 결과는 마감일 기준 24시간 이내에 알림으로 발송됩니다.</span>
           </div>
 
           <div className="modal-btn-row">
             <button className="btn-cancel" onClick={() => setModalOpen(false)}>취소</button>
-            <button className="btn-confirm" onClick={submitRaffle}>응모하기 🎟</button>
+            <button className="btn-confirm" onClick={submitRaffle}><TicketIcon size={15} weight="fill" /> 응모하기</button>
           </div>
         </div>
       </div>
 
       {/* 토스트 */}
       <div className={`toast ${showToast ? 'show' : ''}`}>
-        🎉 응모가 완료되었습니다! 당첨을 기다려주세요.
+        <CheckCircleIcon size={18} weight="fill" color="var(--success)" /> 응모가 완료되었습니다! 당첨을 기다려주세요.
       </div>
     </div>
   )

@@ -130,6 +130,7 @@ export interface CreateRaffleProductPayload {
   description?: string
   price_krw: number
   image: File
+  duration_days: number
 }
 
 export async function createRaffleProduct(token: string, payload: CreateRaffleProductPayload) {
@@ -138,6 +139,7 @@ export async function createRaffleProduct(token: string, payload: CreateRafflePr
   if (payload.description) formData.append('description', payload.description)
   formData.append('price_krw', String(payload.price_krw))
   formData.append('image', payload.image)
+  formData.append('duration_days', String(payload.duration_days))
 
   const res = await fetch(`${API_URL}/raffles`, {
     method: 'POST',

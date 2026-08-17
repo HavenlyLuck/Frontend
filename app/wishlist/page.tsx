@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { HeartIcon } from '@phosphor-icons/react'
 import { getWishlistItems, removeWishlistItem, type WishlistItem } from '@/lib/wishlist'
 
 export default function WishlistPage() {
@@ -15,11 +16,11 @@ export default function WishlistPage() {
   return (
     <div className="home-container">
       <div className="section-title" style={{ marginBottom: 24 }}>
-        <span className="emoji">❤️</span> 찜한 상품
+        <HeartIcon size={18} weight="fill" color="var(--danger)" /> 찜한 상품
       </div>
 
       {items.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '100px 0', color: '#9a9a9a', fontSize: 14 }}>
+        <div style={{ textAlign: 'center', padding: '100px 0', color: 'var(--text-tertiary)', fontSize: 14 }}>
           아직 찜한 상품이 없어요.
           <br />
           상품 페이지에서 하트를 눌러보세요.
@@ -34,18 +35,18 @@ export default function WishlistPage() {
                 style={{
                   position: 'absolute', top: 10, right: 10, zIndex: 2,
                   width: 32, height: 32, borderRadius: '50%', border: 'none',
-                  background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 15,
+                  background: 'rgba(0,0,0,0.55)', color: 'var(--danger)', fontSize: 15,
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                ❤️
+                <HeartIcon size={16} weight="fill" />
               </button>
               <Link href={item.href} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="card-img">
                   {item.image ? (
                     <img src={item.image} alt={item.title} />
                   ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, background: '#f5f6f7' }}>
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, background: 'var(--bg-subtle)' }}>
                       {item.emoji ?? '🛍️'}
                     </div>
                   )}

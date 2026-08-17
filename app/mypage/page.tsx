@@ -2,6 +2,19 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import {
+  ArchiveIcon,
+  BellIcon,
+  ChatCircleIcon,
+  ClockIcon,
+  ConfettiIcon,
+  GearIcon,
+  HeartIcon,
+  HouseIcon,
+  SmileySadIcon,
+  StarIcon,
+  TicketIcon,
+} from "@phosphor-icons/react";
 import { getReadyStorageCount } from "@/lib/storage";
 import { getOngoingEntries, getParticipationCount, getWinCount } from "@/lib/raffleEntries";
 
@@ -113,7 +126,7 @@ export default function MyPage() {
             <div className="profile-avatar">🐔</div>
             <div className="profile-name">경호소인</div>
             <div className="profile-email">wkcpq103100@gmail.com</div>
-            <div className="profile-rating">⭐ 4.9</div>
+            <div className="profile-rating"><StarIcon size={13} weight="fill" /> 4.9</div>
             <div className="profile-stats">
               <div className="profile-stat">
                 <div className="profile-stat-value">{getParticipationCount()}</div>
@@ -131,18 +144,18 @@ export default function MyPage() {
         <div className="main-content">
           {/* 최근 알림 */}
           <div className="mypage-section-header">
-            <div className="mypage-section-title">🔔 최근 알림</div>
+            <div className="mypage-section-title"><BellIcon size={17} weight="fill" color="var(--accent)" /> 최근 알림</div>
             <div className="see-all">전체보기 →</div>
           </div>
 
           <div className="notif-list">
             <div className="notif-item unread">
               <div className="notif-dot" />
-              <div className="notif-icon">🎉</div>
+              <div className="notif-icon"><ConfettiIcon size={20} color="var(--gold)" /></div>
               <div className="notif-text">
                 <div className="notif-title">
                   <strong>플레이스테이션 5</strong> 응모에서{" "}
-                  <strong style={{ color: "#16a34a" }}>당첨</strong>되셨습니다!
+                  <strong style={{ color: "var(--success)" }}>당첨</strong>되셨습니다!
                   판매자에게 연락해 거래를 진행해주세요.
                 </div>
                 <div className="notif-time">3일 전</div>
@@ -151,11 +164,11 @@ export default function MyPage() {
 
             <div className="notif-item unread">
               <div className="notif-dot" />
-              <div className="notif-icon">⏰</div>
+              <div className="notif-icon"><ClockIcon size={20} color="var(--gold)" /></div>
               <div className="notif-text">
                 <div className="notif-title">
                   <strong>아이폰 14 Pro</strong> 응모 마감까지{" "}
-                  <strong style={{ color: "#d9691d" }}>8시간</strong>{" "}
+                  <strong style={{ color: "var(--gold)" }}>8시간</strong>{" "}
                   남았습니다.
                 </div>
                 <div className="notif-time">오늘</div>
@@ -164,7 +177,7 @@ export default function MyPage() {
 
             <div className="notif-item unread">
               <div className="notif-dot" />
-              <div className="notif-icon">🎟</div>
+              <div className="notif-icon"><TicketIcon size={20} color="var(--accent)" /></div>
               <div className="notif-text">
                 <div className="notif-title">
                   찜한 상품 <strong>소니 WH-1000XM5</strong>에 새로운 응모자가
@@ -176,7 +189,7 @@ export default function MyPage() {
 
             <div className="notif-item">
               <div className="notif-dot read" />
-              <div className="notif-icon">💬</div>
+              <div className="notif-icon"><ChatCircleIcon size={20} color="var(--text-tertiary)" /></div>
               <div className="notif-text">
                 <div className="notif-title">
                   <strong>테크마켓Pro</strong>님이 채팅 메시지를 보냈습니다.
@@ -187,7 +200,7 @@ export default function MyPage() {
 
             <div className="notif-item">
               <div className="notif-dot read" />
-              <div className="notif-icon">😢</div>
+              <div className="notif-icon"><SmileySadIcon size={20} color="var(--text-tertiary)" /></div>
               <div className="notif-text">
                 <div className="notif-title">
                   <strong>에어팟 프로 2세대</strong> 응모에서 미당첨되셨습니다.
@@ -200,11 +213,11 @@ export default function MyPage() {
 
           <div className="sidebar-menu" style={{ marginTop: 24 }}>
             {[
-              { icon: "🏠", label: "내 활동 요약", active: true },
-              { icon: "🎟", label: "응모 내역", href: "/mypage/entries", badge: getOngoingEntries().length },
-              { icon: "📦", label: "보관함", href: "/mypage/storage", badge: getReadyStorageCount() },
-              { icon: "❤️", label: "찜한 상품", href: "/wishlist" },
-              { icon: "⚙️", label: "설정", href: "/mypage/settings" },
+              { icon: <HouseIcon size={16} weight="fill" />, label: "내 활동 요약", active: true },
+              { icon: <TicketIcon size={16} weight="fill" />, label: "응모 내역", href: "/mypage/entries", badge: getOngoingEntries().length },
+              { icon: <ArchiveIcon size={16} weight="fill" />, label: "보관함", href: "/mypage/storage", badge: getReadyStorageCount() },
+              { icon: <HeartIcon size={16} weight="fill" />, label: "찜한 상품", href: "/wishlist" },
+              { icon: <GearIcon size={16} weight="fill" />, label: "설정", href: "/mypage/settings" },
             ].map((item) => {
               const content = (
                 <>
@@ -265,7 +278,7 @@ export default function MyPage() {
           <div className="win-product">
             반다이 맥시매틱 젠인 나오야 피규어[미개봉]
             <br />
-            <span style={{ color: "#1477b8", fontWeight: 700 }}>
+            <span style={{ color: "var(--gold)", fontWeight: 700 }}>
               28,000원
             </span>{" "}
             상당의 상품에 당첨!
