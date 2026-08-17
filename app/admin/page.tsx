@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { verifyAdmin, ApiError } from '@/lib/api'
+import { verifyAdmin, ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse } from '@/lib/api'
 import { TODAY, DAILY_REV, MONTHLY_REV, DAILY_SALES } from '@/lib/adminStats'
 import {
   PRODUCTS, PRODUCT_TABS, TAB_EMOJI, addProduct, removeProduct, toggleProductActive,
@@ -139,6 +139,7 @@ const lightInput: React.CSSProperties = { background: '#ffffff', border: '1px so
 export default function AdminPage() {
   const router = useRouter()
   const [authChecked, setAuthChecked] = useState(false)
+  const [adminToken, setAdminToken] = useState<string | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -147,7 +148,10 @@ export default function AdminPage() {
       return
     }
     verifyAdmin(token)
-      .then(() => setAuthChecked(true))
+      .then(() => {
+        setAdminToken(token)
+        setAuthChecked(true)
+      })
       .catch((err) => {
         if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
           localStorage.removeItem('isAdmin')
@@ -155,6 +159,20 @@ export default function AdminPage() {
         router.replace('/')
       })
   }, [router])
+
+  const [raffleProducts, setRaffleProducts] = useState<RaffleProductResponse[]>([])
+  const [raffleListError, setRaffleListError] = useState<string | null>(null)
+
+  function reloadRaffleProducts() {
+    getRaffleProducts()
+      .then(setRaffleProducts)
+      .catch((err) => setRaffleListError(err instanceof ApiError ? err.message : '응모 상품 목록을 불러오지 못했습니다.'))
+  }
+
+  useEffect(() => {
+    if (!authChecked) return
+    reloadRaffleProducts()
+  }, [authChecked])
 
   const [revenueTab, setRevenueTab] = useState<'일별' | '월별'>('일별')
   const [revDate, setRevDate] = useState(TODAY)
@@ -166,8 +184,33 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>(() => [...PRODUCTS])
   const [showAddForm, setShowAddForm] = useState(false)
   const [nextId, setNextId] = useState(100)
-  const [newP, setNewP] = useState({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' })
+  const [newP, setNewP] = useState({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '' })
+  const [newImageFile, setNewImageFile] = useState<File | null>(null)
+  const [raffleSubmitting, setRaffleSubmitting] = useState(false)
+  const [raffleSubmitError, setRaffleSubmitError] = useState<string | null>(null)
   const autoMaxTickets = Math.floor((Number(newP.price.replace(/[^0-9]/g, '')) || 0) / 1000)
+
+  function resetNewProductForm() {
+    setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '' })
+    setNewImageFile(null)
+    setKujiItems([{ name: '', img: '', count: '1', cost: '' }])
+    setRaffleSubmitError(null)
+  }
+
+  function raffleToProduct(rp: RaffleProductResponse): Product {
+    return {
+      id: rp.raffle_product_id,
+      type: '응모',
+      title: rp.product_name,
+      price: `${rp.price_krw.toLocaleString()} 운포인트`,
+      img: rp.image_url ?? '',
+      active: rp.is_open,
+      stock: 1,
+      maxTickets: rp.total_slots,
+      ticketPrice: `${rp.ticket_price.toLocaleString()} 운포인트`,
+      description: rp.description ?? undefined,
+    }
+  }
   const [kujiItems, setKujiItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1', cost: '' }])
   const kujiItemCount = kujiItems.filter(it => it.name.trim()).reduce((sum, it) => sum + (Number(it.count) || 1), 0)
   const kujiLowerCount = Number(newP.stock) || 0
@@ -184,7 +227,7 @@ export default function AdminPage() {
   const monthlyRevMonths = new Set(Object.keys(MONTHLY_REV))
   const saleDates = new Set(Object.keys(DAILY_SALES))
   const currentSales = DAILY_SALES[saleDate] ?? []
-  const filtered = products.filter(p => p.type === productTab)
+  const filtered = productTab === '응모' ? raffleProducts.map(raffleToProduct) : products.filter(p => p.type === productTab)
 
   const calBtn: React.CSSProperties = {
     padding: '5px 12px', borderRadius: 8, border: '1px solid #e2e2e4',
@@ -329,6 +372,10 @@ export default function AdminPage() {
           ))}
         </div>
 
+        {productTab === '응모' && raffleListError && (
+          <div style={{ color: '#e14d72', fontSize: 13, marginBottom: 12 }}>{raffleListError}</div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
           {filtered.length === 0 && (
             <div style={{ color: '#9a9a9a', textAlign: 'center', padding: '40px 0', border: '1px dashed #e2e2e4', borderRadius: 12 }}>등록된 상품이 없습니다.</div>
@@ -345,7 +392,7 @@ export default function AdminPage() {
                   {p.cost && <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· 제품 원가 {p.cost}</span>}
                   {p.maxTickets && <span style={{ marginLeft: 12, color: '#9a9a9a' }}>{p.type === '쿠지' ? '총' : '최대'} {p.maxTickets}장</span>}
                   {p.ticketPrice && <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· 응모권 {p.ticketPrice}</span>}
-                  {p.durationDays && <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· {p.durationDays}일간 판매</span>}
+                  {p.type === '응모' && <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· 등록 후 24시간 자동 마감</span>}
                   {p.type === '쿠지' && p.kujiItems && (
                     <span style={{ marginLeft: 8, color: '#9a9a9a' }}>· 상품 {p.kujiItems.length}개 · 하위상 {p.lowerCount ?? 0}개</span>
                   )}
@@ -358,8 +405,14 @@ export default function AdminPage() {
               </div>
               <div style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, flexShrink: 0, background: p.active ? '#eaf6fd' : '#f0f0f0', color: p.active ? '#1477b8' : '#9a9a9a', border: `1px solid ${p.active ? '#bfe3fb' : '#e2e2e4'}` }}>{p.active ? '활성' : '비활성'}</div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button onClick={() => { toggleProductActive(p.id); setProducts(prev => prev.map(x => x.id === p.id ? { ...x, active: !x.active } : x)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${p.active ? '#fecdd3' : '#bfe3fb'}`, background: p.active ? '#fff0f4' : '#eaf6fd', color: p.active ? '#e14d72' : '#1477b8' }}>{p.active ? '내리기' : '올리기'}</button>
-                <button onClick={() => { removeProduct(p.id); setProducts(prev => prev.filter(x => x.id !== p.id)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid #fecdd3', background: '#fff0f4', color: '#e14d72' }}>삭제</button>
+                {p.type === '응모' ? (
+                  <span style={{ fontSize: 11, color: '#c2c2c2' }}>상태 변경 API 미구현</span>
+                ) : (
+                  <>
+                    <button onClick={() => { toggleProductActive(p.id); setProducts(prev => prev.map(x => x.id === p.id ? { ...x, active: !x.active } : x)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${p.active ? '#fecdd3' : '#bfe3fb'}`, background: p.active ? '#fff0f4' : '#eaf6fd', color: p.active ? '#e14d72' : '#1477b8' }}>{p.active ? '내리기' : '올리기'}</button>
+                    <button onClick={() => { removeProduct(p.id); setProducts(prev => prev.filter(x => x.id !== p.id)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid #fecdd3', background: '#fff0f4', color: '#e14d72' }}>삭제</button>
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -380,7 +433,7 @@ export default function AdminPage() {
               {productTab !== '쿠지' && (
                 <div>
                   <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>판매가격 *</div>
-                  <input style={lightInput} placeholder={productTab === '응모' ? undefined : '예: 50,000 운포인트'} value={newP.price} onChange={e => setNewP(p => ({ ...p, price: e.target.value }))} />
+                  <input style={lightInput} placeholder={productTab === '응모' ? '예: 650000 (숫자만)' : '예: 50,000 운포인트'} value={newP.price} onChange={e => setNewP(p => ({ ...p, price: e.target.value }))} />
                 </div>
               )}
               {productTab !== '쿠지' && (
@@ -405,6 +458,7 @@ export default function AdminPage() {
                         onChange={e => {
                           const file = e.target.files?.[0]
                           if (!file) return
+                          setNewImageFile(file)
                           const reader = new FileReader()
                           reader.onload = () => setNewP(p => ({ ...p, img: typeof reader.result === 'string' ? reader.result : '' }))
                           reader.readAsDataURL(file)
@@ -412,7 +466,7 @@ export default function AdminPage() {
                       />
                     </label>
                     {newP.img && (
-                      <button type="button" onClick={() => setNewP(p => ({ ...p, img: '' }))} style={{ border: 'none', background: 'none', color: '#e14d72', fontSize: 12, cursor: 'pointer' }}>제거</button>
+                      <button type="button" onClick={() => { setNewP(p => ({ ...p, img: '' })); setNewImageFile(null) }} style={{ border: 'none', background: 'none', color: '#e14d72', fontSize: 12, cursor: 'pointer' }}>제거</button>
                     )}
                   </div>
                 </div>
@@ -506,14 +560,14 @@ export default function AdminPage() {
               )}
               {productTab === '응모' && (
                 <div>
-                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>판매 기간 (일) *</div>
-                  <input style={lightInput} placeholder="예: 3" type="number" min="1" value={newP.durationDays} onChange={e => setNewP(p => ({ ...p, durationDays: e.target.value }))} />
-                  <p style={{ margin: '6px 0 0', fontSize: 12, color: '#9a9a9a' }}>
-                    {Number(newP.durationDays) > 0
-                      ? `등록 시점부터 ${newP.durationDays}일 뒤, ${new Date(Date.now() + Number(newP.durationDays) * 86400000).toLocaleDateString('ko-KR')}에 마감됩니다.`
-                      : '기간이 지나면 자동으로 응모가 마감돼요.'}
-                  </p>
+                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 5 }}>판매 기간</div>
+                  <div style={{ ...lightInput, background: '#f5f6f7', color: '#181818' }}>
+                    등록 시점부터 24시간 뒤 자동 마감 (서버에 고정된 값)
+                  </div>
                 </div>
+              )}
+              {productTab === '응모' && raffleSubmitError && (
+                <div style={{ color: '#e14d72', fontSize: 12 }}>{raffleSubmitError}</div>
               )}
               {productTab === '쿠지' && (
                 <div style={{ display: 'flex', gap: 12 }}>
@@ -528,7 +582,36 @@ export default function AdminPage() {
               )}
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-              <button onClick={() => {
+              <button disabled={raffleSubmitting} onClick={async () => {
+                if (productTab === '응모') {
+                  if (!newP.title.trim() || !newP.price.trim() || !newImageFile || !adminToken) {
+                    setRaffleSubmitError('상품명, 가격, 이미지를 모두 입력해주세요.')
+                    return
+                  }
+                  const priceNum = Number(newP.price.replace(/[^0-9]/g, ''))
+                  if (!priceNum) {
+                    setRaffleSubmitError('가격은 숫자로 입력해주세요.')
+                    return
+                  }
+                  try {
+                    setRaffleSubmitting(true)
+                    setRaffleSubmitError(null)
+                    const created = await createRaffleProduct(adminToken, {
+                      product_name: newP.title,
+                      description: newP.description || undefined,
+                      price_krw: priceNum,
+                      image: newImageFile,
+                    })
+                    setRaffleProducts(prev => [created, ...prev])
+                    resetNewProductForm()
+                    setShowAddForm(false)
+                  } catch (err) {
+                    setRaffleSubmitError(err instanceof ApiError ? err.message : '등록 중 오류가 발생했습니다.')
+                  } finally {
+                    setRaffleSubmitting(false)
+                  }
+                  return
+                }
                 if (!newP.title.trim()) return
                 if (productTab !== '쿠지' && !newP.price.trim()) return
                 if (productTab === '쿠지' && kujiItemCount === 0) return
@@ -540,21 +623,18 @@ export default function AdminPage() {
                   cost: productTab === '쿠지' ? undefined : newP.cost,
                   img: productTab === '쿠지' ? kujiThumb : newP.img,
                   active: true,
-                  stock: productTab === '응모' ? 1 : (Number(newP.stock) || 1),
-                  ...(productTab === '응모'
-                    ? { maxTickets: autoMaxTickets || 50, ticketPrice: '1,000 운포인트', description: newP.description, durationDays: Number(newP.durationDays) || 3 }
-                    : productTab === '쿠지'
+                  stock: Number(newP.stock) || 1,
+                  ...(productTab === '쿠지'
                     ? { maxTickets: kujiTotalPapers || 50, ticketPrice: newP.ticketPrice || '1,000 운포인트', kujiItems: kujiItems.filter(it => it.name.trim()), lowerCount: kujiLowerCount }
                     : { description: newP.description }),
                 } as Product
                 addProduct(newProduct)
                 setProducts(prev => [...prev, newProduct])
                 setNextId(n => n + 1)
-                setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' })
-                setKujiItems([{ name: '', img: '', count: '1', cost: '' }])
+                resetNewProductForm()
                 setShowAddForm(false)
-              }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: '#181818', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>추가하기</button>
-              <button onClick={() => { setShowAddForm(false); setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '', durationDays: '3' }); setKujiItems([{ name: '', img: '', count: '1', cost: '' }]) }} style={{ padding: '11px 24px', borderRadius: 10, border: '1px solid #e2e2e4', background: '#f5f6f7', color: '#767676', fontSize: 14, cursor: 'pointer' }}>취소</button>
+              }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: '#181818', color: '#fff', fontSize: 14, fontWeight: 700, cursor: raffleSubmitting ? 'default' : 'pointer', opacity: raffleSubmitting ? 0.6 : 1 }}>{raffleSubmitting ? '등록 중...' : '추가하기'}</button>
+              <button onClick={() => { setShowAddForm(false); resetNewProductForm() }} style={{ padding: '11px 24px', borderRadius: 10, border: '1px solid #e2e2e4', background: '#f5f6f7', color: '#767676', fontSize: 14, cursor: 'pointer' }}>취소</button>
             </div>
           </div>
         )}

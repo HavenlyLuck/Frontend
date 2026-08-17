@@ -2,8 +2,38 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { getRaffleProducts, type RaffleProductResponse } from "@/lib/api";
 
-// 응모 상품은 백엔드 연동 전까지 "준비중" 상태로 표시 (마감임박/응모상품 섹션, 히어로 캐러셀 포함)
+// 마감임박 섹션과 히어로 캐러셀은 아직 "준비중" 상태로 표시 (응모상품 섹션만 백엔드 연동됨)
+
+function formatRaffleCountdown(seconds: number): string {
+  if (seconds <= 0) return "마감";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)} 남음` : `${pad(m)}:${pad(s)} 남음`;
+}
+
+function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; remainingSeconds: number }) {
+  return (
+    <Link className="product-card-home" href="/eungmo">
+      <div className="card-img">
+        {rp.image_url && <img src={rp.image_url} alt={rp.product_name} />}
+        <div className="card-time-badge">⏱ {formatRaffleCountdown(remainingSeconds)}</div>
+      </div>
+      <div className="card-body">
+        <div className="card-raffle-badge">🎟 응모 진행 중</div>
+        <div className="card-title">{rp.product_name}</div>
+        <div className="card-price">{rp.price_krw.toLocaleString()} 운포인트</div>
+        <div className="card-progress-label" style={{ marginBottom: 0 }}>
+          <span>응모권 {rp.ticket_price.toLocaleString()} 운포인트</span>
+          <span>최대 {rp.total_slots.toLocaleString()}명</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 const KUJI_ITEMS = [
   {
@@ -220,6 +250,32 @@ export default function HomePage() {
     setShopItems(pickRandom(SHOP_ITEMS, 3));
   }, []);
 
+  const [raffleProducts, setRaffleProducts] = useState<RaffleProductResponse[]>([]);
+  const [raffleFetchedAt, setRaffleFetchedAt] = useState(0);
+  const [nowTick, setNowTick] = useState(0);
+
+  useEffect(() => {
+    getRaffleProducts("open")
+      .then((list) => {
+        setRaffleProducts(list);
+        setRaffleFetchedAt(Date.now());
+        setNowTick(Date.now());
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (raffleProducts.length === 0) return;
+    const timer = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [raffleProducts.length]);
+
+  const elapsedSeconds = raffleFetchedAt ? Math.floor((nowTick - raffleFetchedAt) / 1000) : 0;
+  const openRaffleItems = raffleProducts
+    .map((rp) => ({ rp, remainingSeconds: Math.max(0, rp.remaining_seconds - elapsedSeconds) }))
+    .filter((item) => item.remainingSeconds > 0)
+    .slice(0, 3);
+
   return (
     <div>
       {/* 히어로 */}
@@ -260,14 +316,22 @@ export default function HomePage() {
         {/* 응모상품 */}
         <div className="section-header">
           <div className="section-title"><span className="emoji">🎟</span> 응모상품</div>
-          <div className="see-all">전체보기 →</div>
+          <Link className="see-all" href="/eungmo">전체보기 →</Link>
         </div>
 
-        <div className="coming-soon-box">
-          <div className="emoji">🎟</div>
-          <div className="title">상품 준비중</div>
-          <div className="desc">응모 상품을 준비하고 있어요</div>
-        </div>
+        {openRaffleItems.length === 0 ? (
+          <div className="coming-soon-box">
+            <div className="emoji">🎟</div>
+            <div className="title">상품 준비중</div>
+            <div className="desc">응모 상품을 준비하고 있어요</div>
+          </div>
+        ) : (
+          <div className="product-grid-home">
+            {openRaffleItems.map(({ rp, remainingSeconds }) => (
+              <RaffleHomeCard key={rp.raffle_product_id} rp={rp} remainingSeconds={remainingSeconds} />
+            ))}
+          </div>
+        )}
 
         {/* 쿠지상품 */}
         <div className="section-header">
