@@ -34,6 +34,7 @@ export default function LoginPage() {
     try {
       const res = await login({ login_id: form.userId, password: form.password })
       localStorage.setItem('token', res.access_token)
+      localStorage.setItem('refreshToken', res.refresh_token)
       localStorage.setItem('userId', form.userId)
       localStorage.setItem('isAdmin', String(res.is_admin))
       router.push('/')

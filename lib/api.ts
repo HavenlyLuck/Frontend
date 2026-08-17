@@ -55,6 +55,13 @@ export interface LoginPayload {
 
 export interface LoginResponse {
   access_token: string
+  refresh_token: string
+  token_type: string
+  is_admin: boolean
+}
+
+export interface RefreshResponse {
+  access_token: string
   token_type: string
   is_admin: boolean
 }
@@ -70,6 +77,13 @@ export function login(payload: LoginPayload) {
   return request<LoginResponse>('/users/login', {
     method: 'POST',
     body: JSON.stringify(payload),
+  })
+}
+
+export function refreshAccessToken(refreshToken: string) {
+  return request<RefreshResponse>('/users/refresh', {
+    method: 'POST',
+    body: JSON.stringify({ refresh_token: refreshToken }),
   })
 }
 
@@ -131,6 +145,61 @@ export interface CreateRaffleProductPayload {
   price_krw: number
   image: File
   duration_days: number
+}
+
+export interface StoreProductResponse {
+  store_product_id: number
+  product_name: string
+  description: string | null
+  point_type: 'woon' | 'ssal'
+  price: number
+  stock: number
+  image_url: string | null
+  created_at: string
+}
+
+export function getStoreProducts(pointType?: 'woon' | 'ssal') {
+  const query = pointType ? `?point_type=${pointType}` : ''
+  return request<StoreProductResponse[]>(`/store-products${query}`)
+}
+
+export interface CreateStoreProductPayload {
+  product_name: string
+  description?: string
+  point_type: 'woon' | 'ssal'
+  price: number
+  stock: number
+  image?: File
+}
+
+export async function createStoreProduct(token: string, payload: CreateStoreProductPayload) {
+  const formData = new FormData()
+  formData.append('product_name', payload.product_name)
+  if (payload.description) formData.append('description', payload.description)
+  formData.append('point_type', payload.point_type)
+  formData.append('price', String(payload.price))
+  formData.append('stock', String(payload.stock))
+  if (payload.image) formData.append('image', payload.image)
+
+  const res = await fetch(`${API_URL}/store-products`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+
+  const data = await res.json().catch(() => null)
+
+  if (!res.ok) {
+    const detail = data?.detail
+    const message = typeof detail === 'string'
+      ? detail
+      : Array.isArray(detail)
+        ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join(', ')
+        : '요청 처리 중 오류가 발생했습니다.'
+    throw new ApiError(res.status, message)
+  }
+
+  return data as StoreProductResponse
 }
 
 export async function createRaffleProduct(token: string, payload: CreateRaffleProductPayload) {
