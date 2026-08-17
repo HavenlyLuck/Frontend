@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { verifyAdmin, ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse } from '@/lib/api'
+import { verifyAdmin, ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse, getStoreProducts, createStoreProduct, type StoreProductResponse } from '@/lib/api'
 import { getValidSession, clearAuth } from '@/lib/auth'
 import { TODAY, DAILY_REV, MONTHLY_REV, DAILY_SALES } from '@/lib/adminStats'
 import {
@@ -178,9 +178,19 @@ export default function AdminPage() {
       .catch((err) => setRaffleListError(err instanceof ApiError ? err.message : '응모 상품 목록을 불러오지 못했습니다.'))
   }
 
+  const [storeProducts, setStoreProducts] = useState<StoreProductResponse[]>([])
+  const [storeListError, setStoreListError] = useState<string | null>(null)
+
+  function reloadStoreProducts() {
+    getStoreProducts()
+      .then(setStoreProducts)
+      .catch((err) => setStoreListError(err instanceof ApiError ? err.message : '상점 상품 목록을 불러오지 못했습니다.'))
+  }
+
   useEffect(() => {
     if (!authChecked) return
     reloadRaffleProducts()
+    reloadStoreProducts()
   }, [authChecked])
 
   const [revenueTab, setRevenueTab] = useState<'일별' | '월별'>('일별')
@@ -220,6 +230,20 @@ export default function AdminPage() {
       description: rp.description ?? undefined,
     }
   }
+
+  function storeToProduct(sp: StoreProductResponse): Product {
+    const label = sp.point_type === 'woon' ? '운포인트' : '쌀포인트'
+    return {
+      id: sp.store_product_id,
+      type: sp.point_type === 'woon' ? '상점(운포인트)' : '상점(쌀포인트)',
+      title: sp.product_name,
+      price: `${sp.price.toLocaleString()} ${label}`,
+      img: sp.image_url ?? '',
+      active: true,
+      stock: sp.stock,
+      description: sp.description ?? undefined,
+    }
+  }
   const [kujiItems, setKujiItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1', cost: '' }])
   const kujiItemCount = kujiItems.filter(it => it.name.trim()).reduce((sum, it) => sum + (Number(it.count) || 1), 0)
   const kujiLowerCount = Number(newP.stock) || 0
@@ -236,7 +260,13 @@ export default function AdminPage() {
   const monthlyRevMonths = new Set(Object.keys(MONTHLY_REV))
   const saleDates = new Set(Object.keys(DAILY_SALES))
   const currentSales = DAILY_SALES[saleDate] ?? []
-  const filtered = productTab === '응모' ? raffleProducts.map(raffleToProduct) : products.filter(p => p.type === productTab)
+  const filtered = productTab === '응모'
+    ? raffleProducts.map(raffleToProduct)
+    : productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)'
+      ? storeProducts
+          .filter(sp => sp.point_type === (productTab === '상점(운포인트)' ? 'woon' : 'ssal'))
+          .map(storeToProduct)
+      : products.filter(p => p.type === productTab)
 
   const calBtn: React.CSSProperties = {
     padding: '5px 12px', borderRadius: 8, border: '1px solid #e2e2e4',
@@ -385,6 +415,10 @@ export default function AdminPage() {
           <div style={{ color: '#e14d72', fontSize: 13, marginBottom: 12 }}>{raffleListError}</div>
         )}
 
+        {(productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)') && storeListError && (
+          <div style={{ color: '#e14d72', fontSize: 13, marginBottom: 12 }}>{storeListError}</div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
           {filtered.length === 0 && (
             <div style={{ color: '#9a9a9a', textAlign: 'center', padding: '40px 0', border: '1px dashed #e2e2e4', borderRadius: 12 }}>등록된 상품이 없습니다.</div>
@@ -414,7 +448,7 @@ export default function AdminPage() {
               </div>
               <div style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, flexShrink: 0, background: p.active ? '#eaf6fd' : '#f0f0f0', color: p.active ? '#1477b8' : '#9a9a9a', border: `1px solid ${p.active ? '#bfe3fb' : '#e2e2e4'}` }}>{p.active ? '활성' : '비활성'}</div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                {p.type === '응모' ? (
+                {p.type === '응모' || p.type === '상점(운포인트)' || p.type === '상점(쌀포인트)' ? (
                   <span style={{ fontSize: 11, color: '#c2c2c2' }}>상태 변경 API 미구현</span>
                 ) : (
                   <>
@@ -575,7 +609,7 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
-              {productTab === '응모' && raffleSubmitError && (
+              {(productTab === '응모' || productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)') && raffleSubmitError && (
                 <div style={{ color: '#e14d72', fontSize: 12 }}>{raffleSubmitError}</div>
               )}
               {productTab === '쿠지' && (
@@ -612,6 +646,38 @@ export default function AdminPage() {
                       image: newImageFile,
                     })
                     setRaffleProducts(prev => [created, ...prev])
+                    resetNewProductForm()
+                    setShowAddForm(false)
+                  } catch (err) {
+                    setRaffleSubmitError(err instanceof ApiError ? err.message : '등록 중 오류가 발생했습니다.')
+                  } finally {
+                    setRaffleSubmitting(false)
+                  }
+                  return
+                }
+                if (productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)') {
+                  if (!newP.title.trim() || !newP.price.trim() || !newP.stock.trim() || !adminToken) {
+                    setRaffleSubmitError('상품명, 가격, 수량을 모두 입력해주세요.')
+                    return
+                  }
+                  const priceNum = Number(newP.price.replace(/[^0-9]/g, ''))
+                  const stockNum = Number(newP.stock)
+                  if (!priceNum) {
+                    setRaffleSubmitError('가격은 숫자로 입력해주세요.')
+                    return
+                  }
+                  try {
+                    setRaffleSubmitting(true)
+                    setRaffleSubmitError(null)
+                    const created = await createStoreProduct(adminToken, {
+                      product_name: newP.title,
+                      description: newP.description || undefined,
+                      point_type: productTab === '상점(운포인트)' ? 'woon' : 'ssal',
+                      price: priceNum,
+                      stock: stockNum,
+                      image: newImageFile ?? undefined,
+                    })
+                    setStoreProducts(prev => [created, ...prev])
                     resetNewProductForm()
                     setShowAddForm(false)
                   } catch (err) {
