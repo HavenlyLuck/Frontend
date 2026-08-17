@@ -580,6 +580,42 @@ nav {
   padding: 48px 24px;
 }
 
+/* ── 응모 상품 준비중 안내 ── */
+.coming-soon-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  background: #fafbfc;
+  border: 1px dashed #e2e2e4;
+  border-radius: 20px;
+  padding: 56px 24px;
+  color: #9a9a9a;
+  margin-bottom: 64px;
+}
+
+.coming-soon-box .emoji {
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+.coming-soon-box .title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #767676;
+}
+
+.coming-soon-box .desc {
+  font-size: 13px;
+  color: #9a9a9a;
+}
+
+.coming-soon-box.large {
+  padding: 88px 24px;
+}
+
 /* ── 마감 임박 카드 ── */
 .hot-grid {
   display: grid;

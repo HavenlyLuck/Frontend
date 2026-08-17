@@ -103,3 +103,59 @@ export function getMyPoints(token: string) {
     headers: { Authorization: `Bearer ${token}` },
   })
 }
+
+export interface RaffleProductResponse {
+  raffle_product_id: number
+  product_name: string
+  description: string | null
+  price_krw: number
+  ticket_price: number
+  total_slots: number
+  image_url: string | null
+  status: 'open' | 'completed' | 'cancelled'
+  starts_at: string
+  ends_at: string
+  drawn_at: string | null
+  remaining_seconds: number
+  is_open: boolean
+}
+
+export function getRaffleProducts(status?: 'open' | 'completed' | 'cancelled') {
+  const query = status ? `?status=${status}` : ''
+  return request<RaffleProductResponse[]>(`/raffles${query}`)
+}
+
+export interface CreateRaffleProductPayload {
+  product_name: string
+  description?: string
+  price_krw: number
+  image: File
+}
+
+export async function createRaffleProduct(token: string, payload: CreateRaffleProductPayload) {
+  const formData = new FormData()
+  formData.append('product_name', payload.product_name)
+  if (payload.description) formData.append('description', payload.description)
+  formData.append('price_krw', String(payload.price_krw))
+  formData.append('image', payload.image)
+
+  const res = await fetch(`${API_URL}/raffles`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+
+  const data = await res.json().catch(() => null)
+
+  if (!res.ok) {
+    const detail = data?.detail
+    const message = typeof detail === 'string'
+      ? detail
+      : Array.isArray(detail)
+        ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join(', ')
+        : '요청 처리 중 오류가 발생했습니다.'
+    throw new ApiError(res.status, message)
+  }
+
+  return data as RaffleProductResponse
+}
