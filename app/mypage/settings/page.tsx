@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { clearAuth } from '@/lib/auth'
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: 8,
@@ -33,9 +34,7 @@ export default function SettingsPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('userId')
-    localStorage.removeItem('isAdmin')
+    clearAuth()
     router.push('/')
   }
 

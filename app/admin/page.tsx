@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { verifyAdmin, ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse } from '@/lib/api'
+import { getValidSession, clearAuth } from '@/lib/auth'
 import { TODAY, DAILY_REV, MONTHLY_REV, DAILY_SALES } from '@/lib/adminStats'
 import {
   PRODUCTS, PRODUCT_TABS, TAB_EMOJI, addProduct, removeProduct, toggleProductActive,
@@ -142,22 +143,30 @@ export default function AdminPage() {
   const [adminToken, setAdminToken] = useState<string | null>(null)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.replace('/login')
-      return
+    let cancelled = false
+    getValidSession().then((session) => {
+      if (cancelled) return
+      if (!session) {
+        router.replace('/login')
+        return
+      }
+      verifyAdmin(session.token)
+        .then(() => {
+          if (cancelled) return
+          setAdminToken(session.token)
+          setAuthChecked(true)
+        })
+        .catch((err) => {
+          if (cancelled) return
+          if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+            clearAuth()
+          }
+          router.replace('/')
+        })
+    })
+    return () => {
+      cancelled = true
     }
-    verifyAdmin(token)
-      .then(() => {
-        setAdminToken(token)
-        setAuthChecked(true)
-      })
-      .catch((err) => {
-        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-          localStorage.removeItem('isAdmin')
-        }
-        router.replace('/')
-      })
   }, [router])
 
   const [raffleProducts, setRaffleProducts] = useState<RaffleProductResponse[]>([])

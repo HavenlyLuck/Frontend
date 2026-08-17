@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { verifyAdmin, ApiError } from '@/lib/api'
+import { getValidSession, clearAuth } from '@/lib/auth'
 import { TODAY } from '@/lib/adminStats'
 import {
   EXPENSE_RECORDS, addExpenseRecord, removeExpenseRecord,
@@ -28,19 +29,28 @@ export default function AdminFinancePage() {
   const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.replace('/login')
-      return
+    let cancelled = false
+    getValidSession().then((session) => {
+      if (cancelled) return
+      if (!session) {
+        router.replace('/login')
+        return
+      }
+      verifyAdmin(session.token)
+        .then(() => {
+          if (!cancelled) setAuthChecked(true)
+        })
+        .catch((err) => {
+          if (cancelled) return
+          if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+            clearAuth()
+          }
+          router.replace('/')
+        })
+    })
+    return () => {
+      cancelled = true
     }
-    verifyAdmin(token)
-      .then(() => setAuthChecked(true))
-      .catch((err) => {
-        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-          localStorage.removeItem('isAdmin')
-        }
-        router.replace('/')
-      })
   }, [router])
 
   const [tab, setTab] = useState<Period>('day')

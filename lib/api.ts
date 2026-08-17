@@ -55,6 +55,13 @@ export interface LoginPayload {
 
 export interface LoginResponse {
   access_token: string
+  refresh_token: string
+  token_type: string
+  is_admin: boolean
+}
+
+export interface RefreshResponse {
+  access_token: string
   token_type: string
   is_admin: boolean
 }
@@ -70,6 +77,13 @@ export function login(payload: LoginPayload) {
   return request<LoginResponse>('/users/login', {
     method: 'POST',
     body: JSON.stringify(payload),
+  })
+}
+
+export function refreshAccessToken(refreshToken: string) {
+  return request<RefreshResponse>('/users/refresh', {
+    method: 'POST',
+    body: JSON.stringify({ refresh_token: refreshToken }),
   })
 }
 

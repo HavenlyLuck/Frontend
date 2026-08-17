@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMyPoints } from "@/hooks/useMyPoints";
 import { getReadyStorageCount } from "@/lib/storage";
+import { getValidSession, clearAuth } from "@/lib/auth";
 
 const NAV_CATEGORIES = [
   { emoji: "🎟", label: "응모", href: "/eungmo" },
@@ -26,14 +27,19 @@ export default function Navbar() {
   const { eungPoint, ssalPoint } = useMyPoints();
 
   useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem("token"));
-    setIsAdmin(localStorage.getItem("isAdmin") === "true");
+    let cancelled = false;
+    getValidSession().then((session) => {
+      if (cancelled) return;
+      setIsLoggedIn(!!session);
+      setIsAdmin(!!session?.isAdmin);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [pathname]);
 
   function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("isAdmin");
+    clearAuth();
     setIsLoggedIn(false);
     setIsAdmin(false);
     router.push("/");
