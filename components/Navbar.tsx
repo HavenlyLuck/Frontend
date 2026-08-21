@@ -89,7 +89,7 @@ export default function Navbar() {
                   <span className="nav-btn-badge">{getReadyStorageCount()}</span>
                 )}
               </Link>
-              <Link href="/wishlist" className="nav-btn">
+              <Link href="/mypage/wishlist" className="nav-btn">
                 <HeartIcon size={16} weight="bold" />
                 <span>찜한 상품</span>
               </Link>

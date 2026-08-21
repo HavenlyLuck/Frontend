@@ -9,20 +9,29 @@ import {
   ChartLineUpIcon,
   CoinsIcon,
   GearIcon,
+  GiftIcon,
+  GrainsIcon,
   PackageIcon,
   PaperclipIcon,
   ShoppingBagIcon,
+  TicketIcon,
   UsersIcon,
 } from '@phosphor-icons/react'
 import { verifyAdmin, ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse, getStoreProducts, createStoreProduct, type StoreProductResponse } from '@/lib/api'
 import { getValidSession, clearAuth } from '@/lib/auth'
 import { TODAY, DAILY_REV, MONTHLY_REV, DAILY_SALES } from '@/lib/adminStats'
 import {
-  PRODUCTS, PRODUCT_TABS, TAB_EMOJI, addProduct, removeProduct, toggleProductActive,
+  PRODUCTS, PRODUCT_TABS, addProduct, removeProduct, toggleProductActive,
   type ProductType, type KujiItem, type Product,
 } from '@/lib/adminProducts'
 
-const TYPE_COLOR: Record<string, string> = { '응모': 'var(--accent)', '쿠지': 'var(--gold)', '상점': '#a78bfa' }
+const TYPE_COLOR: Record<string, string> = { '응모': 'var(--accent)', '쿠지': 'var(--gold)', '상점': 'var(--type-store)' }
+const TAB_ICON: Record<ProductType, React.ReactNode> = {
+  '응모': <TicketIcon size={13} weight="fill" />,
+  '쿠지': <GiftIcon size={13} weight="fill" />,
+  '상점(운포인트)': <CoinsIcon size={13} weight="fill" />,
+  '상점(쌀포인트)': <GrainsIcon size={13} weight="fill" />,
+}
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 
@@ -306,7 +315,7 @@ export default function AdminPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 36 }}>
           {[
             { label: '현재 이용자 수', value: '1,247명', icon: <UsersIcon size={22} weight="fill" />, color: 'var(--accent)' },
-            { label: '오늘 매출', value: (DAILY_REV[TODAY] ?? 0).toLocaleString() + '원', icon: <CalendarIcon size={22} weight="fill" />, color: '#a78bfa' },
+            { label: '오늘 매출', value: (DAILY_REV[TODAY] ?? 0).toLocaleString() + '원', icon: <CalendarIcon size={22} weight="fill" />, color: 'var(--type-store)' },
             { label: '이번 달 매출', value: (MONTHLY_REV['2026-08'] ?? 0).toLocaleString() + '원', icon: <ChartLineUpIcon size={22} weight="fill" />, color: 'var(--gold)' },
           ].map(c => (
             <div key={c.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', boxShadow: 'var(--shadow-sm)' }}>
@@ -358,9 +367,10 @@ export default function AdminPage() {
                 <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
                   {d.amount > 0 && <div style={{ color: 'var(--text-tertiary)', fontSize: 9, whiteSpace: 'nowrap' }}>{(d.amount / 10000).toFixed(0)}만</div>}
                   <div style={{
-                    width: '100%', borderRadius: '4px 4px 0 0', transition: 'height 0.3s',
-                    height: d.amount > 0 ? `${Math.max(pct * 120, 4)}px` : '2px',
-                    background: isSel ? 'var(--accent)' : d.amount > 0 ? 'var(--gold-tint-border)' : 'var(--border)',
+                    width: '100%', height: 120, borderRadius: '4px 4px 0 0',
+                    transformOrigin: 'bottom', transition: 'transform 0.3s',
+                    transform: `scaleY(${d.amount > 0 ? Math.max(pct, 4 / 120) : 2 / 120})`,
+                    background: isSel ? 'var(--accent)' : d.amount > 0 ? 'var(--border-strong)' : 'var(--border)',
                     boxShadow: isSel ? '0 0 8px rgba(224,56,76,0.4)' : undefined,
                   }} />
                   <div style={{ color: isSel ? 'var(--accent)' : 'var(--text-tertiary)', fontSize: 9, whiteSpace: 'nowrap', fontWeight: isSel ? 700 : 400 }}>{d.label}</div>
@@ -396,7 +406,7 @@ export default function AdminPage() {
                     <div style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0, background: `color-mix(in srgb, ${TYPE_COLOR[item.type]} 16%, transparent)`, color: TYPE_COLOR[item.type], border: `1px solid color-mix(in srgb, ${TYPE_COLOR[item.type]} 45%, transparent)` }}>{item.type}</div>
                     <div style={{ flex: 1, color: 'var(--text)', fontSize: 14 }}>{item.title}</div>
                     <div style={{ color: 'var(--text-tertiary)', fontSize: 12, flexShrink: 0 }}>{item.buyer}</div>
-                    <div style={{ color: '#a78bfa', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{item.price}</div>
+                    <div style={{ color: 'var(--text)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{item.price}</div>
                   </div>
                 ))}
               </div>
@@ -427,7 +437,8 @@ export default function AdminPage() {
               background: productTab === t ? 'var(--accent-tint)' : 'var(--surface)',
               color: productTab === t ? 'var(--accent)' : 'var(--text-secondary)',
               fontWeight: productTab === t ? 700 : 400,
-            }}>{TAB_EMOJI[t]} {t}</button>
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>{TAB_ICON[t]} {t}</button>
           ))}
         </div>
 
@@ -487,7 +498,7 @@ export default function AdminPage() {
           </button>
         ) : (
           <div style={{ border: '1px solid var(--border)', borderRadius: 14, background: 'var(--surface)', padding: '24px 24px 20px', boxShadow: 'var(--shadow-md)' }}>
-            <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, marginBottom: 18 }}>{TAB_EMOJI[productTab]} {productTab} 상품 추가</div>
+            <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>{TAB_ICON[productTab]} {productTab} 상품 추가</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
                 <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>{productTab === '쿠지' ? '쿠지 이름 *' : '상품명 *'}</div>
