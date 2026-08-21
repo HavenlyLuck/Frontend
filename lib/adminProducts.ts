@@ -16,6 +16,7 @@ export interface Product {
   description?: string
   kujiItems?: KujiItem[]
   lowerCount?: number
+  deadlineLabel?: string
 }
 
 export const PRODUCT_TABS: ProductType[] = ['응모', '쿠지', '상점(운포인트)', '상점(쌀포인트)']

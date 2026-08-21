@@ -3,16 +3,23 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  ArchiveIcon,
+  GearIcon,
+  HeartIcon,
+  MagnifyingGlassIcon,
+  UserIcon,
+} from "@phosphor-icons/react";
 import { useMyPoints } from "@/hooks/useMyPoints";
 import { getReadyStorageCount } from "@/lib/storage";
 import { getValidSession, clearAuth } from "@/lib/auth";
 
 const NAV_CATEGORIES = [
-  { emoji: "🎟", label: "응모", href: "/eungmo" },
-  { emoji: "🎁", label: "쿠지", href: "/kuji" },
-  { emoji: "🏪", label: "상점", href: "/shop" },
-  { emoji: "📖", label: "설명충", href: "/guide" },
-  { emoji: "💬", label: "후기/문의", href: "/review" },
+  { label: "응모", href: "/eungmo" },
+  { label: "쿠지", href: "/kuji" },
+  { label: "상점", href: "/shop" },
+  { label: "설명충", href: "/guide" },
+  { label: "후기/문의", href: "/review" },
 ];
 
 export default function Navbar() {
@@ -49,7 +56,7 @@ export default function Navbar() {
     <nav className={isNeon ? "nav-neon" : undefined}>
       <div className="nav-top-row">
         <Link className="logo" href="/">
-          <div className="logo-icon">🧧</div>
+          <div className="logo-icon">천</div>
           천운
         </Link>
 
@@ -76,21 +83,21 @@ export default function Navbar() {
                 </span>
               </div>
               <Link href="/mypage/storage" className="nav-btn">
-                <span>📦</span>
+                <ArchiveIcon size={16} weight="bold" />
                 <span>보관함</span>
                 {getReadyStorageCount() > 0 && (
                   <span className="nav-btn-badge">{getReadyStorageCount()}</span>
                 )}
               </Link>
               <Link href="/wishlist" className="nav-btn">
-                <span>❤️</span>
+                <HeartIcon size={16} weight="bold" />
                 <span>찜한 상품</span>
               </Link>
               <Link
                 href="/mypage"
                 className={`nav-btn ${isMypage ? "active-nav" : ""}`}
               >
-                <span>👤</span>
+                <UserIcon size={16} weight="bold" />
                 <span>마이페이지</span>
               </Link>
               <button className="nav-btn" onClick={handleLogout}>
@@ -112,7 +119,7 @@ export default function Navbar() {
 
       {!hideTabsRow && <div className="nav-tabs-row">
         <div className="search-bar">
-          <span>🔍</span>
+          <MagnifyingGlassIcon size={16} color="var(--text-tertiary)" />
           <input type="text" placeholder="원하는 상품을 검색해보세요" />
         </div>
 
@@ -123,7 +130,7 @@ export default function Navbar() {
               href={cat.href}
               className={`nav-cat-tab ${pathname === cat.href ? "active" : ""}`}
             >
-              <span className="emoji">{cat.emoji}</span> {cat.label}
+              {cat.label}
             </Link>
           ))}
         </div>
@@ -131,9 +138,10 @@ export default function Navbar() {
           <Link
             href="/admin"
             className={`nav-cat-tab ${pathname === "/admin" ? "active" : ""}`}
-            style={{ marginLeft: 'auto' }}
+            style={{ marginLeft: 'auto', gap: '6px' }}
           >
-            <span className="emoji">⚙️</span> 관리자
+            <GearIcon size={15} weight="bold" />
+            관리자
           </Link>
         )}
       </div>}

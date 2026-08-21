@@ -73,7 +73,7 @@ export default function ShopProductPage({ params }: { params: { id: string } }) 
           <div className="info-panel">
             <div className="status-row">
               <span className="badge on-sale">{product.category}</span>
-              {soldOut && <span className="badge" style={{ background: '#f5f6f7', color: '#9a9a9a', border: '1px solid #e2e2e4' }}>품절</span>}
+              {soldOut && <span className="badge" style={{ background: 'var(--bg-subtle)', color: 'var(--text-tertiary)', border: '1px solid var(--border)' }}>품절</span>}
             </div>
 
             <div className="product-title">{product.title}</div>
@@ -85,28 +85,28 @@ export default function ShopProductPage({ params }: { params: { id: string } }) 
             <div className="description">{product.description}</div>
 
             <div style={{ marginTop: 24 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#181818', marginBottom: 10 }}>구매 수량</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>구매 수량</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, border: '1px solid #e2e2e4', borderRadius: 10, padding: '8px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, border: '1px solid var(--border-strong)', borderRadius: 10, padding: '8px 16px' }}>
                   <button
                     onClick={() => changeQty(-1)}
                     disabled={soldOut}
-                    style={{ width: 28, height: 28, border: 'none', background: 'none', fontSize: 18, cursor: soldOut ? 'default' : 'pointer', color: '#454545' }}
+                    style={{ width: 28, height: 28, border: 'none', background: 'none', fontSize: 18, cursor: soldOut ? 'default' : 'pointer', color: 'var(--text-secondary)' }}
                   >
                     −
                   </button>
-                  <span style={{ fontSize: 15, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>{qty}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, minWidth: 20, textAlign: 'center', color: 'var(--text)' }}>{qty}</span>
                   <button
                     onClick={() => changeQty(1)}
                     disabled={soldOut}
-                    style={{ width: 28, height: 28, border: 'none', background: 'none', fontSize: 18, cursor: soldOut ? 'default' : 'pointer', color: '#454545' }}
+                    style={{ width: 28, height: 28, border: 'none', background: 'none', fontSize: 18, cursor: soldOut ? 'default' : 'pointer', color: 'var(--text-secondary)' }}
                   >
                     +
                   </button>
                 </div>
-                <span style={{ fontSize: 13, color: '#9a9a9a' }}>최대 {product.stock}개까지 구매 가능</span>
+                <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>최대 {product.stock}개까지 구매 가능</span>
               </div>
-              <div style={{ marginTop: 12, fontSize: 14, color: '#181818' }}>
+              <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text)' }}>
                 총 결제 금액 <strong>{(product.price * qty).toLocaleString()} {product.currency}</strong>
               </div>
             </div>
@@ -116,7 +116,7 @@ export default function ShopProductPage({ params }: { params: { id: string } }) 
                 className="btn-raffle"
                 disabled={soldOut}
                 onClick={() => setModalOpen(true)}
-                style={soldOut ? { background: '#e2e2e4', color: '#9a9a9a', cursor: 'default' } : undefined}
+                style={soldOut ? { background: 'var(--border)', color: 'var(--text-tertiary)', cursor: 'default' } : undefined}
               >
                 {soldOut ? '품절' : '🎰 구매하기'}
               </button>
@@ -182,7 +182,7 @@ export default function ShopProductPage({ params }: { params: { id: string } }) 
           <div className="modal-sub">
             {product.title}<br />
             {qty}개 · 총{' '}
-            <strong style={{ color: '#181818' }}>{(product.price * qty).toLocaleString()} {product.currency}</strong>
+            <strong style={{ color: 'var(--text)' }}>{(product.price * qty).toLocaleString()} {product.currency}</strong>
             {' '}가 차감됩니다.
           </div>
 
