@@ -1,22 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import Link from "next/link";
 import {
-  ArchiveIcon,
   BellIcon,
   ChatCircleIcon,
   ClockIcon,
   ConfettiIcon,
-  GearIcon,
-  HeartIcon,
-  HouseIcon,
   SmileySadIcon,
-  StarIcon,
   TicketIcon,
 } from "@phosphor-icons/react";
-import { getReadyStorageCount } from "@/lib/storage";
-import { getOngoingEntries, getParticipationCount, getWinCount } from "@/lib/raffleEntries";
 
 const CONFETTI_COLORS = [
   "#7c6aff",
@@ -118,135 +110,75 @@ export default function MyPage() {
   useEffect(() => () => stopConfetti(), [stopConfetti]);
 
   return (
-    <><div>
-      <div className="mypage-layout">
-        {/* 사이드바 */}
-        <div className="sidebar">
-          <div className="profile-card">
-            <div className="profile-avatar">🐔</div>
-            <div className="profile-name">경호소인</div>
-            <div className="profile-email">wkcpq103100@gmail.com</div>
-            <div className="profile-rating"><StarIcon size={13} weight="fill" /> 4.9</div>
-            <div className="profile-stats">
-              <div className="profile-stat">
-                <div className="profile-stat-value">{getParticipationCount()}</div>
-                <div className="profile-stat-label">응모 내역</div>
-              </div>
-              <div className="profile-stat">
-                <div className="profile-stat-value">{getWinCount()}</div>
-                <div className="profile-stat-label">당첨 횟수</div>
-              </div>
+    <>
+      {/* 최근 알림 */}
+      <div className="mypage-section-header">
+        <div className="mypage-section-title"><BellIcon size={17} weight="fill" color="var(--accent)" /> 최근 알림</div>
+        <div className="see-all">전체보기 →</div>
+      </div>
+
+      <div className="notif-list">
+        <div className="notif-item unread">
+          <div className="notif-dot" />
+          <div className="notif-icon"><ConfettiIcon size={20} color="var(--gold)" /></div>
+          <div className="notif-text">
+            <div className="notif-title">
+              <strong>플레이스테이션 5</strong> 응모에서{" "}
+              <strong style={{ color: "var(--success)" }}>당첨</strong>되셨습니다!
+              판매자에게 연락해 거래를 진행해주세요.
             </div>
+            <div className="notif-time">3일 전</div>
           </div>
         </div>
 
-        {/* 메인 콘텐츠 */}
-        <div className="main-content">
-          {/* 최근 알림 */}
-          <div className="mypage-section-header">
-            <div className="mypage-section-title"><BellIcon size={17} weight="fill" color="var(--accent)" /> 최근 알림</div>
-            <div className="see-all">전체보기 →</div>
+        <div className="notif-item unread">
+          <div className="notif-dot" />
+          <div className="notif-icon"><ClockIcon size={20} color="var(--gold)" /></div>
+          <div className="notif-text">
+            <div className="notif-title">
+              <strong>아이폰 14 Pro</strong> 응모 마감까지{" "}
+              <strong style={{ color: "var(--gold)" }}>8시간</strong>{" "}
+              남았습니다.
+            </div>
+            <div className="notif-time">오늘</div>
           </div>
+        </div>
 
-          <div className="notif-list">
-            <div className="notif-item unread">
-              <div className="notif-dot" />
-              <div className="notif-icon"><ConfettiIcon size={20} color="var(--gold)" /></div>
-              <div className="notif-text">
-                <div className="notif-title">
-                  <strong>플레이스테이션 5</strong> 응모에서{" "}
-                  <strong style={{ color: "var(--success)" }}>당첨</strong>되셨습니다!
-                  판매자에게 연락해 거래를 진행해주세요.
-                </div>
-                <div className="notif-time">3일 전</div>
-              </div>
+        <div className="notif-item unread">
+          <div className="notif-dot" />
+          <div className="notif-icon"><TicketIcon size={20} color="var(--accent)" /></div>
+          <div className="notif-text">
+            <div className="notif-title">
+              찜한 상품 <strong>소니 WH-1000XM5</strong>에 새로운 응모자가
+              15명 추가되었습니다.
             </div>
-
-            <div className="notif-item unread">
-              <div className="notif-dot" />
-              <div className="notif-icon"><ClockIcon size={20} color="var(--gold)" /></div>
-              <div className="notif-text">
-                <div className="notif-title">
-                  <strong>아이폰 14 Pro</strong> 응모 마감까지{" "}
-                  <strong style={{ color: "var(--gold)" }}>8시간</strong>{" "}
-                  남았습니다.
-                </div>
-                <div className="notif-time">오늘</div>
-              </div>
-            </div>
-
-            <div className="notif-item unread">
-              <div className="notif-dot" />
-              <div className="notif-icon"><TicketIcon size={20} color="var(--accent)" /></div>
-              <div className="notif-text">
-                <div className="notif-title">
-                  찜한 상품 <strong>소니 WH-1000XM5</strong>에 새로운 응모자가
-                  15명 추가되었습니다.
-                </div>
-                <div className="notif-time">1일 전</div>
-              </div>
-            </div>
-
-            <div className="notif-item">
-              <div className="notif-dot read" />
-              <div className="notif-icon"><ChatCircleIcon size={20} color="var(--text-tertiary)" /></div>
-              <div className="notif-text">
-                <div className="notif-title">
-                  <strong>테크마켓Pro</strong>님이 채팅 메시지를 보냈습니다.
-                </div>
-                <div className="notif-time">2일 전</div>
-              </div>
-            </div>
-
-            <div className="notif-item">
-              <div className="notif-dot read" />
-              <div className="notif-icon"><SmileySadIcon size={20} color="var(--text-tertiary)" /></div>
-              <div className="notif-text">
-                <div className="notif-title">
-                  <strong>에어팟 프로 2세대</strong> 응모에서 미당첨되셨습니다.
-                  다음 기회에 다시 도전해보세요!
-                </div>
-                <div className="notif-time">5일 전</div>
-              </div>
-            </div>
+            <div className="notif-time">1일 전</div>
           </div>
+        </div>
 
-          <div className="sidebar-menu" style={{ marginTop: 24 }}>
-            {[
-              { icon: <HouseIcon size={16} weight="fill" />, label: "내 활동 요약", active: true },
-              { icon: <TicketIcon size={16} weight="fill" />, label: "응모 내역", href: "/mypage/entries", badge: getOngoingEntries().length },
-              { icon: <ArchiveIcon size={16} weight="fill" />, label: "보관함", href: "/mypage/storage", badge: getReadyStorageCount() },
-              { icon: <HeartIcon size={16} weight="fill" />, label: "찜한 상품", href: "/wishlist" },
-              { icon: <GearIcon size={16} weight="fill" />, label: "설정", href: "/mypage/settings" },
-            ].map((item) => {
-              const content = (
-                <>
-                  <span className="menu-icon">{item.icon}</span>
-                  {item.label}
-                  {item.badge && <span className="menu-badge">{item.badge}</span>}
-                </>
-              );
-              return item.href ? (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`menu-item ${item.active ? "active" : ""}`}
-                >
-                  {content}
-                </Link>
-              ) : (
-                <div
-                  key={item.label}
-                  className={`menu-item ${item.active ? "active" : ""}`}
-                >
-                  {content}
-                </div>
-              );
-            })}
+        <div className="notif-item">
+          <div className="notif-dot read" />
+          <div className="notif-icon"><ChatCircleIcon size={20} color="var(--text-tertiary)" /></div>
+          <div className="notif-text">
+            <div className="notif-title">
+              <strong>테크마켓Pro</strong>님이 채팅 메시지를 보냈습니다.
+            </div>
+            <div className="notif-time">2일 전</div>
+          </div>
+        </div>
+
+        <div className="notif-item">
+          <div className="notif-dot read" />
+          <div className="notif-icon"><SmileySadIcon size={20} color="var(--text-tertiary)" /></div>
+          <div className="notif-text">
+            <div className="notif-title">
+              <strong>에어팟 프로 2세대</strong> 응모에서 미당첨되셨습니다.
+              다음 기회에 다시 도전해보세요!
+            </div>
+            <div className="notif-time">5일 전</div>
           </div>
         </div>
       </div>
-    </div>
 
       {/* 폭죽 캔버스 */}
       <canvas

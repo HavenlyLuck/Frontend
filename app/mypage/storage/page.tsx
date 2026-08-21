@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { ArchiveIcon, CalendarIcon, ConfettiIcon, TicketIcon, TruckIcon, XIcon } from '@phosphor-icons/react'
 import { STORAGE_ITEMS } from '@/lib/storage'
 import { ADDRESSES, addAddress, type Address } from '@/lib/address'
@@ -92,92 +91,77 @@ export default function StoragePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '48px 16px 120px' }}>
-      <div style={{ width: '100%', maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <Link href="/mypage" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 20 }}>←</Link>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <ArchiveIcon size={19} weight="fill" color="var(--accent)" /> 보관함
-          </h2>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 24, marginLeft: 32 }}>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-            당첨되거나 구매한 상품이 보관돼요. 받고 싶은 상품을 선택해서 한 번에 택배로 받아보세요.
-          </p>
-          <button
-            onClick={() => setShowAddrModal(true)}
-            style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            <TruckIcon size={13} weight="fill" /> 배송지 등록
-          </button>
-        </div>
+    <div>
+      <div className="mypage-section-header">
+        <div className="mypage-section-title"><ArchiveIcon size={17} weight="fill" color="var(--accent)" /> 보관함</div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 24 }}>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+          당첨되거나 구매한 상품이 보관돼요. 받고 싶은 상품을 선택해서 한 번에 택배로 받아보세요.
+        </p>
+        <button
+          onClick={() => setShowAddrModal(true)}
+          style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          <TruckIcon size={13} weight="fill" /> 배송지 등록
+        </button>
+      </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {items.map(item => {
-            const isSelected = selected.has(item.id)
-            const isReady = item.status === 'ready'
-            return (
-              <div
-                key={item.id}
-                onClick={() => isReady && toggle(item.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  background: 'var(--surface)',
-                  border: `1px solid ${isSelected ? 'var(--accent-tint-border)' : 'var(--border)'}`,
-                  borderRadius: 12, padding: '14px 16px',
-                  boxShadow: 'var(--shadow-sm)',
-                  cursor: isReady ? 'pointer' : 'default',
-                  opacity: isReady ? 1 : 0.6,
-                  transition: 'all 0.15s',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  disabled={!isReady}
-                  onChange={() => toggle(item.id)}
-                  onClick={e => e.stopPropagation()}
-                  style={{ width: 18, height: 18, accentColor: 'var(--accent)', flexShrink: 0, cursor: isReady ? 'pointer' : 'default' }}
-                />
-                <div style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>
-                  {item.img != null ? (
-                    <img src={item.img} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    item.emoji ?? '📦'
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.title}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, fontSize: 12, color: 'var(--text-tertiary)' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      {item.source === '당첨' ? <ConfettiIcon size={12} color="var(--gold)" /> : <TicketIcon size={12} />} {item.source === '당첨' ? '당첨' : '구매'}
-                    </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {item.date}</span>
-                    <span>{item.value}</span>
-                  </div>
-                </div>
-                {isReady ? (
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-tint)', border: '1px solid var(--accent-tint-border)', borderRadius: 20, padding: '4px 12px', flexShrink: 0 }}>
-                    보관 중
-                  </span>
+      <div className="entry-list">
+        {items.map(item => {
+          const isSelected = selected.has(item.id)
+          const isReady = item.status === 'ready'
+          return (
+            <div
+              key={item.id}
+              onClick={() => isReady && toggle(item.id)}
+              className="entry-item"
+              style={{
+                cursor: isReady ? 'pointer' : 'default',
+                opacity: isReady ? 1 : 0.6,
+                background: isSelected ? 'var(--accent-tint)' : undefined,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                disabled={!isReady}
+                onChange={() => toggle(item.id)}
+                onClick={e => e.stopPropagation()}
+                style={{ width: 18, height: 18, accentColor: 'var(--accent)', flexShrink: 0, cursor: isReady ? 'pointer' : 'default' }}
+              />
+              <div className="entry-emoji">
+                {item.img != null ? (
+                  <img src={item.img} alt={item.title} />
                 ) : (
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 12px', flexShrink: 0 }}>
-                    배송 신청됨
-                  </span>
+                  item.emoji ?? '📦'
                 )}
               </div>
-            )
-          })}
-        </div>
-
-        {items.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-tertiary)', fontSize: 14 }}>
-            보관함이 비어 있어요.
-          </div>
-        )}
+              <div className="entry-info">
+                <div className="entry-title">{item.title}</div>
+                <div className="entry-meta">
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                    {item.source === '당첨' ? <ConfettiIcon size={12} color="var(--gold)" /> : <TicketIcon size={12} />} {item.source === '당첨' ? '당첨' : '구매'}
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {item.date}</span>
+                  <span>{item.value}</span>
+                </div>
+              </div>
+              <div className="entry-status">
+                <span className={`status-badge ${isReady ? 'waiting' : 'lose'}`}>
+                  {isReady ? '보관 중' : '배송 신청됨'}
+                </span>
+              </div>
+            </div>
+          )
+        })}
       </div>
+
+      {items.length === 0 && (
+        <div className="coming-soon-box">
+          <div className="desc">보관함이 비어 있어요.</div>
+        </div>
+      )}
 
       {readyItems.length > 0 && (
         <div style={{

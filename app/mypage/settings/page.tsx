@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { CheckIcon, GearIcon } from '@phosphor-icons/react'
 import { clearAuth } from '@/lib/auth'
 
@@ -40,16 +39,12 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '48px 16px 80px' }}>
-      <div style={{ width: '100%', maxWidth: 560, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <Link href="/mypage" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 20 }}>←</Link>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <GearIcon size={19} weight="fill" color="var(--accent)" /> 설정
-          </h2>
-        </div>
+    <div style={{ maxWidth: 560 }}>
+      <div className="mypage-section-header">
+        <div className="mypage-section-title"><GearIcon size={17} weight="fill" color="var(--accent)" /> 설정</div>
+      </div>
 
-        <div style={card}>
+      <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>프로필 정보</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
@@ -120,7 +115,6 @@ export default function SettingsPage() {
         >
           로그아웃
         </button>
-      </div>
     </div>
   )
 }

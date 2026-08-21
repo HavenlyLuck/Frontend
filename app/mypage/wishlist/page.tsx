@@ -14,16 +14,14 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="home-container">
-      <div className="section-title" style={{ marginBottom: 24 }}>
-        <HeartIcon size={18} weight="fill" color="var(--danger)" /> 찜한 상품
+    <>
+      <div className="mypage-section-header">
+        <div className="mypage-section-title"><HeartIcon size={17} weight="fill" color="var(--danger)" /> 찜한 상품</div>
       </div>
 
       {items.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '100px 0', color: 'var(--text-tertiary)', fontSize: 14 }}>
-          아직 찜한 상품이 없어요.
-          <br />
-          상품 페이지에서 하트를 눌러보세요.
+        <div className="coming-soon-box">
+          <div className="desc">아직 찜한 상품이 없어요.<br />상품 페이지에서 하트를 눌러보세요.</div>
         </div>
       ) : (
         <div className="product-grid-home">
@@ -60,6 +58,6 @@ export default function WishlistPage() {
           ))}
         </div>
       )}
-    </div>
+    </>
   )
 }
