@@ -197,16 +197,30 @@ export function getTierRemaining(product: KujiProduct, grade: string): number {
   return product.tickets.filter(t => t.grade === grade && t.status === 'available').length
 }
 
-export function drawKujiTickets(productId: string, ticketIds: number[]) {
+export interface KujiDrawResult {
+  drawn: { ticketId: number; grade: string; tier: KujiTier }[]
+  unavailableIds: number[]
+}
+
+// 선택한 제비가 그 사이에 다른 사람에게 뽑혔을 수 있으니, 실제로 뽑기 전에
+// 전부 아직 available인지 먼저 확인한다. 하나라도 이미 나갔으면 아무것도
+// 뽑지 않고 unavailableIds로 알려줘서, 호출한 쪽이 그 제비만 선택 해제하고
+// 나머지는 유지한 채 다시 고르게 할 수 있도록 한다 (부분 성공은 만들지 않음).
+export function drawKujiTickets(productId: string, ticketIds: number[]): KujiDrawResult {
   const product = getKujiProduct(productId)
-  if (!product) return []
-  const results: { ticketId: number; grade: string; tier: KujiTier }[] = []
-  ticketIds.forEach(id => {
-    const ticket = product.tickets.find(t => t.id === id && t.status === 'available')
-    if (!ticket) return
+  if (!product) return { drawn: [], unavailableIds: ticketIds }
+
+  const unavailableIds = ticketIds.filter(id => {
+    const ticket = product.tickets.find(t => t.id === id)
+    return !ticket || ticket.status !== 'available'
+  })
+  if (unavailableIds.length > 0) return { drawn: [], unavailableIds }
+
+  const drawn = ticketIds.map(id => {
+    const ticket = product.tickets.find(t => t.id === id)!
     ticket.status = 'drawn'
     const tier = product.tiers.find(t => t.grade === ticket.grade)!
-    results.push({ ticketId: id, grade: ticket.grade, tier })
+    return { ticketId: id, grade: ticket.grade, tier }
   })
-  return results
+  return { drawn, unavailableIds: [] }
 }
