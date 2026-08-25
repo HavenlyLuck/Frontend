@@ -14,9 +14,9 @@ import {
   TicketIcon,
   WarningIcon,
 } from '@phosphor-icons/react'
-import { getRaffleProducts, type RaffleProductResponse } from '@/lib/api'
+import { ApiError, createRaffleEntry, getRaffleProducts, type RaffleProductResponse } from '@/lib/api'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
-import { isLoggedIn } from '@/lib/auth'
+import { getValidSession, isLoggedIn } from '@/lib/auth'
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return '마감'
@@ -46,6 +46,8 @@ export default function RaffleProductPage({ params }: { params: { id: string } }
   const [modalOpen, setModalOpen] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [remaining, setRemaining] = useState(0)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -93,19 +95,47 @@ export default function RaffleProductPage({ params }: { params: { id: string } }
   const urgent = remaining > 0 && remaining < 3600
   const wishId = `raffle-${product.raffle_product_id}`
 
-  // 판매된 응모권 수는 API에서 아직 제공하지 않음(0으로 둠) — 나중에 필드가 추가되면
-  // 여기만 실제 판매 수량으로 바꾸면 "남은 응모권만큼만 구매 가능" 로직이 그대로 동작함
-  const soldCount = 0
-  const maxPurchasable = Math.max(1, product.total_slots - soldCount)
+  const soldCount = product.sold_slots
+  const maxPurchasable = Math.max(0, product.total_slots - soldCount)
+  const soldOut = maxPurchasable === 0
+  const soldPct = product.total_slots > 0 ? Math.min(100, Math.round((soldCount / product.total_slots) * 100)) : 0
 
   const changeTicket = (delta: number) =>
-    setTicketCount((prev) => Math.min(maxPurchasable, Math.max(1, prev + delta)))
+    setTicketCount((prev) => Math.min(Math.max(maxPurchasable, 1), Math.max(1, prev + delta)))
 
-  const submitRaffle = () => {
-    setModalOpen(false)
-    setShowToast(true)
-    if (toastTimer.current) clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setShowToast(false), 3500)
+  const openModal = () => {
+    setSubmitError(null)
+    setTicketCount(1)
+    setModalOpen(true)
+  }
+
+  const submitRaffle = async () => {
+    const session = await getValidSession()
+    if (!session) {
+      alert('로그인 후 이용해주세요.')
+      router.replace('/login')
+      return
+    }
+
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      const entry = await createRaffleEntry(session.token, product.raffle_product_id, ticketCount)
+      const newSoldSlots = product.sold_slots + entry.ticket_count
+      const justSoldOut = newSoldSlots >= product.total_slots
+      setProduct((prev) => (prev ? { ...prev, sold_slots: newSoldSlots } : prev))
+      setModalOpen(false)
+      setShowToast(true)
+      if (toastTimer.current) clearTimeout(toastTimer.current)
+      toastTimer.current = setTimeout(() => setShowToast(false), 3500)
+      if (justSoldOut) {
+        alert('응모권이 모두 소진되었습니다! 당첨자 추첨 기능은 아직 준비 중이라, 별도 절차 없이 응모가 그대로 진행됩니다.')
+      }
+    } catch (e) {
+      setSubmitError(e instanceof ApiError ? e.message : '응모 처리 중 오류가 발생했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -159,9 +189,9 @@ export default function RaffleProductPage({ params }: { params: { id: string } }
                 </div>
                 <div className="progress-bar-row">
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: '0%' }} />
+                    <div className="progress-fill" style={{ width: `${soldPct}%` }} />
                   </div>
-                  <span className="progress-pct" style={{ color: 'var(--text-tertiary)' }}>집계 준비 중</span>
+                  <span className="progress-pct">{soldPct}%</span>
                 </div>
               </div>
 
@@ -171,15 +201,15 @@ export default function RaffleProductPage({ params }: { params: { id: string } }
                   <div className="stat-label">응모권 가격</div>
                 </div>
                 <div className="stat-item">
-                  <div className="stat-value">{product.total_slots.toLocaleString()}장</div>
-                  <div className="stat-label">총 응모권</div>
+                  <div className="stat-value">{maxPurchasable.toLocaleString()}장</div>
+                  <div className="stat-label">남은 응모권 (총 {product.total_slots.toLocaleString()}장)</div>
                 </div>
               </div>
             </div>
 
             <div className="cta-row">
-              <button className="btn-raffle" onClick={() => setModalOpen(true)}>
-                <TicketIcon size={17} weight="fill" /> 응모하기
+              <button className="btn-raffle" onClick={openModal} disabled={soldOut}>
+                <TicketIcon size={17} weight="fill" /> {soldOut ? '매진' : '응모하기'}
               </button>
               <button
                 className={`btn-wish ${isLiked ? 'liked' : ''}`}
@@ -230,9 +260,18 @@ export default function RaffleProductPage({ params }: { params: { id: string } }
             <span>응모권 구매 후 취소 및 환불이 불가합니다. 추첨 결과는 마감일 기준 24시간 이내에 알림으로 발송됩니다.</span>
           </div>
 
+          {submitError && (
+            <div className="modal-notice" style={{ color: 'var(--danger)' }}>
+              <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span>{submitError}</span>
+            </div>
+          )}
+
           <div className="modal-btn-row">
-            <button className="btn-cancel" onClick={() => setModalOpen(false)}>취소</button>
-            <button className="btn-confirm" onClick={submitRaffle}><TicketIcon size={15} weight="fill" /> 응모하기</button>
+            <button className="btn-cancel" onClick={() => setModalOpen(false)} disabled={submitting}>취소</button>
+            <button className="btn-confirm" onClick={submitRaffle} disabled={submitting || soldOut}>
+              <TicketIcon size={15} weight="fill" /> {submitting ? '처리 중...' : '응모하기'}
+            </button>
           </div>
         </div>
       </div>

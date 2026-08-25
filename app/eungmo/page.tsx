@@ -76,11 +76,14 @@ export default function EungmoPage() {
                     <div className="card-price">{p.ticket_price.toLocaleString()} 운포인트 <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-tertiary)' }}>/ 장당</span></div>
                     <div className="card-progress-row">
                       <div className="card-progress-bar">
-                        <div className="card-progress-fill" style={{ width: '0%' }} />
+                        <div
+                          className="card-progress-fill"
+                          style={{ width: `${p.total_slots > 0 ? Math.min(100, Math.round((p.sold_slots / p.total_slots) * 100)) : 0}%` }}
+                        />
                       </div>
                     </div>
                     <div className="card-progress-label">
-                      <span style={{ color: 'var(--text-tertiary)' }}>집계 준비 중</span>
+                      <span>{p.remaining_slots.toLocaleString()}장 남음</span>
                       <span>총 {p.total_slots.toLocaleString()}장</span>
                     </div>
                   </div>

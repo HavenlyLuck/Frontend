@@ -125,6 +125,7 @@ export interface RaffleProductResponse {
   price_krw: number
   ticket_price: number
   total_slots: number
+  sold_slots: number
   image_url: string | null
   status: 'open' | 'completed' | 'cancelled'
   starts_at: string
@@ -132,11 +133,32 @@ export interface RaffleProductResponse {
   drawn_at: string | null
   remaining_seconds: number
   is_open: boolean
+  remaining_slots: number
 }
 
 export function getRaffleProducts(status?: 'open' | 'completed' | 'cancelled') {
   const query = status ? `?status=${status}` : ''
   return request<RaffleProductResponse[]>(`/raffles${query}`)
+}
+
+export function getRaffleProduct(raffleProductId: number) {
+  return request<RaffleProductResponse>(`/raffles/${raffleProductId}`)
+}
+
+export interface RaffleEntryResponse {
+  entry_id: number
+  raffle_product_id: number
+  ticket_count: number
+  points_spent: number
+  created_at: string
+}
+
+export function createRaffleEntry(token: string, raffleProductId: number, ticketCount: number) {
+  return request<RaffleEntryResponse>(`/raffles/${raffleProductId}/entries`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ ticket_count: ticketCount }),
+  })
 }
 
 export interface CreateRaffleProductPayload {
