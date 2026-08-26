@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { login, ApiError } from '@/lib/api'
+import { notifyPointsUpdated } from '@/hooks/useMyPoints'
 
 const inputStyle: React.CSSProperties = {
   padding: '12px 14px',
@@ -37,6 +38,7 @@ export default function LoginPage() {
       localStorage.setItem('refreshToken', res.refresh_token)
       localStorage.setItem('userId', form.userId)
       localStorage.setItem('isAdmin', String(res.is_admin))
+      notifyPointsUpdated()
       router.push('/')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '로그인 중 오류가 발생했습니다.')

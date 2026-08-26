@@ -118,6 +118,21 @@ export function getMyPoints(token: string) {
   })
 }
 
+export interface MyProfileResponse {
+  user_id: number
+  login_id: string
+  nickname: string
+  email: string
+  avatar_url: string | null
+  trade_count: number
+}
+
+export function getMyProfile(token: string) {
+  return request<MyProfileResponse>('/users/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 export interface RaffleProductResponse {
   raffle_product_id: number
   product_name: string
@@ -151,13 +166,37 @@ export interface RaffleEntryResponse {
   ticket_count: number
   points_spent: number
   created_at: string
+  entry_number: number
+}
+
+export interface RaffleEntryCreateResponse extends RaffleEntryResponse {
+  total_ticket_count: number
 }
 
 export function createRaffleEntry(token: string, raffleProductId: number, ticketCount: number) {
-  return request<RaffleEntryResponse>(`/raffles/${raffleProductId}/entries`, {
+  return request<RaffleEntryCreateResponse>(`/raffles/${raffleProductId}/entries`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ ticket_count: ticketCount }),
+  })
+}
+
+export interface MyRaffleEntryResponse {
+  entry_id: number
+  raffle_product_id: number
+  ticket_count: number
+  points_spent: number
+  created_at: string
+  product_name: string
+  image_url: string | null
+  price_krw: number
+  status: 'open' | 'completed' | 'cancelled'
+  ends_at: string
+}
+
+export function getMyRaffleEntries(token: string) {
+  return request<MyRaffleEntryResponse[]>('/raffles/entries/me', {
+    headers: { Authorization: `Bearer ${token}` },
   })
 }
 
