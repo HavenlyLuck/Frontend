@@ -1,22 +1,23 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   CalendarIcon,
-  CheckCircleIcon,
   ChatCircleIcon,
   ClockIcon,
+  ConfettiIcon,
   EyeIcon,
   FlameIcon,
   HeartIcon,
   TicketIcon,
   WarningIcon,
 } from '@phosphor-icons/react'
-import { ApiError, createRaffleEntry, getRaffleProducts, type RaffleProductResponse } from '@/lib/api'
+import { ApiError, createRaffleEntry, getRaffleProducts, type RaffleProductResponse, type RaffleEntryCreateResponse } from '@/lib/api'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
 import { getValidSession, isLoggedIn } from '@/lib/auth'
+import { notifyPointsUpdated } from '@/hooks/useMyPoints'
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return '마감'
@@ -44,11 +45,10 @@ export default function RaffleProductPage({ params }: { params: { id: string } }
   const [ticketCount, setTicketCount] = useState(1)
   const [isLiked, setIsLiked] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
-  const [showToast, setShowToast] = useState(false)
+  const [purchaseResult, setPurchaseResult] = useState<RaffleEntryCreateResponse | null>(null)
   const [remaining, setRemaining] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     getRaffleProducts()
@@ -124,10 +124,9 @@ export default function RaffleProductPage({ params }: { params: { id: string } }
       const newSoldSlots = product.sold_slots + entry.ticket_count
       const justSoldOut = newSoldSlots >= product.total_slots
       setProduct((prev) => (prev ? { ...prev, sold_slots: newSoldSlots } : prev))
+      notifyPointsUpdated()
       setModalOpen(false)
-      setShowToast(true)
-      if (toastTimer.current) clearTimeout(toastTimer.current)
-      toastTimer.current = setTimeout(() => setShowToast(false), 3500)
+      setPurchaseResult(entry)
       if (justSoldOut) {
         alert('응모권이 모두 소진되었습니다! 당첨자 추첨 기능은 아직 준비 중이라, 별도 절차 없이 응모가 그대로 진행됩니다.')
       }
@@ -276,10 +275,29 @@ export default function RaffleProductPage({ params }: { params: { id: string } }
         </div>
       </div>
 
-      {/* 토스트 */}
-      <div className={`toast ${showToast ? 'show' : ''}`}>
-        <CheckCircleIcon size={18} weight="fill" color="var(--success)" /> 응모가 완료되었습니다! 당첨을 기다려주세요.
-      </div>
+      {/* 구매 완료 결과 */}
+      {purchaseResult && (
+        <div
+          className="modal-overlay open"
+          onClick={(e) => { if (e.target === e.currentTarget) setPurchaseResult(null) }}
+        >
+          <div className="modal">
+            <div className="modal-icon"><ConfettiIcon size={28} weight="fill" color="var(--gold)" /></div>
+            <div className="modal-title">응모가 완료되었습니다!</div>
+            <div className="modal-sub">
+              내 응모 번호<br />
+              <strong style={{ color: 'var(--text)', fontSize: 20 }}>#{purchaseResult.entry_number}</strong>
+            </div>
+            <div className="modal-sub">
+              이 상품에 지금까지 총{' '}
+              <strong style={{ color: 'var(--text)' }}>{purchaseResult.total_ticket_count}장</strong> 응모하셨습니다.
+            </div>
+            <div className="modal-btn-row">
+              <button className="btn-confirm" style={{ width: '100%' }} onClick={() => setPurchaseResult(null)}>확인</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

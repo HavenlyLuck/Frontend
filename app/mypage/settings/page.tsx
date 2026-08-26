@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckIcon, GearIcon } from '@phosphor-icons/react'
-import { clearAuth } from '@/lib/auth'
+import { clearAuth, getValidSession } from '@/lib/auth'
+import { getMyProfile } from '@/lib/api'
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: 8,
@@ -20,13 +21,26 @@ const card: React.CSSProperties = {
 
 export default function SettingsPage() {
   const router = useRouter()
-  const [nickname, setNickname] = useState('경호소인')
-  const [email, setEmail] = useState('wkcpq103100@gmail.com')
+  const [nickname, setNickname] = useState('')
+  const [email, setEmail] = useState('')
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
   const [notif, setNotif] = useState({ deadline: true, win: true, marketing: false })
   const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    getValidSession().then((session) => {
+      if (!session) return
+      getMyProfile(session.token).then((profile) => {
+        if (cancelled) return
+        setNickname(profile.nickname)
+        setEmail(profile.email)
+      })
+    })
+    return () => { cancelled = true }
+  }, [])
 
   const handleSave = () => {
     setSaved(true)
