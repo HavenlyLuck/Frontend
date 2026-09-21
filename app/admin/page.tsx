@@ -8,6 +8,7 @@ import {
   ChartBarIcon,
   ChartLineUpIcon,
   CoinsIcon,
+  DiceFiveIcon,
   GearIcon,
   GiftIcon,
   GrainsIcon,
@@ -424,6 +425,20 @@ export default function AdminPage() {
               <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>부대비용을 기록하고 일별 · 주별 · 월별 · 년도별 순이익을 확인하세요</div>
             </div>
             <span style={{ color: 'var(--gold)', fontSize: 20 }}>→</span>
+          </div>
+        </Link>
+
+        {/* 라플 추첨 바로가기 */}
+        <Link href="/admin/raffle-draw" style={{ textDecoration: 'none' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: 'var(--accent-tint)', border: '1px solid var(--accent-tint-border)', borderRadius: 14, padding: '20px 24px', marginBottom: 36, cursor: 'pointer',
+          }}>
+            <div>
+              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><DiceFiveIcon size={18} weight="fill" color="var(--accent)" /> 라플 추첨</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>마감된 응모 상품의 당첨자를 추첨하고 결과 영상을 저장하세요</div>
+            </div>
+            <span style={{ color: 'var(--accent)', fontSize: 20 }}>→</span>
           </div>
         </Link>
 

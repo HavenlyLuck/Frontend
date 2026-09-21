@@ -1,9 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { TicketIcon, CalendarIcon } from '@phosphor-icons/react'
 import { useMyRaffleEntries } from '@/hooks/useMyRaffleEntries'
-import { groupEntriesByProduct } from '@/lib/raffle'
+import { groupEntriesByProduct, type GroupedRaffleEntry } from '@/lib/raffle'
 import { formatRelativeDate } from '@/lib/date'
 
 const STATUS_LABEL: Record<'open' | 'completed' | 'cancelled', string> = {
@@ -15,6 +16,8 @@ const STATUS_LABEL: Record<'open' | 'completed' | 'cancelled', string> = {
 export default function RaffleEntriesPage() {
   const { entries } = useMyRaffleEntries()
   const grouped = groupEntriesByProduct(entries)
+  const [resultItem, setResultItem] = useState<GroupedRaffleEntry | null>(null)
+  const isWin = resultItem != null && resultItem.entryNumber === resultItem.winnerEntryNumber
 
   const ongoing = grouped.filter(e => e.status === 'open')
   const past = grouped.filter(e => e.status !== 'open')
@@ -84,14 +87,44 @@ export default function RaffleEntriesPage() {
                 </div>
               </div>
               <div className="entry-status">
-                <span className={`status-badge ${item.status === 'cancelled' ? 'lose' : 'waiting'}`}>
-                  {STATUS_LABEL[item.status]}
-                </span>
+                {item.status === 'completed' && item.drawVideoUrl ? (
+                  <button className="btn-win-confirm" onClick={() => setResultItem(item)}>
+                    당첨결과 확인하기
+                  </button>
+                ) : (
+                  <span className={`status-badge ${item.status === 'cancelled' ? 'lose' : 'waiting'}`}>
+                    {STATUS_LABEL[item.status]}
+                  </span>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <div className={`win-overlay ${resultItem ? 'open' : ''}`} onClick={() => setResultItem(null)}>
+        {resultItem && (
+          <div className="win-modal" onClick={e => e.stopPropagation()}>
+            <span className="win-icon">{isWin ? '🎉' : '💔'}</span>
+            <div className="win-title" style={!isWin ? { color: 'var(--text-tertiary)' } : undefined}>
+              {isWin ? '당첨을 축하드려요!' : '아쉽게도 낙첨되었어요'}
+            </div>
+            <div className="win-product">
+              {resultItem.product_name}
+              <br />
+              내 응모번호 #{resultItem.entryNumber} · 당첨번호 #{resultItem.winnerEntryNumber}
+            </div>
+            {resultItem.drawVideoUrl && (
+              <video
+                src={resultItem.drawVideoUrl}
+                controls
+                style={{ width: '100%', borderRadius: 12, marginBottom: 20, background: '#000' }}
+              />
+            )}
+            <button className="win-close" onClick={() => setResultItem(null)}>닫기</button>
+          </div>
+        )}
+      </div>
     </>
   )
 }
