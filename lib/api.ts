@@ -146,6 +146,9 @@ export interface RaffleProductResponse {
   starts_at: string
   ends_at: string
   drawn_at: string | null
+  winner_entry_number: number | null
+  winner_user_id: number | null
+  draw_video_url: string | null
   remaining_seconds: number
   is_open: boolean
   remaining_slots: number
@@ -158,6 +161,49 @@ export function getRaffleProducts(status?: 'open' | 'completed' | 'cancelled') {
 
 export function getRaffleProduct(raffleProductId: number) {
   return request<RaffleProductResponse>(`/raffles/${raffleProductId}`)
+}
+
+export function getPendingDrawProducts(token: string) {
+  return request<RaffleProductResponse[]>('/raffles/pending-draw', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export interface RaffleEntrantResponse {
+  entry_number: number
+  ticket_count: number
+}
+
+export function getRaffleEntrants(token: string, raffleProductId: number) {
+  return request<RaffleEntrantResponse[]>(`/raffles/${raffleProductId}/entrants`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function drawRaffleWinner(token: string, raffleProductId: number, winnerEntryNumber: number, video: Blob) {
+  const formData = new FormData()
+  formData.append('winner_entry_number', String(winnerEntryNumber))
+  formData.append('video', video, 'draw.webm')
+
+  const res = await fetch(`${API_URL}/raffles/${raffleProductId}/draw`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+
+  const data = await res.json().catch(() => null)
+
+  if (!res.ok) {
+    const detail = data?.detail
+    const message = typeof detail === 'string'
+      ? detail
+      : Array.isArray(detail)
+        ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join(', ')
+        : '요청 처리 중 오류가 발생했습니다.'
+    throw new ApiError(res.status, message)
+  }
+
+  return data as RaffleProductResponse
 }
 
 export interface RaffleEntryResponse {
@@ -181,17 +227,26 @@ export function createRaffleEntry(token: string, raffleProductId: number, ticket
   })
 }
 
+export function getMyRaffleEntriesForProduct(token: string, raffleProductId: number) {
+  return request<RaffleEntryResponse[]>(`/raffles/${raffleProductId}/entries/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 export interface MyRaffleEntryResponse {
   entry_id: number
   raffle_product_id: number
   ticket_count: number
   points_spent: number
+  entry_number: number
   created_at: string
   product_name: string
   image_url: string | null
   price_krw: number
   status: 'open' | 'completed' | 'cancelled'
   ends_at: string
+  winner_entry_number: number | null
+  draw_video_url: string | null
 }
 
 export function getMyRaffleEntries(token: string) {
