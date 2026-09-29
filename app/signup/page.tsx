@@ -16,39 +16,21 @@ const DUPL_CHECK_FIELDS: Record<'nickname' | 'userId' | 'email', DuplCheckField>
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,20}$/
 
-const inputStyle: React.CSSProperties = {
-  flex: 1,
-  padding: '12px 14px',
-  borderRadius: 8,
-  border: '1px solid #e2e2e4',
-  background: '#ffffff',
-  color: '#181818',
-  fontSize: 15,
-  outline: 'none',
-  minWidth: 0,
-}
+const CLOUD_MARK_PATH =
+  'M6 20 C6 15.5 9.6 12.5 13.5 13.2 C14.6 9.6 19 8.3 22 11 C25.6 11.4 28 14.3 27 17.8 C29.2 19 29.2 22.4 26.5 23.3 C25.5 25.6 22.6 26.2 20.8 24.6 C19.4 26.4 16.4 26.3 15.1 24.4 C12.8 25.6 9.8 24.3 9.3 21.8 C7.4 21.9 6 21.2 6 20 Z'
 
-const checkBtnStyle: React.CSSProperties = {
-  padding: '0 14px',
-  height: 46,
-  borderRadius: 8,
-  background: '#f5f6f7',
-  color: '#454545',
-  fontSize: 13,
-  fontWeight: 600,
-  border: '1px solid #e2e2e4',
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-  flexShrink: 0,
+function CloudMark({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" aria-hidden="true">
+      <path d={CLOUD_MARK_PATH} fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinejoin="round" />
+      <circle cx="23" cy="12.5" r="1.8" fill="var(--gold)" />
+    </svg>
+  )
 }
 
 function StatusMsg({ state, message }: { state: CheckState; message: string }) {
   if (state === 'idle' || state === 'checking') return null
-  return (
-    <p style={{ margin: '2px 0 0', fontSize: 12, color: state === 'ok' ? '#16a34a' : '#e14d72' }}>
-      {message}
-    </p>
-  )
+  return <p className={`field-hint ${state === 'ok' ? 'ok' : 'fail'}`}>{message}</p>
 }
 
 export default function SignupPage() {
@@ -131,84 +113,160 @@ export default function SignupPage() {
     }
   }
 
+  const passwordHintClass = !form.password ? '' : PASSWORD_REGEX.test(form.password) ? 'ok' : 'fail'
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px', background: '#f5f6f7' }}>
-      <div style={{ width: '100%', maxWidth: 460, padding: '40px 32px', background: '#ffffff', border: '1px solid #ececec', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: 28, fontSize: 24, fontWeight: 700, color: '#181818' }}>회원가입</h2>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="auth-shell">
+      <div className="auth-grid">
+        <div className="auth-brand">
+          <CloudMark className="auth-brand-mark" />
+          <h1>
+            천원 한 장,
+            <br />
+            <span>천운</span>을 뽑다.
+          </h1>
+          <ul className="auth-brand-facts">
+            <li><b>1,000P</b>부터 응모 시작</li>
+            <li><b>매진</b> 시 바로 자동 추첨</li>
+            <li>낙첨해도 <b>쌀포인트</b>로 페이백</li>
+          </ul>
+        </div>
 
-          {/* 닉네임 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input name="nickname" type="text" placeholder="닉네임" value={form.nickname} onChange={handleChange} required style={inputStyle} />
-              <button type="button" disabled={checks.nickname === 'checking'} style={checkBtnStyle} onClick={() => handleCheck('nickname')}>
-                {checks.nickname === 'checking' ? '확인 중...' : '중복확인'}
-              </button>
+        <div className="auth-card">
+          <div className="auth-card-mobile-mark">
+            <CloudMark />
+            천운
+          </div>
+          <h2 className="auth-title">회원가입</h2>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {/* 닉네임 */}
+            <div className="field">
+              <div className="field-row">
+                <input
+                  id="signup-nickname"
+                  name="nickname"
+                  type="text"
+                  placeholder="닉네임"
+                  value={form.nickname}
+                  onChange={handleChange}
+                  required
+                  className="field-input"
+                />
+                <button type="button" disabled={checks.nickname === 'checking'} className="field-btn" onClick={() => handleCheck('nickname')}>
+                  {checks.nickname === 'checking' ? '확인 중...' : '중복확인'}
+                </button>
+              </div>
+              <StatusMsg state={checks.nickname} message={checkMessages.nickname} />
             </div>
-            <StatusMsg state={checks.nickname} message={checkMessages.nickname} />
-          </div>
 
-          {/* 아이디 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input name="userId" type="text" placeholder="아이디" value={form.userId} onChange={handleChange} required style={inputStyle} />
-              <button type="button" disabled={checks.userId === 'checking'} style={checkBtnStyle} onClick={() => handleCheck('userId')}>
-                {checks.userId === 'checking' ? '확인 중...' : '중복확인'}
-              </button>
+            {/* 아이디 */}
+            <div className="field">
+              <div className="field-row">
+                <input
+                  id="signup-userId"
+                  name="userId"
+                  type="text"
+                  placeholder="아이디"
+                  value={form.userId}
+                  onChange={handleChange}
+                  required
+                  className="field-input"
+                  autoComplete="username"
+                />
+                <button type="button" disabled={checks.userId === 'checking'} className="field-btn" onClick={() => handleCheck('userId')}>
+                  {checks.userId === 'checking' ? '확인 중...' : '중복확인'}
+                </button>
+              </div>
+              <StatusMsg state={checks.userId} message={checkMessages.userId} />
             </div>
-            <StatusMsg state={checks.userId} message={checkMessages.userId} />
-          </div>
 
-          {/* 비밀번호 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <input name="password" type="password" placeholder="비밀번호" value={form.password} onChange={handleChange} required maxLength={20} style={inputStyle} />
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: !form.password ? '#9a9a9a' : PASSWORD_REGEX.test(form.password) ? '#16a34a' : '#e14d72' }}>
-              영문 대소문자, 숫자, 특수문자를 모두 포함한 8~20자
-            </p>
-          </div>
-
-          {/* 비밀번호 확인 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <input name="confirm" type="password" placeholder="비밀번호 확인" value={form.confirm} onChange={handleChange} required style={inputStyle} />
-            {form.confirm && (
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: form.password === form.confirm ? '#16a34a' : '#e14d72' }}>
-                {form.password === form.confirm ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
+            {/* 비밀번호 */}
+            <div className="field">
+              <input
+                id="signup-password"
+                name="password"
+                type="password"
+                placeholder="비밀번호"
+                value={form.password}
+                onChange={handleChange}
+                required
+                maxLength={20}
+                className="field-input"
+                autoComplete="new-password"
+              />
+              <p className={`field-hint ${passwordHintClass}`}>
+                영문 대소문자, 숫자, 특수문자를 모두 포함한 8~20자
               </p>
-            )}
-          </div>
-
-          {/* 이메일 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input name="email" type="email" placeholder="이메일" value={form.email} onChange={handleChange} required style={inputStyle} />
-              <button type="button" disabled={checks.email === 'checking'} style={checkBtnStyle} onClick={() => handleCheck('email')}>
-                {checks.email === 'checking' ? '확인 중...' : '중복확인'}
-              </button>
             </div>
-            <StatusMsg state={checks.email} message={checkMessages.email} />
-          </div>
 
-          {/* 핸드폰 번호 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input name="phone" type="tel" placeholder="핸드폰 번호 (- 없이 입력)" value={form.phone} onChange={handleChange} required style={inputStyle} />
-              <button type="button" style={checkBtnStyle} onClick={handlePhoneCert}>본인인증</button>
+            {/* 비밀번호 확인 */}
+            <div className="field">
+              <input
+                id="signup-confirm"
+                name="confirm"
+                type="password"
+                placeholder="비밀번호 확인"
+                value={form.confirm}
+                onChange={handleChange}
+                required
+                className="field-input"
+                autoComplete="new-password"
+              />
+              {form.confirm && (
+                <p className={`field-hint ${form.password === form.confirm ? 'ok' : 'fail'}`}>
+                  {form.password === form.confirm ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
+                </p>
+              )}
             </div>
-            {phoneCertified && <p style={{ margin: '2px 0 0', fontSize: 12, color: '#16a34a' }}>본인인증이 완료되었습니다.</p>}
-          </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            style={{ padding: '13px', borderRadius: 8, background: '#181818', color: '#fff', fontSize: 16, fontWeight: 700, border: 'none', cursor: submitting ? 'default' : 'pointer', marginTop: 8, opacity: submitting ? 0.7 : 1 }}
-          >
-            {submitting ? '가입 중...' : '회원가입'}
-          </button>
-        </form>
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#767676' }}>
-          이미 계정이 있으신가요?{' '}
-          <Link href="/login" style={{ color: '#4fa8e8', fontWeight: 600, textDecoration: 'none' }}>로그인</Link>
-        </p>
+            {/* 이메일 */}
+            <div className="field">
+              <div className="field-row">
+                <input
+                  id="signup-email"
+                  name="email"
+                  type="email"
+                  placeholder="이메일"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  className="field-input"
+                  autoComplete="email"
+                />
+                <button type="button" disabled={checks.email === 'checking'} className="field-btn" onClick={() => handleCheck('email')}>
+                  {checks.email === 'checking' ? '확인 중...' : '중복확인'}
+                </button>
+              </div>
+              <StatusMsg state={checks.email} message={checkMessages.email} />
+            </div>
+
+            {/* 핸드폰 번호 */}
+            <div className="field">
+              <div className="field-row">
+                <input
+                  id="signup-phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="핸드폰 번호 (- 없이 입력)"
+                  value={form.phone}
+                  onChange={handleChange}
+                  required
+                  className="field-input"
+                  autoComplete="tel"
+                />
+                <button type="button" className="field-btn" onClick={handlePhoneCert}>본인인증</button>
+              </div>
+              {phoneCertified && <p className="field-hint ok">본인인증이 완료되었습니다.</p>}
+            </div>
+
+            <button type="submit" disabled={submitting} className="auth-submit">
+              {submitting ? '가입 중...' : '회원가입'}
+            </button>
+          </form>
+          <p className="auth-switch">
+            이미 계정이 있으신가요? <Link href="/login">로그인</Link>
+          </p>
+        </div>
       </div>
     </div>
   )

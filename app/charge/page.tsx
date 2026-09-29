@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ArrowCircleDownIcon, ArrowCircleUpIcon } from '@phosphor-icons/react'
 import { useMyPoints } from '@/hooks/useMyPoints'
 
 const HISTORY = [
@@ -11,73 +12,59 @@ const HISTORY = [
   { type: 'withdraw', label: '포인트 인출', date: '2026.06.05', point: '-20,000P' },
 ]
 
-const typeColor: Record<string, string> = {
-  deposit: '#16a34a',
-  withdraw: '#dc2626',
-  bonus: '#4fa8e8',
-}
-
 export default function PointHubPage() {
   const { eungPoint, ssalPoint } = useMyPoints()
   const totalPoint = eungPoint + ssalPoint
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '60px 16px', background: '#f5f6f7' }}>
-      <div style={{ width: '100%', maxWidth: 480 }}>
+    <div className="wallet-container">
+      <h1 className="wallet-title" style={{ marginBottom: 24 }}>내 지갑</h1>
 
-        {/* 총 포인트 */}
-        <div style={{ background: '#ffffff', border: '1px solid #ececec', borderRadius: 16, padding: '28px 24px', marginBottom: 20, textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          <p style={{ fontSize: 13, color: '#767676', marginBottom: 8 }}>총 보유 포인트</p>
-          <p style={{ fontSize: 36, fontWeight: 800, color: '#181818', marginBottom: 16 }}>
-            {totalPoint.toLocaleString()}<span style={{ fontSize: 20, fontWeight: 600, color: '#9a9a9a', marginLeft: 4 }}>P</span>
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 24 }}>
-            <div>
-              <p style={{ fontSize: 11, color: '#767676', marginBottom: 2 }}>🎰 운포인트</p>
-              <p style={{ fontSize: 16, fontWeight: 700, color: '#d9691d' }}>{eungPoint.toLocaleString()}P</p>
-            </div>
-            <div style={{ width: 1, background: '#ececec' }} />
-            <div>
-              <p style={{ fontSize: 11, color: '#767676', marginBottom: 2 }}>🌾 쌀포인트</p>
-              <p style={{ fontSize: 16, fontWeight: 700, color: '#4fa8e8' }}>{ssalPoint.toLocaleString()}P</p>
-            </div>
+      {/* 총 포인트 */}
+      <div className="wallet-total-card">
+        <p className="wallet-total-label">총 보유 포인트</p>
+        <p className="wallet-total-value">
+          {totalPoint.toLocaleString()}<span>P</span>
+        </p>
+        <div className="wallet-split-row">
+          <div className="wallet-split-item">
+            <p className="wallet-split-label">🎰 운포인트</p>
+            <p className="wallet-split-value">{eungPoint.toLocaleString()}P</p>
+          </div>
+          <div className="wallet-split-divider" />
+          <div className="wallet-split-item">
+            <p className="wallet-split-label">🌾 쌀포인트</p>
+            <p className="wallet-split-value">{ssalPoint.toLocaleString()}P</p>
           </div>
         </div>
+      </div>
 
-        {/* 충전 / 인출 버튼 */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 32 }}>
-          <Link
-            href="/charge/withdraw"
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0', borderRadius: 12, border: '1px solid #e2e2e4', background: '#ffffff', textDecoration: 'none', color: '#454545', transition: 'all 0.15s' }}
-          >
-            <span style={{ fontSize: 24 }}>💸</span>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>포인트 인출</span>
-          </Link>
-          <Link
-            href="/charge/deposit"
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 0', borderRadius: 12, border: '1px solid #e2e2e4', background: '#ffffff', textDecoration: 'none', color: '#454545', transition: 'all 0.15s' }}
-          >
-            <span style={{ fontSize: 24 }}>🎟</span>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>포인트 충전</span>
-          </Link>
-        </div>
+      {/* 충전 / 인출 버튼 */}
+      <div className="wallet-actions">
+        <Link href="/charge/withdraw" className="wallet-action-card">
+          <ArrowCircleDownIcon size={26} weight="light" />
+          <span className="wallet-action-label">포인트 인출</span>
+        </Link>
+        <Link href="/charge/deposit" className="wallet-action-card">
+          <ArrowCircleUpIcon size={26} weight="light" />
+          <span className="wallet-action-label">포인트 충전</span>
+        </Link>
+      </div>
 
-        {/* 최근 내역 */}
-        <div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#181818', marginBottom: 12 }}>최근 내역</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {HISTORY.map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', border: '1px solid #ececec', borderRadius: 10, padding: '14px 16px' }}>
-                <div>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: '#181818', marginBottom: 2 }}>{item.label}</p>
-                  <p style={{ fontSize: 12, color: '#9a9a9a' }}>{item.date}</p>
-                </div>
-                <p style={{ fontSize: 15, fontWeight: 700, color: typeColor[item.type] }}>{item.point}</p>
+      {/* 최근 내역 */}
+      <div>
+        <p className="wallet-section-title">최근 내역</p>
+        <div className="wallet-history-list">
+          {HISTORY.map((item, i) => (
+            <div key={i} className="wallet-history-item">
+              <div>
+                <p className="wallet-history-label">{item.label}</p>
+                <p className="wallet-history-date">{item.date}</p>
               </div>
-            ))}
-          </div>
+              <p className={`wallet-history-amount ${item.type}`}>{item.point}</p>
+            </div>
+          ))}
         </div>
-
       </div>
     </div>
   )

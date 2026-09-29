@@ -18,7 +18,7 @@ const NAV_CATEGORIES = [
   { label: "응모", href: "/eungmo" },
   { label: "쿠지", href: "/kuji" },
   { label: "상점", href: "/shop" },
-  { label: "설명충", href: "/guide" },
+  { label: "가이드", href: "/guide" },
   { label: "후기/문의", href: "/review" },
 ];
 

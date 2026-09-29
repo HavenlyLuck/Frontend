@@ -259,12 +259,12 @@ function HomeProductCard({ item }: { item: HomeItem }) {
 }
 
 export default function HomePage() {
-  const [kujiItems, setKujiItems] = useState(KUJI_ITEMS.slice(0, 3));
-  const [shopItems, setShopItems] = useState(SHOP_ITEMS.slice(0, 3));
+  const [kujiItems, setKujiItems] = useState(KUJI_ITEMS.slice(0, 4));
+  const [shopItems, setShopItems] = useState(SHOP_ITEMS.slice(0, 4));
 
   useEffect(() => {
-    setKujiItems(pickRandom(KUJI_ITEMS, 3));
-    setShopItems(pickRandom(SHOP_ITEMS, 3));
+    setKujiItems(pickRandom(KUJI_ITEMS, 4));
+    setShopItems(pickRandom(SHOP_ITEMS, 4));
   }, []);
 
   const [raffleProducts, setRaffleProducts] = useState<RaffleProductResponse[]>([]);
@@ -291,7 +291,7 @@ export default function HomePage() {
   const openRaffleItems = raffleProducts
     .map((rp) => ({ rp, remainingSeconds: Math.max(0, rp.remaining_seconds - elapsedSeconds) }))
     .filter((item) => item.remainingSeconds > 0)
-    .slice(0, 3);
+    .slice(0, 4);
   // 히어로 사진: 지금 열린 응모 상품 이미지를 자동으로 사용
   const heroImages = openRaffleItems.map(({ rp }) => rp.image_url).filter((u): u is string => !!u).slice(0, 2);
 
@@ -300,13 +300,16 @@ export default function HomePage() {
       {/* 히어로 — 박스아트 포스터 */}
       <section className="hero">
         <div className="hero-copy">
-          <div className="hero-tag">응모형 중고 마켓</div>
           <h1>
             천원 한 장,
             <br />
             <span>천운</span>을 뽑다.
           </h1>
-          <p className="hero-sub">모든 티켓이 팔리면 바로 추첨해요. 1,000 운포인트부터 참여할 수 있어요.</p>
+          <p className="hero-sub">
+            모든 티켓이 팔리면 바로 추첨해요.
+            <br />
+            1,000 운포인트부터 참여할 수 있어요.
+          </p>
           <Link className="hero-cta" href="/eungmo">응모 보러 가기</Link>
         </div>
         <div className="hero-box" aria-hidden="true">
@@ -359,7 +362,7 @@ export default function HomePage() {
         {/* 쿠지상품 */}
         <div className="section-header">
           <div className="section-title"><GiftIcon size={18} weight="fill" color="var(--accent)" /> 쿠지상품</div>
-          <div className="see-all">전체보기 →</div>
+          <Link className="see-all" href="/kuji">전체보기 →</Link>
         </div>
 
         <div className="product-grid-home">
@@ -371,7 +374,7 @@ export default function HomePage() {
         {/* 상점 */}
         <div className="section-header">
           <div className="section-title"><StorefrontIcon size={18} weight="fill" color="var(--accent)" /> 상점</div>
-          <div className="see-all">전체보기 →</div>
+          <Link className="see-all" href="/shop">전체보기 →</Link>
         </div>
 
         <div className="product-grid-home">
