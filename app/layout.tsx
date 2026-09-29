@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from 'next'
+import { Black_Han_Sans } from 'next/font/google'
 import './globals.css'
 import NavbarWrapper from '@/components/NavbarWrapper'
 import { AuthProvider } from '@/contexts/AuthContext'
+
+const display = Black_Han_Sans({ weight: '400', subsets: ['latin'], variable: '--font-display', display: 'swap' })
 
 export const metadata: Metadata = {
   title: '천운 - 응모형 중고 마켓',
@@ -15,7 +18,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={display.variable}>
       <body>
         <AuthProvider>
           <NavbarWrapper />

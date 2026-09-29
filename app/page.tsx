@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   EyeIcon,
-  FlameIcon,
   ChatCircleIcon,
   GiftIcon,
   HeartIcon,
@@ -25,6 +24,7 @@ function formatRaffleCountdown(seconds: number): string {
 }
 
 function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; remainingSeconds: number }) {
+  const soldPct = rp.total_slots > 0 ? Math.min(100, Math.round((rp.sold_slots / rp.total_slots) * 100)) : 0;
   return (
     <Link className="product-card-home" href={`/eungmo/${rp.raffle_product_id}`}>
       <div className="card-img">
@@ -37,11 +37,12 @@ function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; r
         <div className="card-price">{rp.ticket_price.toLocaleString()} 운포인트 <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-tertiary)' }}>/ 장당</span></div>
         <div className="card-progress-row">
           <div className="card-progress-bar">
-            <div className="card-progress-fill" style={{ width: '0%' }} />
+            <div className="card-progress-fill" style={{ width: `${soldPct}%` }} />
           </div>
+          <span className="card-progress-pct">{soldPct}%</span>
         </div>
         <div className="card-progress-label">
-          <span style={{ color: 'var(--text-tertiary)' }}>집계 준비 중</span>
+          <span><span className="cnt">{rp.sold_slots.toLocaleString()}장</span> 판매</span>
           <span>총 {rp.total_slots.toLocaleString()}장</span>
         </div>
       </div>
@@ -217,7 +218,7 @@ function HomeProductCard({ item }: { item: HomeItem }) {
   const isKuji = pct !== undefined;
 
   return (
-    <Link className="product-card-home" href={item.href}>
+    <Link className={`product-card-home${isKuji ? "" : " is-shop"}`} href={item.href}>
       <div className="card-img">
         <img src={item.img} alt={item.alt} />
       </div>
@@ -258,8 +259,6 @@ function HomeProductCard({ item }: { item: HomeItem }) {
 }
 
 export default function HomePage() {
-  const productsRef = useRef<HTMLDivElement>(null);
-
   const [kujiItems, setKujiItems] = useState(KUJI_ITEMS.slice(0, 3));
   const [shopItems, setShopItems] = useState(SHOP_ITEMS.slice(0, 3));
 
@@ -293,44 +292,51 @@ export default function HomePage() {
     .map((rp) => ({ rp, remainingSeconds: Math.max(0, rp.remaining_seconds - elapsedSeconds) }))
     .filter((item) => item.remainingSeconds > 0)
     .slice(0, 3);
+  // 히어로 사진: 지금 열린 응모 상품 이미지를 자동으로 사용
+  const heroImages = openRaffleItems.map(({ rp }) => rp.image_url).filter((u): u is string => !!u).slice(0, 2);
 
   return (
     <div>
-      {/* 히어로 */}
+      {/* 히어로 — 박스아트 포스터 */}
       <section className="hero">
-        <div className="hero-tag">응모형 중고 마켓</div>
-        <h1>
-          천원으로 행운을,
-          <br />
-          <span>천운</span>
-        </h1>
-
-        <div className="hero-carousel">
-          <div className="coming-soon-box large">
-            <div className="emoji"><TicketIcon size={32} weight="light" /></div>
-            <div className="title">응모 상품을 준비하고 있어요</div>
-            <div className="desc">조금만 기다려주세요, 곧 만나요!</div>
-          </div>
+        <div className="hero-copy">
+          <div className="hero-tag">응모형 중고 마켓</div>
+          <h1>
+            천원 한 장,
+            <br />
+            <span>천운</span>을 뽑다.
+          </h1>
+          <p className="hero-sub">모든 티켓이 팔리면 바로 추첨해요. 1,000 운포인트부터 참여할 수 있어요.</p>
+          <Link className="hero-cta" href="/eungmo">응모 보러 가기</Link>
+        </div>
+        <div className="hero-box" aria-hidden="true">
+          {heroImages.length === 0 ? (
+            <div className="hero-ticket">
+              <div className="hero-ticket-main">
+                <span className="hero-ticket-label">ADMIT ONE</span>
+                <span className="hero-ticket-price">1,000<small>운포인트</small></span>
+                <span className="hero-ticket-note">한 장으로 응모</span>
+              </div>
+              <div className="hero-ticket-stub">천운</div>
+            </div>
+          ) : heroImages.length === 1 ? (
+            <img className="hero-box-img hero-box-img-solo" src={heroImages[0]} alt="" />
+          ) : (
+            <>
+              <img className="hero-box-img hero-box-img-a" src={heroImages[1]} alt="" />
+              <img className="hero-box-img hero-box-img-b" src={heroImages[0]} alt="" />
+            </>
+          )}
         </div>
       </section>
 
+      <div className="hero-strip">
+        <span>티켓 한 장 <b>1,000P</b>부터</span>
+        <span>전량 판매 시 <b>자동 추첨</b></span>
+        <span>당첨 상품은 <b>보관함</b>으로</span>
+      </div>
+
       <div className="home-container">
-        {/* 마감 임박 */}
-        <div
-          className="section-header"
-          ref={productsRef}
-          style={{ scrollMarginTop: "80px" }}
-        >
-          <div className="section-title"><FlameIcon size={18} weight="fill" color="var(--warn)" /> 마감 임박</div>
-          <div className="see-all">전체보기 →</div>
-        </div>
-
-        <div className="coming-soon-box">
-          <div className="emoji"><FlameIcon size={28} weight="light" /></div>
-          <div className="title">상품 준비중</div>
-          <div className="desc">마감 임박 응모 상품이 곧 올라올 예정이에요</div>
-        </div>
-
         {/* 응모상품 */}
         <div className="section-header">
           <div className="section-title"><TicketIcon size={18} weight="fill" color="var(--accent)" /> 응모상품</div>
@@ -338,10 +344,9 @@ export default function HomePage() {
         </div>
 
         {openRaffleItems.length === 0 ? (
-          <div className="coming-soon-box">
-            <div className="emoji"><TicketIcon size={28} weight="light" /></div>
-            <div className="title">상품 준비중</div>
-            <div className="desc">응모 상품을 준비하고 있어요</div>
+          <div className="soon-strip">
+            <span className="soon-dot" />
+            지금 열린 응모가 없어요. 새 응모가 열리면 여기에 표시돼요.
           </div>
         ) : (
           <div className="product-grid-home">

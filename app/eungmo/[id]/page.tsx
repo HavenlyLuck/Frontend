@@ -293,7 +293,7 @@ export default function RaffleProductPage({
                   <div className="progress-bar">
                     <div
                       className="progress-fill"
-                      style={{ width: `${soldPct}%` }}
+                      style={{ transform: `scaleX(${soldPct / 100})` }}
                     />
                   </div>
                   <span className="progress-pct">{soldPct}%</span>

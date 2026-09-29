@@ -134,7 +134,7 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
               <span style={{ fontWeight: 700, color: 'var(--text)' }}>{remaining} / {product.totalTickets}</span>
             </div>
             <div style={{ height: 8, borderRadius: 4, background: 'var(--border)', overflow: 'hidden' }}>
-              <div style={{ width: `${(remaining / product.totalTickets) * 100}%`, height: '100%', background: 'var(--warn)', transition: 'width 0.2s' }} />
+              <div style={{ width: '100%', height: '100%', background: 'var(--warn)', transformOrigin: 'left', transform: `scaleX(${remaining / product.totalTickets})`, transition: 'transform 0.2s' }} />
             </div>
           </div>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>

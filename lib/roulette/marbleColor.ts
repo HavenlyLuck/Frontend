@@ -11,5 +11,7 @@ const HUE_SHUFFLE_STEP = 37
 export function getMarbleColor(entryNumber: number): string {
   const shuffledIndex = (entryNumber * HUE_SHUFFLE_STEP) % MARBLE_COLOR_COUNT
   const hue = Math.round((360 / MARBLE_COLOR_COUNT) * shuffledIndex)
-  return `hsl(${hue}, 100%, 58%)`
+  // 채도/명도를 낮춰 캔디 네온이 아니라 보석(잼톤) 느낌으로 — 사이트의 다크 컬렉터블 톤과 맞춘다.
+  // 색상 자체는 여전히 360도를 다 쓰므로 응모자 구분력은 그대로 유지된다.
+  return `hsl(${hue}, 62%, 46%)`
 }

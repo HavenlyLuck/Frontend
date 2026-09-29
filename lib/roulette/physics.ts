@@ -35,12 +35,13 @@ export const VIEW_BOTTOM = FLOOR_Y + 1
 
 export const MARBLE_RADIUS = 0.28
 
-// 네온 느낌을 위해 채도 높은 색으로 통일 (렌더러에서 이 색들에 발광 효과를 입힌다)
-const PEG_COLOR = '#ff8c00'
-const PADDLE_COLOR = '#b967ff'
-const BUMPER_COLOR = '#ff2e97'
-const FUNNEL_COLOR = '#00e5ff'
-const FINAL_PADDLE_COLOR = '#ff1744'
+// 사이트 다크 컬렉터블 토큰(globals.css :root)과 맞춘 색 — 캔버스라 var()를 못 써서 값만 그대로 복사.
+// 원래는 채도 100%짜리 네온(주황/보라/핫핑크/시안)이었는데 사이트 톤과 안 맞아서 골드/레드 체계로 교체.
+const PEG_COLOR = '#d4af6a' // --gold
+const PADDLE_COLOR = '#e0384c' // --accent
+const BUMPER_COLOR = '#ff4d63' // --danger (막판 구간 긴장감)
+const FUNNEL_COLOR = '#3a3d4a' // --border-strong (구조용 벽, 시선을 끌 필요 없음)
+const FINAL_PADDLE_COLOR = '#e0384c' // --accent (다른 회전 장애물과 동일 계열 유지)
 
 export interface MarbleSpec {
   id: number

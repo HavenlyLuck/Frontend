@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "bounce",
+        "files": [
+          "app/globals.css"
+        ],
+        "createdAt": "2026-09-29T06:36:47.597Z",
+        "reason": "win-modal celebration bounce: rare once-per-win delight moment, sanctioned by project's own emil-design-eng skill (bounce allowed at Rare/first-time frequency tier for celebrations)"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "files": [
+          "app/globals.css"
+        ],
+        "createdAt": "2026-09-29T06:36:48.101Z",
+        "reason": "win-modal scale-in overshoot: same celebration moment as the bounce-easing ignore above, domain-appropriate for a raffle-win reveal"
+      }
+    ]
+  }
+}
