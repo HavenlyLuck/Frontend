@@ -3,22 +3,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeftIcon, BankIcon, CreditCardIcon } from '@phosphor-icons/react'
 import { useMyPoints } from '@/hooks/useMyPoints'
 
 const PRESET_AMOUNTS = [5000, 10000, 30000, 50000, 100000]
 
 const PAYMENT_METHODS = [
-  { id: 'card', label: '💳 신용/체크카드' },
-  { id: 'kakao', label: '🟡 카카오페이' },
-  { id: 'naver', label: '🟢 네이버페이' },
-  { id: 'bank', label: '🏦 무통장 입금' },
+  { id: 'card', label: '신용/체크카드', icon: 'card' as const },
+  { id: 'kakao', label: '카카오페이', dot: '#fee500' },
+  { id: 'naver', label: '네이버페이', dot: '#03c75a' },
+  { id: 'bank', label: '무통장 입금', icon: 'bank' as const },
 ]
-
-const lightInput: React.CSSProperties = {
-  width: '100%', padding: '13px 50px 13px 14px', borderRadius: 8,
-  border: '1px solid #e2e2e4', background: '#ffffff', color: '#181818',
-  fontSize: 16, fontWeight: 600, outline: 'none', boxSizing: 'border-box',
-}
 
 export default function DepositPage() {
   const router = useRouter()
@@ -38,64 +33,72 @@ export default function DepositPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '60px 16px', background: '#f5f6f7' }}>
-      <div style={{ width: '100%', maxWidth: 480 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <Link href="/charge" style={{ color: '#767676', textDecoration: 'none', fontSize: 20 }}>←</Link>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#181818' }}>🎰 운포인트 충전</h2>
-        </div>
-
-        <div style={{ background: '#ffffff', border: '1px solid #ececec', borderRadius: 12, padding: '16px 20px', marginBottom: 28, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-          <p style={{ fontSize: 12, color: '#767676', marginBottom: 4 }}>🎰 현재 운포인트</p>
-          <p style={{ fontSize: 22, fontWeight: 700, color: '#d9691d' }}>{eungPoint.toLocaleString()}P</p>
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: '#181818' }}>충전 금액</p>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-              {PRESET_AMOUNTS.map(v => (
-                <button key={v} type="button" onClick={() => handlePreset(v)}
-                  style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e2e4', background: '#ffffff', color: '#454545', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
-                  +{v.toLocaleString()}원
-                </button>
-              ))}
-              <button type="button" onClick={() => setAmount('')}
-                style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e2e2e4', background: '#ffffff', color: '#9a9a9a', fontSize: 13, cursor: 'pointer' }}>
-                초기화
-              </button>
-            </div>
-            <div style={{ position: 'relative' }}>
-              <input type="number" placeholder="직접 입력 (최소 1,000원)" value={amount}
-                onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                min={1000} style={lightInput} />
-              <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#9a9a9a', fontSize: 14 }}>원</span>
-            </div>
-            {amount !== '' && (
-              <p style={{ marginTop: 6, fontSize: 13, color: '#4fa8e8' }}>
-                충전 후 운포인트: {(eungPoint + Number(amount)).toLocaleString()}P
-              </p>
-            )}
-          </div>
-
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: '#181818' }}>결제 수단</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {PAYMENT_METHODS.map(m => (
-                <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 10, border: `1px solid ${method === m.id ? '#4fa8e888' : '#e2e2e4'}`, background: method === m.id ? '#eaf6fd' : '#ffffff', cursor: 'pointer', transition: 'all 0.15s' }}>
-                  <input type="radio" name="method" value={m.id} checked={method === m.id} onChange={() => setMethod(m.id)} style={{ accentColor: '#4fa8e8' }} />
-                  <span style={{ fontSize: 14, color: method === m.id ? '#1477b8' : '#454545' }}>{m.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <button type="submit"
-            style={{ padding: '14px', borderRadius: 10, background: '#ffffff', color: '#181818', fontSize: 16, fontWeight: 700, border: '1px solid #e2e2e4', cursor: 'pointer' }}>
-            {amount ? `${Number(amount).toLocaleString()}원 충전하기` : '충전하기'}
-          </button>
-        </form>
+    <div className="wallet-container">
+      <div className="wallet-head">
+        <Link href="/charge" className="wallet-back" aria-label="충전/인출로 돌아가기">
+          <ArrowLeftIcon size={20} />
+        </Link>
+        <h2 className="wallet-title">🎰 운포인트 충전</h2>
       </div>
+
+      <div className="wallet-summary-card">
+        <p className="wallet-summary-label">🎰 현재 운포인트</p>
+        <p className="wallet-summary-value">{eungPoint.toLocaleString()}P</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="wallet-form">
+        <div>
+          <p className="wallet-field-title">충전 금액</p>
+          <div className="chip-row">
+            {PRESET_AMOUNTS.map(v => (
+              <button key={v} type="button" className="chip-btn" onClick={() => handlePreset(v)}>
+                +{v.toLocaleString()}원
+              </button>
+            ))}
+            <button type="button" className="chip-btn ghost" onClick={() => setAmount('')}>
+              초기화
+            </button>
+          </div>
+          <div className="wallet-input-wrap" style={{ marginTop: 12 }}>
+            <input
+              id="deposit-amount"
+              type="number"
+              placeholder="직접 입력 (최소 1,000원)"
+              value={amount}
+              onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
+              min={1000}
+              className="field-input"
+            />
+            <span className="wallet-input-suffix">원</span>
+          </div>
+          {amount !== '' && (
+            <p className="wallet-hint ok">
+              충전 후 운포인트: {(eungPoint + Number(amount)).toLocaleString()}P
+            </p>
+          )}
+        </div>
+
+        <div>
+          <p className="wallet-field-title">결제 수단</p>
+          <div className="pay-method-list">
+            {PAYMENT_METHODS.map(m => (
+              <label key={m.id} className={`pay-method-option${method === m.id ? ' selected' : ''}`}>
+                <input type="radio" name="method" value={m.id} checked={method === m.id} onChange={() => setMethod(m.id)} />
+                <span className="pay-method-label">
+                  {m.icon === 'card' && <CreditCardIcon size={16} />}
+                  {m.icon === 'bank' && <BankIcon size={16} />}
+                  {m.dot && <span className="pay-method-dot" style={{ background: m.dot }} />}
+                  {m.label}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <button type="submit" className="auth-submit">
+          {amount ? `${Number(amount).toLocaleString()}원 충전하기` : '충전하기'}
+        </button>
+      </form>
     </div>
   )
 }

@@ -1,6 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import {
+  CaretDownIcon,
+  ChatCircleIcon,
+  LockIcon,
+  QuestionIcon,
+  StarIcon,
+  XIcon,
+} from '@phosphor-icons/react'
 
 type ReviewTab = '후기' | '문의'
 
@@ -50,7 +58,7 @@ const INQUIRIES: Inquiry[] = [
   },
   {
     id: 3, title: '쿠지 라스트원 상 조기 마감 기준이 궁금해요', user: 'user_1902', date: '2026-08-04',
-    content: '설명충 페이지에서 라스트 원 상만 남으면 조기 마감될 수 있다고 했는데, 언제 마감되는지 기준이 있나요?',
+    content: '가이드 페이지에서 라스트 원 상만 남으면 조기 마감될 수 있다고 했는데, 언제 마감되는지 기준이 있나요?',
     status: '답변대기',
   },
   {
@@ -72,20 +80,14 @@ const INQUIRIES: Inquiry[] = [
   },
 ]
 
-const TYPE_COLOR: Record<string, string> = { '응모': '#e14d72', '쿠지': '#4fa8e8', '상점': '#7c3aed' }
+const TYPE_CLASS: Record<string, string> = { '응모': 'eungmo', '쿠지': 'kuji', '상점': 'shop' }
 
 function Stars({ rating }: { rating: number }) {
   return (
-    <span style={{ color: '#fbbf24', fontSize: 14, letterSpacing: 1 }}>
+    <span className="review-stars">
       {'★'.repeat(rating)}{'☆'.repeat(5 - rating)}
     </span>
   )
-}
-
-const lightInput: React.CSSProperties = {
-  background: '#ffffff', border: '1px solid #e2e2e4', borderRadius: 8,
-  color: '#181818', padding: '10px 12px', fontSize: 14, outline: 'none',
-  width: '100%', boxSizing: 'border-box',
 }
 
 export default function ReviewPage() {
@@ -115,40 +117,24 @@ export default function ReviewPage() {
       <div className="home-container" style={{ maxWidth: 800 }}>
 
         {/* 타이틀 */}
-        <div style={{ marginBottom: 14 }}>
-          <div className="section-title">💬 후기/문의</div>
+        <div className="section-title" style={{ marginBottom: 14 }}>
+          <ChatCircleIcon size={18} weight="fill" color="var(--accent)" /> 후기/문의
         </div>
 
         {/* 액션 버튼(왼쪽) + 탭(오른쪽) */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-          <button
-            onClick={() => setShowModal(true)}
-            style={{
-              padding: '8px 20px', borderRadius: 10, border: 'none',
-              background: '#4fa8e8',
-              color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
+        <div className="review-toolbar">
+          <button className="review-write-btn" onClick={() => setShowModal(true)}>
             {tab === '후기' ? '후기 올리기' : '문의하기'}
           </button>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="review-tabs">
             {(['후기', '문의'] as ReviewTab[]).map(t => (
               <button
                 key={t}
+                className={`review-tab${tab === t ? ' active' : ''}`}
                 onClick={() => setTab(t)}
-                style={{
-                  padding: '8px 24px',
-                  borderRadius: 10,
-                  border: `1px solid ${tab === t ? '#4fa8e888' : '#e2e2e4'}`,
-                  background: tab === t ? '#eaf6fd' : '#ffffff',
-                  color: tab === t ? '#1477b8' : '#767676',
-                  fontSize: 14,
-                  fontWeight: tab === t ? 700 : 400,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
               >
-                {t === '후기' ? '⭐ 후기' : '❓ 문의'}
+                {t === '후기' ? <StarIcon size={14} weight={tab === t ? 'fill' : 'regular'} /> : <QuestionIcon size={14} weight={tab === t ? 'fill' : 'regular'} />}
+                {t}
               </button>
             ))}
           </div>
@@ -158,14 +144,14 @@ export default function ReviewPage() {
         {tab === '후기' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {REVIEWS.map(r => (
-              <div key={r.id} style={{ background: '#ffffff', border: '1px solid #ececec', borderRadius: 14, padding: '18px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                  <div style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${TYPE_COLOR[r.type]}18`, color: TYPE_COLOR[r.type], border: `1px solid ${TYPE_COLOR[r.type]}44`, flexShrink: 0 }}>{r.type}</div>
-                  <div style={{ color: '#181818', fontWeight: 600, fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.product}</div>
+              <div key={r.id} className="review-card">
+                <div className="review-card-head">
+                  <div className={`review-type-badge ${TYPE_CLASS[r.type]}`}>{r.type}</div>
+                  <div className="review-product">{r.product}</div>
                   <Stars rating={r.rating} />
                 </div>
-                <p style={{ color: '#5c5c5c', fontSize: 14, lineHeight: 1.7, margin: '0 0 10px' }}>{r.content}</p>
-                <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#9a9a9a' }}>
+                <p className="review-content">{r.content}</p>
+                <div className="review-meta">
                   <span>{r.user}</span>
                   <span>{r.date}</span>
                 </div>
@@ -180,42 +166,39 @@ export default function ReviewPage() {
             {INQUIRIES.map(q => {
               const isOpen = openId === q.id
               return (
-                <div key={q.id} style={{ background: '#ffffff', border: `1px solid ${isOpen ? '#4fa8e844' : '#ececec'}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div key={q.id} className={`inquiry-card${isOpen ? ' open' : ''}`}>
                   {/* 헤더 */}
-                  <button
-                    onClick={() => setOpenId(isOpen ? null : q.id)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                  >
-                    <div style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0, background: q.status === '답변완료' ? '#eaf6fd' : '#fff0f4', color: q.status === '답변완료' ? '#1477b8' : '#e14d72', border: `1px solid ${q.status === '답변완료' ? '#bfe3fb' : '#ffb8cc'}` }}>{q.status}</div>
-                    <div style={{ flex: 1, color: '#181818', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {q.private && <span style={{ fontSize: 13 }}>🔒</span>}
+                  <button className="inquiry-head" onClick={() => setOpenId(isOpen ? null : q.id)}>
+                    <div className={`status-badge ${q.status === '답변완료' ? 'win' : 'waiting'}`}>{q.status}</div>
+                    <div className="inquiry-title">
+                      {q.private && <LockIcon size={13} />}
                       {q.title}
                     </div>
-                    <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#9a9a9a', flexShrink: 0 }}>
+                    <div className="inquiry-meta">
                       <span>{q.user}</span>
                       <span>{q.date}</span>
                     </div>
-                    <span style={{ color: '#9a9a9a', fontSize: 16, flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }}>▾</span>
+                    <span className={`inquiry-caret${isOpen ? ' open' : ''}`}><CaretDownIcon size={16} /></span>
                   </button>
 
                   {/* 펼쳐지는 내용 */}
                   {isOpen && (
-                    <div style={{ borderTop: '1px solid #ececec', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      <div style={{ background: '#f7f7f8', borderRadius: 10, padding: '14px 16px' }}>
-                        <div style={{ color: '#9a9a9a', fontSize: 12, marginBottom: 6 }}>❓ 문의 내용</div>
+                    <div className="inquiry-body">
+                      <div className="inquiry-question-box">
+                        <div className="inquiry-box-label"><QuestionIcon size={13} /> 문의 내용</div>
                         {q.private
-                          ? <p style={{ color: '#9a9a9a', fontSize: 14, lineHeight: 1.7, margin: 0 }}>🔒 비공개 문의입니다.</p>
-                          : <p style={{ color: '#5c5c5c', fontSize: 14, lineHeight: 1.7, margin: 0 }}>{q.content}</p>
+                          ? <p className="inquiry-box-text" style={{ color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 5 }}><LockIcon size={13} /> 비공개 문의입니다.</p>
+                          : <p className="inquiry-box-text">{q.content}</p>
                         }
                       </div>
                       {q.answer && (
-                        <div style={{ background: '#eaf6fd', border: '1px solid #d3ecfb', borderRadius: 10, padding: '14px 16px' }}>
-                          <div style={{ color: '#1477b8', fontSize: 12, marginBottom: 6 }}>💬 답변</div>
-                          <p style={{ color: '#181818', fontSize: 14, lineHeight: 1.7, margin: 0 }}>{q.answer}</p>
+                        <div className="inquiry-answer-box">
+                          <div className="inquiry-box-label"><ChatCircleIcon size={13} weight="fill" /> 답변</div>
+                          <p className="inquiry-box-text">{q.answer}</p>
                         </div>
                       )}
                       {!q.answer && (
-                        <div style={{ color: '#9a9a9a', fontSize: 13, textAlign: 'center', padding: '8px 0' }}>답변을 준비 중입니다. 조금만 기다려주세요 🙏</div>
+                        <div className="inquiry-pending-note">답변을 준비 중입니다. 조금만 기다려주세요 🙏</div>
                       )}
                     </div>
                   )}
@@ -230,61 +213,64 @@ export default function ReviewPage() {
       {/* 모달 */}
       {showModal && (
         <>
-          {/* 백드롭 */}
-          <div onClick={closeModal} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 400, backdropFilter: 'blur(2px)' }} />
+          <div className="review-modal-backdrop" onClick={closeModal} />
 
-          {/* 모달 카드 */}
-          <div style={{
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            zIndex: 401, width: '90%', maxWidth: 480,
-            background: '#ffffff',
-            border: '1px solid #ececec', borderRadius: 18,
-            padding: '28px 28px 24px',
-            boxShadow: '0 16px 60px rgba(0,0,0,0.15)',
-          }}>
-            {/* 모달 헤더 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-              <div style={{ color: '#181818', fontWeight: 700, fontSize: 17 }}>
+          <div className="review-modal">
+            <div className="review-modal-head">
+              <div className="review-modal-title">
                 {tab === '후기' ? '후기 올리기' : '문의하기'}
               </div>
-              <button onClick={closeModal} style={{ background: 'none', border: 'none', color: '#9a9a9a', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+              <button className="review-modal-close" onClick={closeModal} aria-label="닫기"><XIcon size={20} /></button>
             </div>
 
             {/* 후기 폼 */}
             {tab === '후기' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {/* 별점 */}
+              <div className="review-modal-form">
                 <div>
-                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 8 }}>별점</div>
-                  <div style={{ display: 'flex', gap: 4 }}>
+                  <div className="field-label">별점</div>
+                  <div className="review-star-picker">
                     {[1, 2, 3, 4, 5].map(n => (
-                      <button key={n} onClick={() => setReviewForm(f => ({ ...f, rating: n }))}
-                        style={{ background: 'none', border: 'none', fontSize: 28, cursor: 'pointer', color: n <= reviewForm.rating ? '#fbbf24' : '#e2e2e4', padding: 0, lineHeight: 1 }}>
+                      <button
+                        key={n}
+                        type="button"
+                        className={n <= reviewForm.rating ? 'active' : ''}
+                        onClick={() => setReviewForm(f => ({ ...f, rating: n }))}
+                      >
                         ★
                       </button>
                     ))}
                   </div>
                 </div>
-                {/* 제목 */}
                 <div>
-                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 6 }}>제목</div>
-                  <input style={lightInput} placeholder="후기 제목을 입력하세요" value={reviewForm.title} onChange={e => setReviewForm(f => ({ ...f, title: e.target.value }))} />
+                  <div className="field-label">제목</div>
+                  <input
+                    id="review-title"
+                    className="field-input"
+                    placeholder="후기 제목을 입력하세요"
+                    value={reviewForm.title}
+                    onChange={e => setReviewForm(f => ({ ...f, title: e.target.value }))}
+                  />
                 </div>
-                {/* 글 */}
                 <div>
-                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 6 }}>내용</div>
-                  <textarea style={{ ...lightInput, resize: 'vertical', minHeight: 100 }} placeholder="후기 내용을 작성해주세요" value={reviewForm.content} onChange={e => setReviewForm(f => ({ ...f, content: e.target.value }))} />
+                  <div className="field-label">내용</div>
+                  <textarea
+                    id="review-content"
+                    className="field-textarea"
+                    style={{ minHeight: 100 }}
+                    placeholder="후기 내용을 작성해주세요"
+                    value={reviewForm.content}
+                    onChange={e => setReviewForm(f => ({ ...f, content: e.target.value }))}
+                  />
                 </div>
-                {/* 사진 */}
                 <div>
-                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 6 }}>사진 (선택)</div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                    <div style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e2e4', background: '#f5f6f7', color: '#767676', fontSize: 13 }}>파일 선택</div>
-                    <span style={{ color: '#9a9a9a', fontSize: 12 }}>{reviewForm.imgPreview ? '사진이 선택되었습니다' : '선택된 파일 없음'}</span>
+                  <div className="field-label">사진 (선택)</div>
+                  <label className="review-file-label">
+                    <div className="review-file-btn">파일 선택</div>
+                    <span className="review-file-status">{reviewForm.imgPreview ? '사진이 선택되었습니다' : '선택된 파일 없음'}</span>
                     <input type="file" accept="image/*" onChange={handleImgChange} style={{ display: 'none' }} />
                   </label>
                   {reviewForm.imgPreview && (
-                    <img src={reviewForm.imgPreview} alt="미리보기" style={{ marginTop: 10, width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e2e4' }} />
+                    <img src={reviewForm.imgPreview} alt="미리보기" className="review-file-preview" />
                   )}
                 </div>
               </div>
@@ -292,38 +278,47 @@ export default function ReviewPage() {
 
             {/* 문의 폼 */}
             {tab === '문의' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="review-modal-form">
                 <div>
-                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 6 }}>제목</div>
-                  <input style={lightInput} placeholder="문의 제목을 입력하세요" value={inquiryForm.title} onChange={e => setInquiryForm(f => ({ ...f, title: e.target.value }))} />
+                  <div className="field-label">제목</div>
+                  <input
+                    id="inquiry-title"
+                    className="field-input"
+                    placeholder="문의 제목을 입력하세요"
+                    value={inquiryForm.title}
+                    onChange={e => setInquiryForm(f => ({ ...f, title: e.target.value }))}
+                  />
                 </div>
                 <div>
-                  <div style={{ color: '#767676', fontSize: 12, marginBottom: 6 }}>내용</div>
-                  <textarea style={{ ...lightInput, resize: 'vertical', minHeight: 120 }} placeholder="문의 내용을 상세히 작성해주세요" value={inquiryForm.content} onChange={e => setInquiryForm(f => ({ ...f, content: e.target.value }))} />
+                  <div className="field-label">내용</div>
+                  <textarea
+                    id="inquiry-content"
+                    className="field-textarea"
+                    style={{ minHeight: 120 }}
+                    placeholder="문의 내용을 상세히 작성해주세요"
+                    value={inquiryForm.content}
+                    onChange={e => setInquiryForm(f => ({ ...f, content: e.target.value }))}
+                  />
                 </div>
-                {/* 비공개 체크박스 */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                <label className={`review-private-row${inquiryForm.isPrivate ? ' checked' : ''}`}>
                   <input
                     type="checkbox"
                     checked={inquiryForm.isPrivate}
                     onChange={e => setInquiryForm(f => ({ ...f, isPrivate: e.target.checked }))}
-                    style={{ width: 16, height: 16, accentColor: '#4fa8e8', cursor: 'pointer' }}
+                    style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
                   />
-                  <span style={{ color: inquiryForm.isPrivate ? '#1477b8' : '#767676', fontSize: 14 }}>🔒 비공개 문의</span>
-                  {inquiryForm.isPrivate && <span style={{ fontSize: 12, color: '#9a9a9a' }}>다른 사용자에게 내용이 공개되지 않습니다</span>}
+                  <span className="label"><LockIcon size={13} /> 비공개 문의</span>
+                  {inquiryForm.isPrivate && <span className="review-private-hint">다른 사용자에게 내용이 공개되지 않습니다</span>}
                 </label>
               </div>
             )}
 
             {/* 제출 버튼 */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
-              <button
-                onClick={closeModal}
-                style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: '#181818', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
-              >
+            <div className="review-modal-actions">
+              <button className="review-modal-submit" onClick={closeModal}>
                 {tab === '후기' ? '후기 올리기' : '문의 제출'}
               </button>
-              <button onClick={closeModal} style={{ padding: '11px 20px', borderRadius: 10, border: '1px solid #e2e2e4', background: '#f5f6f7', color: '#767676', fontSize: 14, cursor: 'pointer' }}>취소</button>
+              <button className="review-modal-cancel" onClick={closeModal}>취소</button>
             </div>
           </div>
         </>
