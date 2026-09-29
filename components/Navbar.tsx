@@ -56,7 +56,16 @@ export default function Navbar() {
     <nav className={isNeon ? "nav-neon" : undefined}>
       <div className="nav-top-row">
         <Link className="logo" href="/">
-          <div className="logo-icon">천</div>
+          <svg className="logo-icon" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+            <path
+              d="M6 20 C6 15.5 9.6 12.5 13.5 13.2 C14.6 9.6 19 8.3 22 11 C25.6 11.4 28 14.3 27 17.8 C29.2 19 29.2 22.4 26.5 23.3 C25.5 25.6 22.6 26.2 20.8 24.6 C19.4 26.4 16.4 26.3 15.1 24.4 C12.8 25.6 9.8 24.3 9.3 21.8 C7.4 21.9 6 21.2 6 20 Z"
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+            />
+            <circle cx="23" cy="12.5" r="1.8" fill="var(--gold)" />
+          </svg>
           천운
         </Link>
 

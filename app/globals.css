@@ -106,16 +106,9 @@ nav {
 }
 
 .logo-icon {
-  width: 32px;
-  height: 32px;
-  background: var(--accent);
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  font-weight: 800;
-  color: #ffffff;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
 }
 
 .search-bar {
@@ -348,46 +341,137 @@ nav {
   color: var(--text);
 }
 
-/* ── 홈 히어로 ── */
+/* ── 홈 히어로 (박스아트 포스터) ── */
 .hero {
   background: var(--bg-subtle);
   border-bottom: 1px solid var(--border);
-  padding: 56px 40px 48px;
-  text-align: center;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  min-height: 380px;
   position: relative;
   overflow: hidden;
 }
-
+.hero-copy {
+  position: relative;
+  z-index: 2;
+  padding: 56px 40px 56px max(24px, calc((100vw - 1152px) / 2));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px;
+}
 .hero-tag {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 5px 14px;
-  border-radius: 99px;
-  margin-bottom: 20px;
-}
-
-.hero h1 {
-  position: relative;
-  z-index: 1;
-  font-size: 44px;
-  font-weight: 800;
-  color: var(--text);
-  line-height: 1.22;
-  margin-bottom: 8px;
-  letter-spacing: -1px;
-}
-
-.hero h1 span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   color: var(--accent);
 }
+.hero h1 {
+  font-family: var(--font-display), "Noto Sans KR", sans-serif;
+  font-size: clamp(48px, 6.5vw, 88px);
+  font-weight: 400;
+  color: var(--text);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.hero h1 span { color: var(--accent); }
+.hero-sub {
+  color: var(--text-secondary);
+  font-size: 15px;
+  max-width: 34ch;
+  line-height: 1.6;
+  margin: 0;
+}
+.hero-cta {
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 13px 24px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.hero-cta:hover { background: var(--accent-hover); }
+.hero-box { position: relative; overflow: hidden; }
+.hero-box::before {
+  content: "";
+  position: absolute;
+  inset: -20% -30% -20% 8%;
+  background: var(--accent);
+  transform: skewX(-12deg);
+}
+.hero-box-img {
+  position: absolute;
+  width: 50%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+.hero-box-img-a { left: 12%; top: 14%; transform: rotate(-7deg); }
+.hero-box-img-b { left: 38%; top: 8%; transform: rotate(4deg); z-index: 2; }
+.hero-box-img-solo { left: 26%; top: 10%; transform: rotate(3deg); z-index: 2; width: 48%; }
+.hero-ticket {
+  position: absolute;
+  z-index: 2;
+  left: 14%;
+  right: 6%;
+  top: 50%;
+  transform: translateY(-50%) rotate(-4deg);
+  display: grid;
+  grid-template-columns: 1fr 64px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+.hero-ticket-main {
+  padding: 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-right: 2px dashed var(--border-strong);
+}
+.hero-ticket-label { font-size: 11px; letter-spacing: 0.16em; color: var(--text-tertiary); font-weight: 700; }
+.hero-ticket-price { font-family: var(--font-display), "Noto Sans KR", sans-serif; font-size: clamp(40px, 5vw, 64px); line-height: 1; color: var(--text); }
+.hero-ticket-price small { font-family: inherit; font-size: 14px; color: var(--gold); margin-left: 8px; }
+.hero-ticket-note { font-size: 13px; color: var(--text-secondary); }
+.hero-ticket-stub {
+  display: grid;
+  place-items: center;
+  writing-mode: vertical-rl;
+  letter-spacing: 0.3em;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.hero-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  padding: 14px max(24px, calc((100vw - 1152px) / 2));
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.hero-strip b { color: var(--gold); font-weight: 700; }
+.soon-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  margin-bottom: 56px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.soon-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
 
 /* ── 히어로 캐러셀 ── */
 .hero-carousel {
@@ -841,8 +925,30 @@ nav {
 }
 
 .card-body {
-  padding: 14px 16px;
+  padding: 16px;
+  position: relative;
+  border-top: 2px dashed var(--border-strong);
 }
+
+/* 티켓 절취선 양끝 홈 */
+.card-body::before,
+.card-body::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.card-body::before { left: -10px; }
+.card-body::after { right: -10px; }
+
+/* 상점(즉시구매)은 티켓이 아니므로 절취선 없음 */
+.is-shop .card-body { border-top: 1px solid var(--border); }
+.is-shop .card-body::before,
+.is-shop .card-body::after { display: none; }
 
 .card-raffle-badge {
   display: inline-flex;
@@ -868,8 +974,9 @@ nav {
 }
 
 .card-price {
-  font-size: 16px;
-  font-weight: 700;
+  font-family: var(--font-display), "Noto Sans KR", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
   color: var(--text);
   margin-bottom: 10px;
 }
@@ -1290,11 +1397,13 @@ nav {
 }
 
 .progress-fill {
+  width: 100%;
   height: 100%;
   background: var(--gold);
   border-radius: 99px;
   box-shadow: 0 0 10px rgba(212, 175, 106, 0.4);
-  transition: width 0.5s ease;
+  transform-origin: left;
+  transition: transform 0.5s ease;
 }
 
 .progress-pct {
@@ -1827,7 +1936,6 @@ nav {
 .menu-item.active {
   background: var(--accent-tint);
   color: var(--accent);
-  border-left: 3px solid var(--accent);
 }
 
 .menu-icon {
@@ -3046,14 +3154,17 @@ nav {
     padding: 28px 16px;
   }
   .hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  .hero-copy {
     padding: 32px 16px;
-    min-height: 340px;
   }
-  .hero h1 {
-    font-size: 26px;
+  .hero-box {
+    min-height: 240px;
   }
-  .hero-tag {
-    font-size: 12px;
+  .hero-strip {
+    padding: 12px 16px;
   }
 
   .product-grid-home,

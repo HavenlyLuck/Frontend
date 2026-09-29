@@ -155,23 +155,22 @@ function drawBackgroundAndStage(
   cam: Camera,
   sim: MarbleDrawSim,
 ) {
+  // --bg-subtle → --bg 그라데이션 — 사이트 다른 곳의 엘리베이션 규칙(sunken/elevated)과 같은 방향
   const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  bg.addColorStop(0, "#181022");
-  bg.addColorStop(1, "#06060c");
+  bg.addColorStop(0, "#1a1c24");
+  bg.addColorStop(1, "#14151a");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 네온 트랙 라인 — 무대 좌우 경계를 은은하게 빛나는 선으로 표시
+  // 무대 좌우 경계 — 구조용 선이라 튀지 않게 --border-strong로
   const leftTop = project(cam, 0, VIEW_TOP);
   const leftBottom = project(cam, 0, VIEW_BOTTOM);
   const rightTop = project(cam, WORLD_WIDTH, VIEW_TOP);
   const rightBottom = project(cam, WORLD_WIDTH, VIEW_BOTTOM);
   ctx.save();
-  ctx.strokeStyle = "#00e5ff";
-  ctx.shadowColor = "#00e5ff";
-  ctx.shadowBlur = 10 * cam.zoom;
+  ctx.strokeStyle = "#3a3d4a";
   ctx.lineWidth = Math.max(1, 1.5 * cam.zoom);
-  ctx.globalAlpha = 0.55;
+  ctx.globalAlpha = 0.7;
   ctx.beginPath();
   ctx.moveTo(leftTop.px, leftTop.py);
   ctx.lineTo(leftBottom.px, leftBottom.py);
@@ -182,11 +181,12 @@ function drawBackgroundAndStage(
 
   sim.getObstacleStates().forEach((o) => drawObstacle(ctx, cam, o));
 
+  // 골라인 — --gold, 사이트 전체에서 "보상/당첨"을 뜻하는 색과 통일
   const goal = project(cam, 0, GOAL_Y);
   const goalRight = project(cam, WORLD_WIDTH, GOAL_Y);
   ctx.save();
-  ctx.strokeStyle = "#f5c542";
-  ctx.shadowColor = "#f5c542";
+  ctx.strokeStyle = "#d4af6a";
+  ctx.shadowColor = "#d4af6a";
   ctx.shadowBlur = 12 * cam.zoom;
   ctx.lineWidth = Math.max(1.5, 2 * cam.zoom);
   ctx.setLineDash([8 * cam.zoom, 6 * cam.zoom]);
@@ -383,11 +383,11 @@ export default function RaffleDrawCanvas({
           style={{
             width: "100%",
             aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
-            background: "#14141a",
+            background: "#14151a",
             borderRadius: 12,
-            border: "1px solid #00e5ff88",
+            border: "1px solid #3a3d4a",
             boxShadow:
-              "0 0 16px rgba(0,229,255,0.35), 0 0 40px rgba(188,19,254,0.15)",
+              "0 0 16px rgba(224,56,76,0.25), 0 0 40px rgba(212,175,106,0.15)",
             display: "block",
           }}
         />
@@ -412,7 +412,7 @@ export default function RaffleDrawCanvas({
                 fontSize: 16,
                 fontWeight: 700,
                 color: "#fff",
-                textShadow: "0 0 10px #00e5ff, 0 0 20px #00e5ff",
+                textShadow: "0 0 10px #d4af6a, 0 0 20px #d4af6a",
               }}
             >
               🎉 축하합니다! 🎉
@@ -421,9 +421,9 @@ export default function RaffleDrawCanvas({
               style={{
                 fontSize: 28,
                 fontWeight: 900,
-                color: "#ffe600",
+                color: "#d4af6a",
                 textShadow:
-                  "0 0 8px #ffe600, 0 0 20px #ff2e97, 0 0 36px #ff2e97",
+                  "0 0 8px #d4af6a, 0 0 20px #e0384c, 0 0 36px #e0384c",
               }}
             >
               당첨번호 {celebration}번 !!

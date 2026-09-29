@@ -31,3 +31,6 @@ Thumbs.db
 tsconfig.tsbuildinfo
 .vercel
 .env*
+
+# Impeccable design-hook session cache (machine/session-specific, not shared state)
+.impeccable/hook.cache.json

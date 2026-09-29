@@ -159,7 +159,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                 </div>
                 <div className="progress-bar-row">
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+                    <div className="progress-fill" style={{ transform: `scaleX(${progressPct / 100})` }} />
                   </div>
                   <span className="progress-pct">{progressPct}%</span>
                 </div>
