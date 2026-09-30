@@ -1781,6 +1781,15 @@ nav {
   background: var(--accent-hover);
 }
 
+.btn-confirm:active {
+  transform: scale(0.97);
+}
+
+/* 응모 확정 성공 모달 전용 — 당첨 모달과 같은 축하 톤(드문 순간에만 바운스) */
+.modal-icon.celebrate {
+  animation: bounce 0.6s ease 0.15s both;
+}
+
 /* ── 토스트 ── */
 .toast {
   position: fixed;
@@ -2002,8 +2011,9 @@ nav {
 }
 
 .mypage-section-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-family: var(--font-display), "Noto Sans KR", sans-serif;
+  font-size: 22px;
+  font-weight: 400;
   color: var(--text);
   display: flex;
   align-items: center;
@@ -3784,4 +3794,186 @@ nav {
 .footer-copyright {
   font-size: 11px;
   color: var(--text-tertiary);
+}
+
+/* -- 관리자 상품 목록 행 -- */
+.admin-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s;
+}
+
+.admin-row.inactive {
+  border-color: var(--border);
+  background: var(--bg-subtle);
+  opacity: 0.6;
+}
+
+.admin-row-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+}
+
+.admin-row-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-row-title {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-row-price {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.admin-row-price .cost {
+  margin-left: 8px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.admin-row-meta {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+
+.admin-row-side {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.admin-row-stock {
+  flex-shrink: 0;
+  text-align: center;
+}
+
+/* -- 응모권 확정 시 찢어지는 연출 --
+   .modal의 배경/테두리/그림자를 위·아래 조각 각자에게 나눠줘서, 평소엔 하나로
+   붙어 보이다가 찢어질 때 "텍스트만 흩어지는" 게 아니라 카드 두 장이 실제로
+   갈라지는 것처럼 보이게 한다. */
+.ticket-modal {
+  position: relative;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+}
+
+.ticket-modal-top,
+.ticket-modal-bottom {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-lg);
+  padding-left: 32px;
+  padding-right: 32px;
+  position: relative;
+}
+
+.ticket-modal-top {
+  border-bottom: 2px dashed var(--border-strong);
+  border-radius: 20px 20px 0 0;
+  padding-top: 32px;
+  padding-bottom: 20px;
+  transition: border-color 0.15s ease;
+}
+
+.ticket-modal-bottom {
+  border-top: none;
+  border-radius: 0 0 20px 20px;
+  padding-top: 18px;
+  padding-bottom: 32px;
+  margin-top: -1px; /* 위 조각 아래 테두리랑 겹쳐서 평소엔 이음매가 안 보이게 */
+}
+
+/* 홈 화면 티켓 카드와 같은 노치 — 절취선 양끝에 실제로 뚫린 구멍처럼 보이게,
+   뒤 배경이 뭐든 상관없이 모달 오버레이 자체의 어둡고 블러된 배경을 그대로 복제한다 */
+.ticket-modal-top::before,
+.ticket-modal-top::after {
+  content: "";
+  position: absolute;
+  bottom: -11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  border: 1.5px solid var(--border-strong);
+  z-index: 1;
+}
+.ticket-modal-top::before { left: 18px; }
+.ticket-modal-top::after { right: 18px; }
+
+/* 당기다가(anticipation) → 딱 끊어짐(snap, ~60%) → 떨어져 나가며 사라짐(settle) */
+@keyframes tearTopHalf {
+  0% { transform: translateY(0) rotate(0deg); }
+  18% { transform: translateY(2px) rotate(0.6deg); }
+  36% { transform: translateY(-1px) rotate(-0.8deg); }
+  50% { transform: translateY(1px) rotate(0.5deg); opacity: 1; }
+  58% { transform: translateY(1px) rotate(0.5deg) scale(1.015); opacity: 1; }
+  64% { transform: translateY(-54px) rotate(-7deg) scale(1); opacity: 1; }
+  100% { transform: translateY(-68px) rotate(-6deg); opacity: 0; }
+}
+@keyframes tearBottomHalf {
+  0% { transform: translateY(0) rotate(0deg); }
+  18% { transform: translateY(-2px) rotate(-0.6deg); }
+  36% { transform: translateY(1px) rotate(0.8deg); }
+  50% { transform: translateY(-1px) rotate(-0.5deg); opacity: 1; }
+  58% { transform: translateY(-1px) rotate(-0.5deg) scale(1.015); opacity: 1; }
+  64% { transform: translateY(54px) rotate(6deg) scale(1); opacity: 1; }
+  100% { transform: translateY(68px) rotate(5deg); opacity: 0; }
+}
+.ticket-modal.tearing .ticket-modal-top {
+  border-bottom-color: var(--accent);
+  animation: tearTopHalf 1.05s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.ticket-modal.tearing .ticket-modal-bottom {
+  animation: tearBottomHalf 1.05s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-modal.tearing .ticket-modal-top,
+  .ticket-modal.tearing .ticket-modal-bottom {
+    animation: none;
+    transition: opacity 0.3s ease;
+    opacity: 0;
+  }
 }

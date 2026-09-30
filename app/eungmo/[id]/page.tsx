@@ -66,6 +66,8 @@ export default function RaffleProductPage({
   const [colorInfoOpen, setColorInfoOpen] = useState(false);
   const [purchaseResult, setPurchaseResult] =
     useState<RaffleEntryCreateResponse | null>(null);
+  const [resultOpen, setResultOpen] = useState(false);
+  const [tearing, setTearing] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -110,6 +112,15 @@ export default function RaffleProductPage({
       })
       .catch(() => {});
   }, [product]);
+
+  // 성공 모달은 처음부터 열린 채로 마운트하지 않고, 마운트 다음 프레임에 open
+  // 클래스를 붙여서 .modal-overlay의 기존 트랜지션(opacity/scale)이 실제로 재생되게 한다.
+  // (Rules of Hooks 때문에 이 useEffect는 아래 조건부 return들보다 반드시 위에 있어야 한다.)
+  useEffect(() => {
+    if (!purchaseResult) return;
+    const id = requestAnimationFrame(() => setResultOpen(true));
+    return () => cancelAnimationFrame(id);
+  }, [purchaseResult]);
 
   if (product === undefined) {
     return (
@@ -160,6 +171,11 @@ export default function RaffleProductPage({
     setModalOpen(true);
   };
 
+  function closeResultModal() {
+    setResultOpen(false);
+    setTimeout(() => setPurchaseResult(null), 250); // .modal-overlay transition 길이와 맞춤
+  }
+
   const submitRaffle = async () => {
     const session = await getValidSession();
     if (!session) {
@@ -181,6 +197,11 @@ export default function RaffleProductPage({
       setProduct((prev) =>
         prev ? { ...prev, sold_slots: newSoldSlots } : prev,
       );
+      // 응모권이 절취선을 따라 찢어지는 연출(당기다가 → 딱 끊어짐 → 떨어져 나감,
+      // 1.05초)을 다 보여준 다음 결과 모달로 넘어간다
+      setTearing(true);
+      await new Promise((resolve) => setTimeout(resolve, 1300));
+      setTearing(false);
       notifyPointsUpdated();
       setModalOpen(false);
       setPurchaseResult(entry);
@@ -393,71 +414,74 @@ export default function RaffleProductPage({
           if (e.target === e.currentTarget) setModalOpen(false);
         }}
       >
-        <div className="modal">
-          <div className="modal-icon">
-            <TicketIcon size={28} weight="fill" color="var(--accent)" />
-          </div>
-          <div className="modal-title">응모권 선택</div>
-          <div className="modal-sub">
-            {product.product_name}
-            <br />
-            응모권 1장당{" "}
-            <strong style={{ color: "var(--text)" }}>
-              {product.ticket_price.toLocaleString()}원
-            </strong>
-            이며 추첨일에 당첨자를 발표합니다.
-          </div>
-
-          <div className="ticket-count">
-            <div className="ticket-label">응모권 수량</div>
-            <div className="ticket-selector">
-              <button className="ticket-btn" onClick={() => changeTicket(-1)}>
-                −
-              </button>
-              <div className="ticket-num">{ticketCount}</div>
-              <button className="ticket-btn" onClick={() => changeTicket(1)}>
-                +
-              </button>
+        <div className={`modal ticket-modal${tearing ? " tearing" : ""}`}>
+          <div className="ticket-modal-top">
+            <div className="modal-icon">
+              <TicketIcon size={28} weight="fill" color="var(--accent)" />
             </div>
-            <div className="ticket-info">
-              <span>
-                최대 {maxPurchasable.toLocaleString()}장까지 구매 가능
-              </span>
-              <span className="total">
-                총 {(ticketCount * product.ticket_price).toLocaleString()}원
-              </span>
+            <div className="modal-title">응모권 선택</div>
+            <div className="modal-sub">
+              {product.product_name}
+              <br />
+              응모권 1장당{" "}
+              <strong style={{ color: "var(--text)" }}>
+                {product.ticket_price.toLocaleString()}원
+              </strong>
+              이며 추첨일에 당첨자를 발표합니다.
+            </div>
+
+            <div className="ticket-count">
+              <div className="ticket-label">응모권 수량</div>
+              <div className="ticket-selector">
+                <button className="ticket-btn" onClick={() => changeTicket(-1)}>
+                  −
+                </button>
+                <div className="ticket-num">{ticketCount}</div>
+                <button className="ticket-btn" onClick={() => changeTicket(1)}>
+                  +
+                </button>
+              </div>
+              <div className="ticket-info">
+                <span>
+                  최대 {maxPurchasable.toLocaleString()}장까지 구매 가능
+                </span>
+                <span className="total">
+                  총 {(ticketCount * product.ticket_price).toLocaleString()}원
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="modal-notice">
-            <WarningIcon
-              size={13}
-              weight="fill"
-              style={{ flexShrink: 0, marginTop: "2px" }}
-            />
-            <span>
-              응모권 구매 후 취소 및 환불이 불가합니다. 추첨 결과는 마감일 기준
-              24시간 이내에 알림으로 발송됩니다.
-            </span>
-          </div>
-
-          {submitError && (
-            <div className="modal-notice" style={{ color: "var(--danger)" }}>
+          <div className="ticket-modal-bottom">
+            <div className="modal-notice">
               <WarningIcon
                 size={13}
                 weight="fill"
                 style={{ flexShrink: 0, marginTop: "2px" }}
               />
-              <span>{submitError}</span>
+              <span>
+                응모권 구매 후 취소 및 환불이 불가합니다. 추첨 결과는 마감일 기준
+                24시간 이내에 알림으로 발송됩니다.
+              </span>
             </div>
-          )}
 
-          <div className="modal-btn-row">
-            <button
-              className="btn-cancel"
-              onClick={() => setModalOpen(false)}
-              disabled={submitting}
-            >
+            {submitError && (
+              <div className="modal-notice" style={{ color: "var(--danger)" }}>
+                <WarningIcon
+                  size={13}
+                  weight="fill"
+                  style={{ flexShrink: 0, marginTop: "2px" }}
+                />
+                <span>{submitError}</span>
+              </div>
+            )}
+
+            <div className="modal-btn-row">
+              <button
+                className="btn-cancel"
+                onClick={() => setModalOpen(false)}
+                disabled={submitting}
+              >
               취소
             </button>
             <button
@@ -468,6 +492,7 @@ export default function RaffleProductPage({
               <TicketIcon size={15} weight="fill" />{" "}
               {submitting ? "처리 중..." : "응모하기"}
             </button>
+            </div>
           </div>
         </div>
       </div>
@@ -475,13 +500,13 @@ export default function RaffleProductPage({
       {/* 구매 완료 결과 */}
       {purchaseResult && (
         <div
-          className="modal-overlay open"
+          className={`modal-overlay ${resultOpen ? "open" : ""}`}
           onClick={(e) => {
-            if (e.target === e.currentTarget) setPurchaseResult(null);
+            if (e.target === e.currentTarget) closeResultModal();
           }}
         >
           <div className="modal">
-            <div className="modal-icon">
+            <div className="modal-icon celebrate">
               <ConfettiIcon size={28} weight="fill" color="var(--gold)" />
             </div>
             <div className="modal-title">응모가 완료되었습니다!</div>
@@ -503,7 +528,7 @@ export default function RaffleProductPage({
               <button
                 className="btn-confirm"
                 style={{ width: "100%" }}
-                onClick={() => setPurchaseResult(null)}
+                onClick={closeResultModal}
               >
                 확인
               </button>
