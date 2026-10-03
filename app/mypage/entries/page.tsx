@@ -1,11 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { TicketIcon, CalendarIcon } from '@phosphor-icons/react'
 import { useRaffleEntryPhases, type PhasedRaffleEntry } from '@/hooks/useRaffleEntryPhases'
 import { isOngoingPhase, isWinningEntry } from '@/lib/raffle'
 import { formatRelativeDate } from '@/lib/date'
+
+// 매진 후 추첨까지 남은 시간 — 0이 됐는데 아직 결과가 없으면(폴링 전) 기다림 문구로 바뀐다
+function DrawCountdown({ drawAt }: { drawAt: number | null }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (drawAt == null) return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [drawAt])
+
+  const left = drawAt == null ? 0 : Math.max(0, Math.ceil((drawAt - now) / 1000))
+  if (left === 0) return <span style={{ color: 'var(--gold)' }}>응모 마감 · 추첨 결과를 기다리는 중이에요</span>
+  const mm = Math.floor(left / 60)
+  const ss = String(left % 60).padStart(2, '0')
+  return (
+    <span style={{ color: 'var(--gold)' }}>
+      응모 마감 · 추첨까지 <b className="draw-countdown">{mm}:{ss}</b>
+    </span>
+  )
+}
 
 export default function RaffleEntriesPage() {
   const { items, entries, checkResult } = useRaffleEntryPhases()
@@ -57,8 +77,7 @@ export default function RaffleEntriesPage() {
                   <div className="entry-meta">
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><TicketIcon size={12} /> 총 {item.totalTicketCount}장 응모</span>
                     {item.phase === 'drawPending' ? (
-                      // TODO(backend): 매진 시각(sold_out_at)이 오면 "추첨까지 4:32" 카운트다운으로 교체
-                      <span style={{ color: 'var(--gold)' }}>응모 마감 · 곧 추첨이 시작돼요</span>
+                      <DrawCountdown drawAt={item.drawAt} />
                     ) : item.phase === 'resultReady' ? (
                       <span style={{ color: 'var(--gold)' }}>추첨이 끝났어요</span>
                     ) : (

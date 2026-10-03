@@ -9,7 +9,6 @@ import {
   HeartIcon,
   HouseIcon,
   ReceiptIcon,
-  StarIcon,
   TicketIcon,
   UserIcon,
 } from '@phosphor-icons/react'
@@ -38,6 +37,8 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
   const { items: raffleItems, entries } = useRaffleEntryPhases()
   const ongoingCount = raffleItems.filter(e => isOngoingPhase(e.phase)).length
   const participationCount = entries.filter(e => e.status !== 'cancelled').length
+  // 결과를 확인한 당첨만 센다 — 확인 전에 숫자가 오르면 결과를 미리 알게 되므로
+  const winCount = raffleItems.filter(e => e.phase === 'won').length
 
   useEffect(() => {
     let cancelled = false
@@ -84,14 +85,13 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
           </div>
           <div className="profile-name">{profile?.nickname ?? '불러오는 중...'}</div>
           <div className="profile-email">{profile?.email ?? ''}</div>
-          <div className="profile-rating"><StarIcon size={13} weight="fill" /> 4.9</div>
           <div className="profile-stats">
             <div className="profile-stat">
               <div className="profile-stat-value">{participationCount}</div>
               <div className="profile-stat-label">응모 내역</div>
             </div>
             <div className="profile-stat">
-              <div className="profile-stat-value">-</div>
+              <div className="profile-stat-value">{winCount}</div>
               <div className="profile-stat-label">당첨 횟수</div>
             </div>
           </div>

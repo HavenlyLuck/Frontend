@@ -5,6 +5,7 @@ import { getMyRaffleEntries, getRaffleProducts, type MyRaffleEntryResponse, type
 import { getValidSession } from '@/lib/auth'
 import {
   getCheckedResultIds,
+  getDrawAt,
   getEntryPhase,
   groupEntriesByProduct,
   markResultChecked,
@@ -15,6 +16,8 @@ import {
 
 export interface PhasedRaffleEntry extends GroupedRaffleEntry {
   phase: EntryPhase
+  // 추첨 대기 중일 때 추첨 예정 시각(ms), 모르면 null
+  drawAt: number | null
 }
 
 const POLL_MS = 30_000
@@ -55,10 +58,11 @@ export function useRaffleEntryPhases() {
     }
   }, [load])
 
-  const items: PhasedRaffleEntry[] = groupEntriesByProduct(entries).map(item => ({
-    ...item,
-    phase: getEntryPhase(item, products.get(item.raffle_product_id), checkedIds.includes(item.raffle_product_id)),
-  }))
+  const items: PhasedRaffleEntry[] = groupEntriesByProduct(entries).map(item => {
+    const product = products.get(item.raffle_product_id)
+    const phase = getEntryPhase(item, product, checkedIds.includes(item.raffle_product_id))
+    return { ...item, phase, drawAt: phase === 'drawPending' ? getDrawAt(product) : null }
+  })
 
   const checkResult = useCallback((raffleProductId: number) => {
     markResultChecked(raffleProductId)

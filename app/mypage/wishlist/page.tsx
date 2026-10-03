@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { HeartIcon } from '@phosphor-icons/react'
 import { getWishlistItems, removeWishlistItem, type WishlistItem } from '@/lib/wishlist'
+import CardImage from '@/components/CardImage'
 
 export default function WishlistPage() {
   const [items, setItems] = useState<WishlistItem[]>(() => getWishlistItems())
@@ -42,7 +43,7 @@ export default function WishlistPage() {
               <Link href={item.href} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="card-img">
                   {item.image ? (
-                    <img src={item.image} alt={item.title} />
+                    <CardImage src={item.image} alt={item.title} />
                   ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, background: 'var(--bg-subtle)' }}>
                       {item.emoji ?? '🛍️'}
