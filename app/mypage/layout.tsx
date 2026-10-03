@@ -16,8 +16,8 @@ import {
 import { getReadyStorageCount } from '@/lib/storage'
 import { getValidSession, clearAuth } from '@/lib/auth'
 import { getMyProfile, ApiError, type MyProfileResponse } from '@/lib/api'
-import { useMyRaffleEntries } from '@/hooks/useMyRaffleEntries'
-import { groupEntriesByProduct } from '@/lib/raffle'
+import { useRaffleEntryPhases } from '@/hooks/useRaffleEntryPhases'
+import { isOngoingPhase } from '@/lib/raffle'
 
 function getMenuItems(ongoingCount: number) {
   return [
@@ -35,8 +35,8 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
   const router = useRouter()
   const [authChecked, setAuthChecked] = useState(false)
   const [profile, setProfile] = useState<MyProfileResponse | null>(null)
-  const { entries } = useMyRaffleEntries()
-  const ongoingCount = groupEntriesByProduct(entries).filter(e => e.status === 'open').length
+  const { items: raffleItems, entries } = useRaffleEntryPhases()
+  const ongoingCount = raffleItems.filter(e => isOngoingPhase(e.phase)).length
   const participationCount = entries.filter(e => e.status !== 'cancelled').length
 
   useEffect(() => {

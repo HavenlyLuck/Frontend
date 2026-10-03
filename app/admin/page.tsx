@@ -372,7 +372,7 @@ export default function AdminPage() {
                     transformOrigin: 'bottom', transition: 'transform 0.3s',
                     transform: `scaleY(${d.amount > 0 ? Math.max(pct, 4 / 120) : 2 / 120})`,
                     background: isSel ? 'var(--accent)' : d.amount > 0 ? 'var(--border-strong)' : 'var(--border)',
-                    boxShadow: isSel ? '0 0 8px rgba(224,56,76,0.4)' : undefined,
+                    boxShadow: isSel ? '0 0 8px rgba(217,51,71,0.4)' : undefined,
                   }} />
                   <div style={{ color: isSel ? 'var(--accent)' : 'var(--text-tertiary)', fontSize: 9, whiteSpace: 'nowrap', fontWeight: isSel ? 700 : 400 }}>{d.label}</div>
                 </div>
@@ -514,7 +514,7 @@ export default function AdminPage() {
         </div>
 
         {!showAddForm ? (
-          <button onClick={() => setShowAddForm(true)} style={{ width: '100%', padding: '14px', borderRadius: 12, border: '1px dashed var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent)', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => setShowAddForm(true)} style={{ width: '100%', padding: '14px', borderRadius: 12, border: '1px dashed var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
             + 새 {productTab} 상품 추가
           </button>
         ) : (
@@ -570,7 +570,7 @@ export default function AdminPage() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>상품명 (상위상, 이미지 포함) *</div>
-                    <button type="button" onClick={addKujiItem} style={{ border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent)', borderRadius: 8, width: 24, height: 24, fontSize: 15, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}>+</button>
+                    <button type="button" onClick={addKujiItem} style={{ border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', borderRadius: 8, width: 24, height: 24, fontSize: 15, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}>+</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {kujiItems.map((item, idx) => (

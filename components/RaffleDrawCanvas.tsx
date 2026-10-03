@@ -387,7 +387,7 @@ export default function RaffleDrawCanvas({
             borderRadius: 12,
             border: "1px solid #3a3d4a",
             boxShadow:
-              "0 0 16px rgba(224,56,76,0.25), 0 0 40px rgba(212,175,106,0.15)",
+              "0 0 16px rgba(217,51,71,0.25), 0 0 40px rgba(212,175,106,0.15)",
             display: "block",
           }}
         />
@@ -423,7 +423,7 @@ export default function RaffleDrawCanvas({
                 fontWeight: 900,
                 color: "#d4af6a",
                 textShadow:
-                  "0 0 8px #d4af6a, 0 0 20px #e0384c, 0 0 36px #e0384c",
+                  "0 0 8px #d4af6a, 0 0 20px #d93347, 0 0 36px #d93347",
               }}
             >
               당첨번호 {celebration}번 !!

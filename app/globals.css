@@ -8,12 +8,19 @@
   --border-strong: #3a3d4a;
   --text: #f2f2f0;
   --text-secondary: #a8abb8;
-  --text-tertiary: #6e7180;
+  --text-tertiary: #868a9e; /* 2026-10-03: lightened from #6e7180 — old value was 3.27:1 on --surface, below WCAG AA 4.5:1 for normal text */
 
-  --accent: #e0384c;
+  /* 2026-10-03: darkened from #e0384c so white button text clears WCAG AA (4.34 → 4.65:1).
+     Hardcoded copies of this red also live in app/icon.svg, lib/roulette/physics.ts, components/RaffleDrawCanvas.tsx,
+     and one glow in app/admin/page.tsx — update those by hand if this ever changes again. */
+  --accent: #d93347;
   --accent-hover: #c92c40;
-  --accent-tint: rgba(224, 56, 76, 0.14);
-  --accent-tint-border: rgba(224, 56, 76, 0.4);
+  --accent-tint: rgba(217, 51, 71, 0.14);
+  --accent-tint-border: rgba(217, 51, 71, 0.4);
+  /* --accent = fills, buttons, large display text, icons (icon/non-text needs only 3:1; --accent on --bg is 3.92).
+     --accent-fg = small ACCENT-COLORED TEXT on dark/tinted grounds (badges, active tabs, links) —
+     clears 4.5:1 on --bg, --surface, and --accent-tint alike. */
+  --accent-fg: #f25065;
 
   --gold: #d4af6a;
   --gold-tint: rgba(212, 175, 106, 0.14);
@@ -205,7 +212,7 @@ nav {
 
 .nav-btn.active-nav {
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--accent-fg);
   font-weight: 700;
 }
 
@@ -289,7 +296,7 @@ nav {
 .btn-primary:hover {
   background: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(224, 56, 76, 0.32);
+  box-shadow: 0 8px 24px rgba(217, 51, 71, 0.32);
 }
 
 .btn-ghost {
@@ -398,17 +405,6 @@ nav {
   background: var(--accent);
   transform: skewX(-12deg);
 }
-.hero-box-img {
-  position: absolute;
-  width: 50%;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
-}
-.hero-box-img-a { left: 12%; top: 14%; transform: rotate(-7deg); }
-.hero-box-img-b { left: 38%; top: 8%; transform: rotate(4deg); z-index: 2; }
-.hero-box-img-solo { left: 26%; top: 10%; transform: rotate(3deg); z-index: 2; width: 48%; }
 .hero-ticket {
   position: absolute;
   z-index: 2;
@@ -431,7 +427,7 @@ nav {
   border-right: 2px dashed var(--border-strong);
 }
 .hero-ticket-label { font-size: 11px; letter-spacing: 0.16em; color: var(--text-tertiary); font-weight: 700; }
-.hero-ticket-price { font-family: var(--font-display), "Noto Sans KR", sans-serif; font-size: clamp(40px, 5vw, 64px); line-height: 1; color: var(--text); }
+.hero-ticket-price { font-family: var(--font-display), "Noto Sans KR", sans-serif; font-size: clamp(40px, 5vw, 64px); line-height: 1; color: var(--text); white-space: nowrap; }
 .hero-ticket-price small { font-family: inherit; font-size: 14px; color: var(--gold); margin-left: 8px; }
 .hero-ticket-note { font-size: 13px; color: var(--text-secondary); }
 .hero-ticket-stub {
@@ -547,7 +543,7 @@ nav {
 .hero-square-badge {
   display: inline-block;
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--accent-fg);
   font-size: 16px;
   font-weight: 700;
   padding: 5px 14px;
@@ -886,6 +882,29 @@ nav {
   box-shadow: var(--shadow-lg);
 }
 
+/* 매진된 응모 카드 — 링크 대신 div로 렌더, 사진 블러 + 매진 스탬프 */
+.product-card-home.is-soldout { cursor: not-allowed; }
+.product-card-home.is-soldout:hover { border-color: var(--border); transform: none; box-shadow: var(--shadow-sm); }
+.product-card-home.is-soldout .card-img img { filter: blur(6px) brightness(0.45) saturate(0.6); transform: scale(1.08); }
+.product-card-home.is-soldout .card-body { opacity: 0.5; }
+.card-soldout-stamp {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+}
+.card-soldout-stamp span {
+  font-family: var(--font-display), "Noto Sans KR", sans-serif;
+  font-size: 30px;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  padding: 6px 18px 4px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 6px;
+  transform: rotate(-6deg);
+}
+
 .card-img {
   aspect-ratio: 4 / 3;
   background: var(--bg-subtle);
@@ -950,7 +969,7 @@ nav {
   gap: 4px;
   align-items: center;
   font-size: 10px;
-  color: var(--accent);
+  color: var(--accent-fg);
   background: var(--accent-tint);
   border: 1px solid transparent;
   border-radius: 99px;
@@ -1226,7 +1245,7 @@ nav {
 
 .badge.raffle {
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--accent-fg);
   border: 1px solid var(--accent-tint-border);
   display: flex;
   align-items: center;
@@ -1460,10 +1479,18 @@ nav {
 .btn-raffle:hover {
   background: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(224, 56, 76, 0.32);
+  box-shadow: 0 8px 24px rgba(217, 51, 71, 0.32);
 }
 .btn-raffle:active {
   transform: translateY(0);
+}
+.btn-raffle:disabled {
+  background: var(--surface);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-wish {
@@ -1589,7 +1616,7 @@ nav {
   padding: 2px 7px;
   border-radius: 99px;
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--accent-fg);
   border: 1px solid transparent;
   margin-top: 6px;
 }
@@ -1662,6 +1689,8 @@ nav {
   color: var(--text-tertiary);
   margin-bottom: 28px;
   line-height: 1.6;
+  text-wrap: balance; /* 가운데 정렬 2~3줄 문장에서 마지막 줄에 한두 글자만 떨어지는 것 방지 */
+  word-break: keep-all; /* 한국어 어절 중간에서 끊기지 않게 */
 }
 
 .ticket-count {
@@ -1818,6 +1847,68 @@ nav {
   transform: translateX(-50%) translateY(0);
 }
 
+/* ── 응모 마감 알림 팝업 (components/RaffleAlertWatcher) ── */
+.raffle-alert-stack {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 320;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(360px, calc(100vw - 32px));
+}
+.raffle-alert {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--accent-tint-border);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: var(--shadow-lg);
+  animation: raffleAlertIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.raffle-alert-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-tint);
+  color: var(--accent-fg);
+}
+.raffle-alert-text { flex: 1; min-width: 0; }
+.raffle-alert-title { font-size: 14px; color: var(--text); line-height: 1.45; word-break: keep-all; }
+.raffle-alert-title b { font-weight: 700; }
+.raffle-alert-body { font-size: 13px; color: var(--gold); font-weight: 600; margin-top: 2px; }
+.raffle-alert-link { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--text-secondary); text-decoration: none; }
+.raffle-alert-link:hover { color: var(--text); }
+.raffle-alert-close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.raffle-alert-close:hover { background: var(--bg-subtle); color: var(--text); }
+@keyframes raffleAlertIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 640px) {
+  .raffle-alert-stack { right: 16px; bottom: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .raffle-alert { animation: none; }
+}
+
 /* ── 마이페이지 ── */
 .mypage-layout {
   max-width: 1100px;
@@ -1939,7 +2030,7 @@ nav {
 
 .menu-item.active {
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--accent-fg);
 }
 
 .menu-icon {
@@ -2099,7 +2190,7 @@ nav {
 
 .status-badge.waiting {
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--accent-fg);
   border: 1px solid var(--accent-tint-border);
 }
 .status-badge.win {
@@ -2134,7 +2225,7 @@ nav {
 
 .btn-win-confirm:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 14px rgba(224, 56, 76, 0.35);
+  box-shadow: 0 4px 14px rgba(217, 51, 71, 0.35);
 }
 
 .entry-price {
@@ -2217,7 +2308,7 @@ nav {
   align-items: center;
   gap: 3px;
   font-size: 10px;
-  color: var(--accent);
+  color: var(--accent-fg);
   background: var(--accent-tint);
   border: 1px solid transparent;
   border-radius: 99px;
@@ -3223,7 +3314,7 @@ nav {
 .chip-btn.accent {
   border-color: var(--accent-tint-border);
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--accent-fg);
 }
 
 .chip-btn.ghost {
@@ -3336,7 +3427,7 @@ nav {
 .review-tab.active {
   border-color: var(--accent-tint-border);
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--accent-fg);
   font-weight: 700;
 }
 
@@ -3365,7 +3456,7 @@ nav {
 
 .review-type-badge.eungmo {
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--accent-fg);
   border: 1px solid var(--accent-tint-border);
 }
 .review-type-badge.kuji {
@@ -3969,11 +4060,37 @@ nav {
   animation: tearBottomHalf 1.05s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* 찢기 시작부터는 응모권 조각이 (안 보여도) 클릭을 받지 않게 — 성공 카드 아래로
+   튀어나온 투명한 "응모하기" 버튼을 다시 누르는 사고 방지 */
+.ticket-modal.tearing {
+  pointer-events: none;
+}
+
+/* 성공 카드: 같은 배경 위, 응모권 자리에 겹쳐서 떠오른다.
+   (flex 컨테이너의 절대위치 자식은 justify/align-items 기준으로 가운데 정렬됨) */
+.success-modal {
+  position: absolute;
+  animation: successIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes successIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes successFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ticket-modal.tearing .ticket-modal-top,
   .ticket-modal.tearing .ticket-modal-bottom {
     animation: none;
     transition: opacity 0.3s ease;
     opacity: 0;
+  }
+  .success-modal {
+    animation-name: successFade;
   }
 }

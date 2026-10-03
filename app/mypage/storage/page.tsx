@@ -101,7 +101,7 @@ export default function StoragePage() {
         </p>
         <button
           onClick={() => setShowAddrModal(true)}
-          style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
         >
           <TruckIcon size={13} weight="fill" /> 배송지 등록
         </button>
@@ -229,7 +229,7 @@ export default function StoragePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{addr.label}</span>
                           {addr.isDefault && (
-                            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-tint)', border: '1px solid var(--accent-tint-border)', borderRadius: 20, padding: '1px 8px' }}>기본</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent-tint)', border: '1px solid var(--accent-tint-border)', borderRadius: 20, padding: '1px 8px' }}>기본</span>
                           )}
                           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{addr.recipient}</span>
                           <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{addr.phone}</span>
@@ -246,7 +246,7 @@ export default function StoragePage() {
 
             <button
               onClick={() => setShowAddrModal(true)}
-              style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1px dashed var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 16 }}
+              style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1px dashed var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 16 }}
             >
               + 새 배송지 추가
             </button>

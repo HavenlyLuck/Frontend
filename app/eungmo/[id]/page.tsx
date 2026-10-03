@@ -66,7 +66,6 @@ export default function RaffleProductPage({
   const [colorInfoOpen, setColorInfoOpen] = useState(false);
   const [purchaseResult, setPurchaseResult] =
     useState<RaffleEntryCreateResponse | null>(null);
-  const [resultOpen, setResultOpen] = useState(false);
   const [tearing, setTearing] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -113,15 +112,6 @@ export default function RaffleProductPage({
       .catch(() => {});
   }, [product]);
 
-  // 성공 모달은 처음부터 열린 채로 마운트하지 않고, 마운트 다음 프레임에 open
-  // 클래스를 붙여서 .modal-overlay의 기존 트랜지션(opacity/scale)이 실제로 재생되게 한다.
-  // (Rules of Hooks 때문에 이 useEffect는 아래 조건부 return들보다 반드시 위에 있어야 한다.)
-  useEffect(() => {
-    if (!purchaseResult) return;
-    const id = requestAnimationFrame(() => setResultOpen(true));
-    return () => cancelAnimationFrame(id);
-  }, [purchaseResult]);
-
   if (product === undefined) {
     return (
       <div className="home-container">
@@ -155,6 +145,9 @@ export default function RaffleProductPage({
   const soldCount = product.sold_slots;
   const maxPurchasable = Math.max(0, product.total_slots - soldCount);
   const soldOut = maxPurchasable === 0;
+  // 마감 시간이 지났거나 백엔드가 닫힌 응모로 보는 경우 — 매진이 아니어도 구매를 막는다
+  // (안 막으면 모달까지 열고 눌러봐야 "마감된 응모입니다"로 거절당함)
+  const expired = remaining <= 0 || !product.is_open;
   const soldPct =
     product.total_slots > 0
       ? Math.min(100, Math.round((soldCount / product.total_slots) * 100))
@@ -168,12 +161,19 @@ export default function RaffleProductPage({
   const openModal = () => {
     setSubmitError(null);
     setTicketCount(1);
+    setTearing(false);
+    setPurchaseResult(null);
     setModalOpen(true);
   };
 
-  function closeResultModal() {
-    setResultOpen(false);
-    setTimeout(() => setPurchaseResult(null), 250); // .modal-overlay transition 길이와 맞춤
+  // 응모권 카드와 성공 카드는 같은 배경(.modal-overlay) 하나를 공유한다.
+  // 상태 초기화는 배경 페이드아웃(0.25s)이 끝난 뒤에 해야 닫히는 도중 내용이 바뀌지 않는다.
+  function closeTicketFlow() {
+    setModalOpen(false);
+    setTimeout(() => {
+      setPurchaseResult(null);
+      setTearing(false);
+    }, 260);
   }
 
   const submitRaffle = async () => {
@@ -197,13 +197,13 @@ export default function RaffleProductPage({
       setProduct((prev) =>
         prev ? { ...prev, sold_slots: newSoldSlots } : prev,
       );
-      // 응모권이 절취선을 따라 찢어지는 연출(당기다가 → 딱 끊어짐 → 떨어져 나감,
-      // 1.05초)을 다 보여준 다음 결과 모달로 넘어간다
+      // 응모권이 절취선을 따라 찢어지는 연출(당기다가 → 딱 끊어짐(~0.67s) → 떨어져 나감, CSS 1.05초).
+      // 조각이 아직 날아가는 0.8초 시점에 같은 배경 위로 성공 카드를 띄워서, 빈 화면이나
+      // 배경 깜빡임 없이 "찢었다 → 응모됐다"가 한 동작처럼 이어지게 한다.
+      // tearing 클래스는 모달이 닫힐 때까지 유지 — 먼저 풀면 찢어진 조각이 다시 붙어 보인다.
       setTearing(true);
-      await new Promise((resolve) => setTimeout(resolve, 1300));
-      setTearing(false);
+      await new Promise((resolve) => setTimeout(resolve, 800));
       notifyPointsUpdated();
-      setModalOpen(false);
       setPurchaseResult(entry);
       setMyEntryNumber(entry.entry_number);
       if (justSoldOut) {
@@ -327,7 +327,8 @@ export default function RaffleProductPage({
               >
                 <div className="stat-item">
                   <div className="stat-value">
-                    {product.ticket_price.toLocaleString()}원
+                    {product.ticket_price.toLocaleString()}
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginLeft: 3 }}>운포인트</span>
                   </div>
                   <div className="stat-label">응모권 가격</div>
                 </div>
@@ -376,10 +377,10 @@ export default function RaffleProductPage({
                 <button
                   className="btn-raffle"
                   onClick={openModal}
-                  disabled={soldOut}
+                  disabled={soldOut || expired}
                 >
                   <TicketIcon size={17} weight="fill" />{" "}
-                  {soldOut ? "매진" : "응모하기"}
+                  {soldOut ? "매진" : expired ? "마감" : "응모하기"}
                 </button>
               )}
               <button
@@ -407,11 +408,16 @@ export default function RaffleProductPage({
         </div>
       </div>
 
-      {/* 응모 모달 */}
+      {/* 응모 모달 — 응모권 카드와 성공 카드가 이 배경 하나를 공유한다.
+          결제 처리 중이거나 찢기 연출 중(성공 카드가 뜨기 전)엔 배경 클릭으로 닫히지 않게 막는다.
+          (안 막으면 모달이 먼저 사라졌다가 결제 완료 후 성공 카드가 혼자 튀어나옴) */}
       <div
         className={`modal-overlay ${modalOpen ? "open" : ""}`}
         onClick={(e) => {
-          if (e.target === e.currentTarget) setModalOpen(false);
+          if (e.target !== e.currentTarget) return;
+          if (submitting) return;
+          if (tearing && !purchaseResult) return;
+          closeTicketFlow();
         }}
       >
         <div className={`modal ticket-modal${tearing ? " tearing" : ""}`}>
@@ -425,7 +431,7 @@ export default function RaffleProductPage({
               <br />
               응모권 1장당{" "}
               <strong style={{ color: "var(--text)" }}>
-                {product.ticket_price.toLocaleString()}원
+                {product.ticket_price.toLocaleString()} 운포인트
               </strong>
               이며 추첨일에 당첨자를 발표합니다.
             </div>
@@ -446,7 +452,7 @@ export default function RaffleProductPage({
                   최대 {maxPurchasable.toLocaleString()}장까지 구매 가능
                 </span>
                 <span className="total">
-                  총 {(ticketCount * product.ticket_price).toLocaleString()}원
+                  총 {(ticketCount * product.ticket_price).toLocaleString()} 운포인트
                 </span>
               </div>
             </div>
@@ -487,7 +493,7 @@ export default function RaffleProductPage({
             <button
               className="btn-confirm"
               onClick={submitRaffle}
-              disabled={submitting || soldOut}
+              disabled={submitting || soldOut || expired}
             >
               <TicketIcon size={15} weight="fill" />{" "}
               {submitting ? "처리 중..." : "응모하기"}
@@ -495,17 +501,10 @@ export default function RaffleProductPage({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 구매 완료 결과 */}
-      {purchaseResult && (
-        <div
-          className={`modal-overlay ${resultOpen ? "open" : ""}`}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeResultModal();
-          }}
-        >
-          <div className="modal">
+        {/* 구매 완료 — 찢어진 조각이 날아가는 동안 같은 배경 위로 겹쳐서 떠오른다 */}
+        {purchaseResult && (
+          <div className="modal success-modal" role="dialog" aria-modal="true" aria-label="응모 완료">
             <div className="modal-icon celebrate">
               <ConfettiIcon size={28} weight="fill" color="var(--gold)" />
             </div>
@@ -528,14 +527,14 @@ export default function RaffleProductPage({
               <button
                 className="btn-confirm"
                 style={{ width: "100%" }}
-                onClick={closeResultModal}
+                onClick={closeTicketFlow}
               >
                 확인
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* 당첨번호 구슬 색 안내 */}
       {colorInfoOpen && (

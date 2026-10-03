@@ -111,7 +111,7 @@ export default function AdminRaffleDrawPage() {
         <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
           <DiceFiveIcon size={23} weight="fill" color="var(--accent)" /> 라플 추첨
         </h1>
-        <Link href="/admin/raffle-draw/demo" style={{ fontSize: 13, color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+        <Link href="/admin/raffle-draw/demo" style={{ fontSize: 13, color: 'var(--accent-fg)', textDecoration: 'none', fontWeight: 600 }}>
           데모로 미리보기 →
         </Link>
       </div>
