@@ -152,6 +152,8 @@ export interface RaffleProductResponse {
   remaining_seconds: number
   is_open: boolean
   remaining_slots: number
+  // TODO(backend): 아직 운영 서버에 없음 — 매진된 시각(UTC). 생기면 추첨 5분 타이머가 이 값 기준으로 정확해진다
+  sold_out_at?: string | null
 }
 
 export function getRaffleProducts(status?: 'open' | 'completed' | 'cancelled') {

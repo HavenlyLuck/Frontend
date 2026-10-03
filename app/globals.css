@@ -886,6 +886,7 @@ nav {
 .product-card-home.is-soldout { cursor: not-allowed; }
 .product-card-home.is-soldout:hover { border-color: var(--border); transform: none; box-shadow: var(--shadow-sm); }
 .product-card-home.is-soldout .card-img img { filter: blur(6px) brightness(0.45) saturate(0.6); transform: scale(1.08); }
+.product-card-home.is-soldout .card-img .card-img-backdrop { filter: blur(20px) brightness(0.3) saturate(0.6); transform: scale(1.2); }
 .product-card-home.is-soldout .card-body { opacity: 0.5; }
 .card-soldout-stamp {
   position: absolute;
@@ -905,8 +906,10 @@ nav {
   transform: rotate(-6deg);
 }
 
+/* 상품 사진은 정사각/세로가 대부분이라 1:1 칸에 contain으로 전체를 보여주고,
+   남는 여백은 같은 사진을 흐리게 깐 배경(card-img-backdrop)으로 채운다 — components/CardImage */
 .card-img {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1 / 1;
   background: var(--bg-subtle);
   display: flex;
   align-items: center;
@@ -921,8 +924,16 @@ nav {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
+.card-img .card-img-backdrop {
+  object-fit: cover;
+  filter: blur(20px) brightness(0.5) saturate(1.1);
+  transform: scale(1.2);
+}
+/* 품절(상점) — 사진만 어둡게 */
+.card-img.is-dimmed img { filter: blur(3px) brightness(0.45); }
+.card-img.is-dimmed .card-img-backdrop { filter: blur(20px) brightness(0.3); }
 
 .card-time-badge {
   position: absolute;
@@ -993,6 +1004,15 @@ nav {
   font-weight: 400;
   color: var(--text);
   margin-bottom: 10px;
+}
+/* "1,000 운포인트"와 "/ 장당"이 각각 한 덩어리로 줄바꿈되게 — 좁은 카드에서 "장당"만 혼자 떨어지지 않도록 */
+.card-price .nowrap { white-space: nowrap; }
+.card-price-unit {
+  font-family: "Noto Sans KR", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
 .card-progress-row {
@@ -1172,55 +1192,6 @@ nav {
   height: 100%;
   object-fit: contain;
   padding: 4px;
-}
-
-.seller-card {
-  margin-top: 28px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px 20px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  box-shadow: var(--shadow-sm);
-}
-
-.seller-avatar {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: var(--accent-tint);
-  border: 2px solid var(--accent-tint-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  flex-shrink: 0;
-}
-
-.seller-info {
-  flex: 1;
-}
-
-.seller-name {
-  font-weight: 600;
-  font-size: 15px;
-  color: var(--text);
-}
-
-.seller-meta {
-  display: flex;
-  gap: 12px;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.seller-rating {
-  color: var(--gold);
-  font-size: 13px;
-  font-weight: 600;
 }
 
 .status-row {
@@ -1957,20 +1928,6 @@ nav {
 .profile-email {
   font-size: 13px;
   color: var(--text-tertiary);
-  margin-bottom: 16px;
-}
-
-.profile-rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--gold-tint);
-  border: 1px solid var(--gold-tint-border);
-  color: var(--gold);
-  font-size: 13px;
-  font-weight: 700;
-  padding: 5px 14px;
-  border-radius: 99px;
   margin-bottom: 20px;
 }
 
@@ -2208,6 +2165,9 @@ nav {
   color: var(--gold);
   border: 1px solid var(--gold-tint-border);
 }
+
+/* 추첨까지 남은 시간 — 숫자 폭이 고정돼야 1초마다 글자가 흔들리지 않는다 */
+.draw-countdown { font-variant-numeric: tabular-nums; font-weight: 700; }
 
 .btn-win-confirm {
   display: inline-block;

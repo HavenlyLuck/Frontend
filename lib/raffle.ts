@@ -1,4 +1,41 @@
-import type { MyRaffleEntryResponse, RaffleProductResponse } from './api'
+import { getRaffleProducts, type MyRaffleEntryResponse, type RaffleProductResponse } from './api'
+
+// 백엔드 시각은 UTC인데 끝에 Z가 없어서("2026-10-03T02:51:35") 그대로 파싱하면 로컬 시각으로 읽힌다
+export function parseServerTime(iso: string): number {
+  return Date.parse(/(Z|[+-]\d\d:?\d\d)$/i.test(iso) ? iso : `${iso}Z`)
+}
+
+// 매진(추첨 끝난) 카드를 목록에 블러로 남겨두는 기간
+export const SOLD_OUT_VISIBLE_MS = 24 * 60 * 60 * 1000
+
+export function isSoldOutRaffle(p: RaffleProductResponse): boolean {
+  return p.status === 'completed' || p.remaining_slots <= 0
+}
+
+/*
+ * 홈/응모 목록에 보여줄 응모 상품: 진행 중(매진 후 추첨 대기 포함) + 추첨이 끝난 지 하루가 안 된 상품.
+ * 진행 중인 상품이 먼저, 매진 상품은 뒤로.
+ * TODO(backend): 매진 시각(sold_out_at)이 생기면 추첨 시각 대신 매진 시각 기준으로 하루를 센다
+ *   (지금은 매진 5분 뒤 추첨이라는 전제로 drawn_at 기준 — 매진 후 추첨이 안 된 상품은 마감 시간까지 남는다)
+ */
+export async function getListedRaffles(): Promise<RaffleProductResponse[]> {
+  const [open, completed] = await Promise.all([
+    getRaffleProducts('open'),
+    getRaffleProducts('completed').catch(() => [] as RaffleProductResponse[]),
+  ])
+  const recent = completed.filter(p => p.drawn_at && isWithinSoldOutWindow(p))
+  return [...open, ...recent].sort((a, b) => Number(isSoldOutRaffle(a)) - Number(isSoldOutRaffle(b)))
+}
+
+export function isWithinSoldOutWindow(p: RaffleProductResponse, now = Date.now()): boolean {
+  return p.drawn_at != null && now - parseServerTime(p.drawn_at) < SOLD_OUT_VISIBLE_MS
+}
+
+// 목록에서 계속 보여줄지: 진행 중이면 마감 전까지, 추첨이 끝났으면 추첨 후 하루까지
+export function isListedRaffleVisible(p: RaffleProductResponse, remainingSeconds: number, now = Date.now()): boolean {
+  if (p.status === 'completed') return isWithinSoldOutWindow(p, now)
+  return remainingSeconds > 0
+}
 
 export interface GroupedRaffleEntry {
   raffle_product_id: number
@@ -83,6 +120,30 @@ export function getEntryPhase(
 
 export function isOngoingPhase(phase: EntryPhase): boolean {
   return phase === 'waiting' || phase === 'drawPending' || phase === 'resultReady'
+}
+
+// 매진 후 추첨까지 걸리는 시간 (백엔드: 매진 5분 뒤 자동 추첨)
+export const DRAW_DELAY_MS = 5 * 60 * 1000
+const SOLD_OUT_SEEN_KEY_PREFIX = 'raffleSoldOutSeen:'
+
+/*
+ * 추첨 예정 시각 (ms). 백엔드가 sold_out_at을 주면 그 기준, 아니면 이 브라우저가 매진을 처음 본 시각 기준(임시).
+ * TODO(backend): sold_out_at 필드가 생기면 임시 기준은 쓰이지 않는다
+ */
+export function getDrawAt(product: RaffleProductResponse | undefined): number | null {
+  if (!product || product.status !== 'open' || product.remaining_slots > 0) return null
+  if (product.sold_out_at) return parseServerTime(product.sold_out_at) + DRAW_DELAY_MS
+  try {
+    const key = SOLD_OUT_SEEN_KEY_PREFIX + product.raffle_product_id
+    let seen = Number(localStorage.getItem(key))
+    if (!seen) {
+      seen = Date.now()
+      localStorage.setItem(key, String(seen))
+    }
+    return seen + DRAW_DELAY_MS
+  } catch {
+    return null
+  }
 }
 
 // TODO(backend): "결과 확인함"을 서버에 저장하는 API가 생기면 교체 — 지금은 기기(브라우저)별로만 기억된다

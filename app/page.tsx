@@ -10,7 +10,10 @@ import {
   StorefrontIcon,
   TicketIcon,
 } from "@phosphor-icons/react";
-import { getRaffleProducts, type RaffleProductResponse } from "@/lib/api";
+import { getStoreProducts, type RaffleProductResponse, type StoreProductResponse } from "@/lib/api";
+import CardImage from "@/components/CardImage";
+import StoreProductCard from "@/components/StoreProductCard";
+import { getListedRaffles, isListedRaffleVisible, isSoldOutRaffle } from "@/lib/raffle";
 
 // 마감임박 섹션과 히어로 캐러셀은 아직 "준비중" 상태로 표시 (응모상품 섹션만 백엔드 연동됨)
 
@@ -25,19 +28,19 @@ function formatRaffleCountdown(seconds: number): string {
 
 function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; remainingSeconds: number }) {
   const soldPct = rp.total_slots > 0 ? Math.min(100, Math.round((rp.sold_slots / rp.total_slots) * 100)) : 0;
-  const soldOut = rp.remaining_slots <= 0;
+  const soldOut = isSoldOutRaffle(rp);
   const content = (
     <>
       <div className="card-img">
-        {rp.image_url && <img src={rp.image_url} alt={rp.product_name} />}
+        {rp.image_url && <CardImage src={rp.image_url} alt={rp.product_name} />}
         {soldOut
           ? <div className="card-soldout-stamp"><span>매진</span></div>
           : <div className="card-time-badge">⏱ {formatRaffleCountdown(remainingSeconds)}</div>}
       </div>
       <div className="card-body">
-        <div className="card-raffle-badge"><TicketIcon size={11} weight="fill" /> {soldOut ? "추첨 대기" : "응모 진행 중"}</div>
+        <div className="card-raffle-badge"><TicketIcon size={11} weight="fill" /> {rp.status === "completed" ? "추첨 완료" : soldOut ? "추첨 대기" : "응모 진행 중"}</div>
         <div className="card-title">{rp.product_name}</div>
-        <div className="card-price">{rp.ticket_price.toLocaleString()} 운포인트 <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-tertiary)' }}>/ 장당</span></div>
+        <div className="card-price"><span className="nowrap">{rp.ticket_price.toLocaleString()} 운포인트</span> <span className="card-price-unit">/ 장당</span></div>
         <div className="card-progress-row">
           <div className="card-progress-bar">
             <div className="card-progress-fill" style={{ width: `${soldPct}%` }} />
@@ -146,117 +149,36 @@ const KUJI_ITEMS = [
   },
 ];
 
-const SHOP_ITEMS = [
-  {
-    href: "/shop/sticker-set",
-    img: "/images/demo-1.jpg",
-    alt: "굿즈 스티커 세트",
-    badge: "즉시구매",
-    title: "캐릭터 굿즈 스티커 세트",
-    price: "12,000원",
-    views: 19,
-    wishes: 2,
-    chats: 0,
-  },
-  {
-    href: "/shop/acrylic-stand",
-    img: "/images/demo-2.jpg",
-    alt: "아크릴 스탠드",
-    badge: "즉시구매",
-    title: "인기 캐릭터 아크릴 스탠드",
-    price: "18,000원",
-    views: 31,
-    wishes: 6,
-    chats: 1,
-  },
-  {
-    href: "/shop/mini-figure",
-    img: "/images/demo-4.jpg",
-    alt: "미니 피규어",
-    badge: "즉시구매",
-    title: "데스크용 미니 피규어",
-    price: "25,000원",
-    views: 27,
-    wishes: 4,
-    chats: 0,
-  },
-  {
-    href: "/shop/ps5-controller",
-    img: "/images/ps5.jpg",
-    alt: "PS5 무선 컨트롤러",
-    badge: "즉시구매",
-    title: "PS5 듀얼센스 무선 컨트롤러",
-    price: "78,000원",
-    views: 45,
-    wishes: 11,
-    chats: 3,
-  },
-  {
-    href: "/shop/iphone-case",
-    img: "/images/iphone14pro.jpg",
-    alt: "아이폰 케이스",
-    badge: "즉시구매",
-    title: "아이폰 14 Pro 투명 케이스",
-    price: "15,000원",
-    views: 22,
-    wishes: 3,
-    chats: 0,
-  },
-  {
-    href: "/shop/figure-case",
-    img: "/images/demo-3.jpg",
-    alt: "피규어 진열 케이스",
-    badge: "즉시구매",
-    title: "피규어 먼지방지 진열 케이스",
-    price: "9,000원",
-    views: 16,
-    wishes: 1,
-    chats: 0,
-  },
-];
-
 function pickRandom<T>(pool: T[], n: number): T[] {
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, n);
 }
 
-type HomeItem = (typeof KUJI_ITEMS)[number] | (typeof SHOP_ITEMS)[number];
-
-function HomeProductCard({ item }: { item: HomeItem }) {
-  const pct = "pct" in item ? item.pct : undefined;
-  const isKuji = pct !== undefined;
-
+function KujiHomeCard({ item }: { item: (typeof KUJI_ITEMS)[number] }) {
   return (
-    <Link className={`product-card-home${isKuji ? "" : " is-shop"}`} href={item.href}>
+    <Link className="product-card-home" href={item.href}>
       <div className="card-img">
-        <img src={item.img} alt={item.alt} />
+        <CardImage src={item.img} alt={item.alt} />
       </div>
       <div className="card-body">
         <div className="card-raffle-badge">
-          {isKuji ? <GiftIcon size={11} weight="fill" /> : <StorefrontIcon size={11} weight="fill" />}
+          <GiftIcon size={11} weight="fill" />
           {item.badge}
         </div>
         <div className="card-title">{item.title}</div>
         <div className="card-price">{item.price}</div>
-        {pct !== undefined && "count" in item && (
-          <>
-            <div className="card-progress-row">
-              <div className="card-progress-bar">
-                <div
-                  className="card-progress-fill"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <span className="card-progress-pct">{pct}%</span>
-            </div>
-            <div className="card-progress-label">
-              <span>
-                <span className="cnt">{item.count}명</span> 참여
-              </span>
-              <span>최대 {item.max}명</span>
-            </div>
-          </>
-        )}
+        <div className="card-progress-row">
+          <div className="card-progress-bar">
+            <div className="card-progress-fill" style={{ width: `${item.pct}%` }} />
+          </div>
+          <span className="card-progress-pct">{item.pct}%</span>
+        </div>
+        <div className="card-progress-label">
+          <span>
+            <span className="cnt">{item.count}명</span> 참여
+          </span>
+          <span>최대 {item.max}명</span>
+        </div>
         <div className="card-stats">
           <span><EyeIcon size={12} /> {item.views}</span>
           <span><HeartIcon size={12} /> {item.wishes}</span>
@@ -269,11 +191,20 @@ function HomeProductCard({ item }: { item: HomeItem }) {
 
 export default function HomePage() {
   const [kujiItems, setKujiItems] = useState(KUJI_ITEMS.slice(0, 4));
-  const [shopItems, setShopItems] = useState(SHOP_ITEMS.slice(0, 4));
+  const [shopProducts, setShopProducts] = useState<StoreProductResponse[]>([]);
+  const [shopLoaded, setShopLoaded] = useState(false);
 
   useEffect(() => {
     setKujiItems(pickRandom(KUJI_ITEMS, 4));
-    setShopItems(pickRandom(SHOP_ITEMS, 4));
+    // 상점: 백엔드에 등록된 실제 상품 중 재고 있는 것 우선으로 4개
+    getStoreProducts()
+      .then((list) => {
+        const inStock = pickRandom(list.filter((p) => p.stock > 0), 4);
+        const soldOut = list.filter((p) => p.stock === 0);
+        setShopProducts([...inStock, ...soldOut].slice(0, 4));
+      })
+      .catch(() => {})
+      .finally(() => setShopLoaded(true));
   }, []);
 
   const [raffleProducts, setRaffleProducts] = useState<RaffleProductResponse[]>([]);
@@ -281,7 +212,7 @@ export default function HomePage() {
   const [nowTick, setNowTick] = useState(0);
 
   useEffect(() => {
-    getRaffleProducts("open")
+    getListedRaffles()
       .then((list) => {
         setRaffleProducts(list);
         setRaffleFetchedAt(Date.now());
@@ -299,7 +230,7 @@ export default function HomePage() {
   const elapsedSeconds = raffleFetchedAt ? Math.floor((nowTick - raffleFetchedAt) / 1000) : 0;
   const openRaffleItems = raffleProducts
     .map((rp) => ({ rp, remainingSeconds: Math.max(0, rp.remaining_seconds - elapsedSeconds) }))
-    .filter((item) => item.remainingSeconds > 0)
+    .filter((item) => isListedRaffleVisible(item.rp, item.remainingSeconds, nowTick || Date.now()))
     .slice(0, 4);
 
   return (
@@ -365,7 +296,7 @@ export default function HomePage() {
 
         <div className="product-grid-home">
           {kujiItems.map((item, i) => (
-            <HomeProductCard key={i} item={item} />
+            <KujiHomeCard key={i} item={item} />
           ))}
         </div>
 
@@ -375,11 +306,17 @@ export default function HomePage() {
           <Link className="see-all" href="/shop">전체보기 →</Link>
         </div>
 
-        <div className="product-grid-home">
-          {shopItems.map((item, i) => (
-            <HomeProductCard key={i} item={item} />
-          ))}
-        </div>
+        {shopLoaded && shopProducts.length === 0 ? (
+          <div className="coming-soon-box" style={{ marginBottom: 56 }}>
+            <div className="desc">상점 상품을 준비하고 있어요.</div>
+          </div>
+        ) : (
+          <div className="product-grid-home">
+            {shopProducts.map((p) => (
+              <StoreProductCard key={p.store_product_id} product={p} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

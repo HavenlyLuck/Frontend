@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CoinsIcon, GrainsIcon, StorefrontIcon } from '@phosphor-icons/react'
 import { getStoreProducts, type StoreProductResponse } from '@/lib/api'
+import StoreProductCard from '@/components/StoreProductCard'
 
 const SORTS = ['최신순', '낮은 가격순', '높은 가격순', '인기순']
 
@@ -103,32 +104,7 @@ export default function ShopPage() {
         {products.length > 0 && (
           <div className="product-grid-home">
             {products.map(p => (
-              <div key={p.store_product_id} className="product-card-home" style={{ cursor: 'default' }}>
-                <div className="card-img" style={{ position: 'relative' }}>
-                  {p.image_url ? (
-                    <img src={p.image_url} alt={p.product_name} style={{ filter: p.stock === 0 ? 'blur(3px) brightness(0.45)' : undefined }} />
-                  ) : (
-                    <span style={{ fontSize: 48, display: 'flex', color: 'var(--text-tertiary)' }}>{TAB_ICON[storeTab]}</span>
-                  )}
-                  {p.stock === 0 && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ color: '#fff', fontWeight: 800, fontSize: 15, letterSpacing: 3, padding: '5px 14px', borderRadius: 6, border: '2px solid #ffffff66', background: 'rgba(0,0,0,0.5)', textShadow: '0 0 12px #fff8' }}>SOLD OUT</span>
-                    </div>
-                  )}
-                </div>
-                <div className="card-body">
-                  <div className="card-raffle-badge">{TAB_ICON[storeTab]} {storeTab === '운포인트' ? '운포인트 상점' : '쌀포인트 상점'}</div>
-                  <div className="card-title" style={{ color: p.stock === 0 ? 'var(--text-tertiary)' : undefined }}>{p.product_name}</div>
-                  <div className="card-price" style={{ color: p.stock === 0 ? 'var(--text-tertiary)' : undefined, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span>{p.price.toLocaleString()} {storeTab}</span>
-                    {p.stock > 0 && p.stock <= 3 && (
-                      <span style={{ background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, flexShrink: 0 }}>
-                        재고 {p.stock}개 남음
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <StoreProductCard key={p.store_product_id} product={p} />
             ))}
           </div>
         )}

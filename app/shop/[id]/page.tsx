@@ -1,52 +1,49 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { notFound, useRouter } from 'next/navigation'
-import { getShopProduct } from '@/lib/shopData'
-import { addStorageItem } from '@/lib/storage'
+import { getStoreProducts, type StoreProductResponse } from '@/lib/api'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
-import { isLoggedIn } from '@/lib/auth'
+import StoreProductCard, { POINT_LABEL, PointTypeIcon } from '@/components/StoreProductCard'
 
+// 상점 상품 상세 — 백엔드에 단건 조회 API가 없어서 목록을 받아 id로 찾는다.
+// TODO(backend): GET /store-products/{id} 가 생기면 단건 조회로 교체
 export default function ShopProductPage({ params }: { params: { id: string } }) {
-  const product = getShopProduct(params.id)
-  if (!product) notFound()
+  const productId = Number(params.id)
+  const [products, setProducts] = useState<StoreProductResponse[] | null>(null)
+  const [failed, setFailed] = useState(false)
 
-  const router = useRouter()
   useEffect(() => {
-    if (!isLoggedIn()) {
-      alert('로그인 후 이용해주세요.')
-      router.replace('/login')
-    }
-  }, [router])
+    let cancelled = false
+    getStoreProducts()
+      .then(list => { if (!cancelled) setProducts(list) })
+      .catch(() => { if (!cancelled) setFailed(true) })
+    return () => { cancelled = true }
+  }, [])
 
-  const wishId = `shop-${product.id}`
-  const [qty, setQty] = useState(1)
+  const product = products?.find(p => p.store_product_id === productId)
+  const wishId = `shop-${productId}`
   const [isLiked, setIsLiked] = useState(() => isWished(wishId))
-  const [modalOpen, setModalOpen] = useState(false)
-  const [showToast, setShowToast] = useState(false)
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const soldOut = product.stock === 0
-  const changeQty = (delta: number) =>
-    setQty(prev => Math.min(product.stock, Math.max(1, prev + delta)))
-
-  const confirmPurchase = () => {
-    addStorageItem({
-      id: `${product.id}-${Date.now()}`,
-      img: product.image,
-      emoji: product.emoji,
-      title: qty > 1 ? `${product.title} x${qty}` : product.title,
-      source: '구매',
-      date: new Date().toISOString().slice(0, 10),
-      value: `${(product.price * qty).toLocaleString()} ${product.currency}`,
-      status: 'ready',
-    })
-    setModalOpen(false)
-    setShowToast(true)
-    if (toastTimer.current) clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setShowToast(false), 3000)
+  if (failed || (products && !product)) {
+    return (
+      <div className="container">
+        <div className="coming-soon-box large" style={{ marginTop: 40 }}>
+          <div className="title">{failed ? '상품을 불러오지 못했어요' : '찾을 수 없는 상품이에요'}</div>
+          <div className="desc">{failed ? '잠시 후 다시 시도해주세요.' : '판매가 끝났거나 삭제된 상품일 수 있어요.'}</div>
+          <Link href="/shop" className="hero-cta" style={{ marginTop: 20, display: 'inline-block' }}>상점으로 돌아가기</Link>
+        </div>
+      </div>
+    )
   }
+
+  if (!product) return <div className="container" style={{ minHeight: '60vh' }} />
+
+  const label = POINT_LABEL[product.point_type]
+  const soldOut = product.stock === 0
+  const related = (products ?? [])
+    .filter(p => p.store_product_id !== product.store_product_id && p.point_type === product.point_type)
+    .slice(0, 4)
 
   return (
     <div>
@@ -54,151 +51,76 @@ export default function ShopProductPage({ params }: { params: { id: string } }) 
         <div className="breadcrumb">
           <span><Link href="/">홈</Link></span>
           <span><Link href="/shop">상점</Link></span>
-          <span>{product.subcategory}</span>
+          <span>{label} 상점</span>
         </div>
 
         <div className="product-layout">
           <div className="image-area">
             <div className="main-image">
-              {product.image ? (
-                <img src={product.image} alt={product.title} />
+              {product.image_url ? (
+                <img src={product.image_url} alt={product.product_name} />
               ) : (
-                <div className="image-placeholder">
-                  <span className="cam">{product.emoji}</span>
-                </div>
+                <div className="image-placeholder"><PointTypeIcon type={product.point_type} size={64} /></div>
               )}
             </div>
           </div>
 
           <div className="info-panel">
             <div className="status-row">
-              <span className="badge on-sale">{product.category}</span>
+              <span className="badge on-sale" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <PointTypeIcon type={product.point_type} size={12} /> {label} 상점
+              </span>
               {soldOut && <span className="badge" style={{ background: 'var(--bg-subtle)', color: 'var(--text-tertiary)', border: '1px solid var(--border)' }}>품절</span>}
             </div>
 
-            <div className="product-title">{product.title}</div>
-            <div className="price">{product.price.toLocaleString()} {product.currency}</div>
+            <div className="product-title">{product.product_name}</div>
+            <div className="price">{product.price.toLocaleString()} {label}</div>
             <div className="price-sub">{soldOut ? '현재 품절된 상품입니다' : `재고 ${product.stock}개 남음`}</div>
 
-            <div className="divider" />
-
-            <div className="description">{product.description}</div>
-
-            <div style={{ marginTop: 24 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>구매 수량</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, border: '1px solid var(--border-strong)', borderRadius: 10, padding: '8px 16px' }}>
-                  <button
-                    onClick={() => changeQty(-1)}
-                    disabled={soldOut}
-                    style={{ width: 28, height: 28, border: 'none', background: 'none', fontSize: 18, cursor: soldOut ? 'default' : 'pointer', color: 'var(--text-secondary)' }}
-                  >
-                    −
-                  </button>
-                  <span style={{ fontSize: 15, fontWeight: 700, minWidth: 20, textAlign: 'center', color: 'var(--text)' }}>{qty}</span>
-                  <button
-                    onClick={() => changeQty(1)}
-                    disabled={soldOut}
-                    style={{ width: 28, height: 28, border: 'none', background: 'none', fontSize: 18, cursor: soldOut ? 'default' : 'pointer', color: 'var(--text-secondary)' }}
-                  >
-                    +
-                  </button>
-                </div>
-                <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>최대 {product.stock}개까지 구매 가능</span>
-              </div>
-              <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text)' }}>
-                총 결제 금액 <strong>{(product.price * qty).toLocaleString()} {product.currency}</strong>
-              </div>
-            </div>
+            {product.description && (
+              <>
+                <div className="divider" />
+                <div className="description">{product.description}</div>
+              </>
+            )}
 
             <div className="cta-row" style={{ marginTop: 24 }}>
-              <button
-                className="btn-raffle"
-                disabled={soldOut}
-                onClick={() => setModalOpen(true)}
-                style={soldOut ? { background: 'var(--border)', color: 'var(--text-tertiary)', cursor: 'default' } : undefined}
-              >
-                {soldOut ? '품절' : '🎰 구매하기'}
+              {/* TODO(backend): 상점 구매 API가 생기면 수량 선택 + 구매 확인 모달 + 포인트 차감으로 연결 */}
+              <button className="btn-raffle" disabled>
+                {soldOut ? '품절' : '구매 준비 중'}
               </button>
               <button
                 className={`btn-wish ${isLiked ? 'liked' : ''}`}
+                aria-label={isLiked ? '찜 해제' : '찜하기'}
                 onClick={() => setIsLiked(toggleWishlist({
                   id: wishId,
-                  href: `/shop/${product.id}`,
-                  title: product.title,
-                  image: product.image,
-                  emoji: product.emoji,
-                  subtitle: `${product.price.toLocaleString()} ${product.currency}`,
+                  href: `/shop/${product.store_product_id}`,
+                  title: product.product_name,
+                  image: product.image_url,
+                  subtitle: `${product.price.toLocaleString()} ${label}`,
                 }))}
               >
                 <span className="heart">{isLiked ? '❤️' : '🤍'}</span>
               </button>
             </div>
-
-            <div className="meta-stats">
-              <span>💬 채팅 {product.meta.chats}</span>
-              <span>🤍 관심 {product.meta.wishes}</span>
-              <span>👁 조회 {product.meta.views}</span>
-              <span>📅 {product.meta.time}</span>
-            </div>
+            {!soldOut && (
+              <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-tertiary)' }}>
+                상점 구매 기능을 준비하고 있어요. 조금만 기다려주세요!
+              </div>
+            )}
           </div>
         </div>
 
-        {product.relatedProducts.length > 0 && (
+        {related.length > 0 && (
           <div className="more-section">
             <div className="section-header">
               <div className="section-title">함께 보면 좋은 상품</div>
             </div>
-
-            <div className="product-grid">
-              {product.relatedProducts.map((rp, i) => (
-                <Link key={i} href={`/shop/${rp.id}`} className="product-card">
-                  <div className="card-image">
-                    {rp.image ? <img src={rp.image} alt={rp.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : rp.emoji}
-                  </div>
-                  <div className="card-body-sm">
-                    <div className="card-title-sm">{rp.title}</div>
-                    <div className="card-price-sm">{rp.price}</div>
-                    <div className="card-meta-sm">
-                      <span>👁 {rp.views}</span>
-                      <span>🤍 {rp.wishes}</span>
-                    </div>
-                    {rp.soldOut && <div className="card-badge sold">품절</div>}
-                  </div>
-                </Link>
-              ))}
+            <div className="product-grid-home">
+              {related.map(p => <StoreProductCard key={p.store_product_id} product={p} />)}
             </div>
           </div>
         )}
-      </div>
-
-      <div
-        className={`modal-overlay ${modalOpen ? 'open' : ''}`}
-        onClick={e => { if (e.target === e.currentTarget) setModalOpen(false) }}
-      >
-        <div className="modal">
-          <div className="modal-icon">🎰</div>
-          <div className="modal-title">구매 확인</div>
-          <div className="modal-sub">
-            {product.title}<br />
-            {qty}개 · 총{' '}
-            <strong style={{ color: 'var(--text)' }}>{(product.price * qty).toLocaleString()} {product.currency}</strong>
-            {' '}가 차감됩니다.
-          </div>
-
-          <div className="modal-notice">
-            구매 확정 후에는 취소 및 환불이 불가합니다.
-          </div>
-
-          <div className="modal-btn-row">
-            <button className="btn-cancel" onClick={() => setModalOpen(false)}>취소</button>
-            <button className="btn-confirm" onClick={confirmPurchase}>구매하기 🎰</button>
-          </div>
-        </div>
-      </div>
-
-      <div className={`toast ${showToast ? 'show' : ''}`}>
-        🎉 구매가 완료되었습니다! 보관함에서 확인해주세요!
       </div>
     </div>
   )
