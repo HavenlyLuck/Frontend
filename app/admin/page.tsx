@@ -372,7 +372,7 @@ export default function AdminPage() {
                     transformOrigin: 'bottom', transition: 'transform 0.3s',
                     transform: `scaleY(${d.amount > 0 ? Math.max(pct, 4 / 120) : 2 / 120})`,
                     background: isSel ? 'var(--accent)' : d.amount > 0 ? 'var(--border-strong)' : 'var(--border)',
-                    boxShadow: isSel ? '0 0 8px rgba(224,56,76,0.4)' : undefined,
+                    boxShadow: isSel ? '0 0 8px rgba(217,51,71,0.4)' : undefined,
                   }} />
                   <div style={{ color: isSel ? 'var(--accent)' : 'var(--text-tertiary)', fontSize: 9, whiteSpace: 'nowrap', fontWeight: isSel ? 700 : 400 }}>{d.label}</div>
                 </div>
@@ -470,45 +470,51 @@ export default function AdminPage() {
             <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '40px 0', border: '1px dashed var(--border-strong)', borderRadius: 12 }}>등록된 상품이 없습니다.</div>
           )}
           {filtered.map(p => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', borderRadius: 12, border: `1px solid ${p.active ? 'var(--border-strong)' : 'var(--border)'}`, background: p.active ? 'var(--surface)' : 'var(--bg-subtle)', opacity: p.active ? 1 : 0.6, transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}>
-              <div style={{ width: 56, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
-                {p.img ? <img src={p.img} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🌾'}
+            <div key={p.id} className={`admin-row${p.active ? '' : ' inactive'}`}>
+              <div className="admin-row-thumb">
+                {p.img ? <img src={p.img} alt={p.title} /> : '🌾'}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: 15, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+              <div className="admin-row-body">
+                <div className="admin-row-title">{p.title}</div>
+                <div className="admin-row-price">
                   {p.price}
-                  {p.cost && <span style={{ marginLeft: 8, color: 'var(--text-tertiary)' }}>· 제품 원가 {p.cost}</span>}
-                  {p.maxTickets && <span style={{ marginLeft: 12, color: 'var(--text-tertiary)' }}>{p.type === '쿠지' ? '총' : '최대'} {p.maxTickets}장</span>}
-                  {p.ticketPrice && <span style={{ marginLeft: 8, color: 'var(--text-tertiary)' }}>· 응모권 {p.ticketPrice}</span>}
-                  {p.type === '응모' && <span style={{ marginLeft: 8, color: 'var(--text-tertiary)' }}>· 등록 후 {p.deadlineLabel ?? '24시간'} 자동 마감</span>}
-                  {p.type === '쿠지' && p.kujiItems && (
-                    <span style={{ marginLeft: 8, color: 'var(--text-tertiary)' }}>· 상품 {p.kujiItems.length}개 · 하위상 {p.lowerCount ?? 0}개</span>
+                  {p.cost && <span className="cost">제품 원가 {p.cost}</span>}
+                </div>
+                {(p.maxTickets || p.ticketPrice || p.type === '응모' || (p.type === '쿠지' && p.kujiItems)) && (
+                  <div className="admin-row-meta">
+                    {p.maxTickets && <span>{p.type === '쿠지' ? '총' : '최대'} {p.maxTickets}장</span>}
+                    {p.ticketPrice && <span>응모권 {p.ticketPrice}</span>}
+                    {p.type === '응모' && <span>등록 후 {p.deadlineLabel ?? '24시간'} 자동 마감</span>}
+                    {p.type === '쿠지' && p.kujiItems && (
+                      <span>상품 {p.kujiItems.length}개 · 하위상 {p.lowerCount ?? 0}개</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="admin-row-side">
+                {/* 재고 */}
+                <div className="admin-row-stock">
+                  <span style={{ fontSize: 14, fontWeight: 700, color: p.stock === 0 ? 'var(--danger)' : p.stock <= 3 ? 'var(--gold)' : 'var(--success)' }}>{p.stock}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 2 }}>개</span>
+                </div>
+                <div style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, flexShrink: 0, background: p.active ? 'var(--accent-tint)' : 'var(--bg-subtle)', color: p.active ? 'var(--accent)' : 'var(--text-tertiary)', border: `1px solid ${p.active ? 'var(--accent-tint-border)' : 'var(--border)'}` }}>{p.active ? '활성' : '비활성'}</div>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  {p.type === '응모' || p.type === '상점(운포인트)' || p.type === '상점(쌀포인트)' ? (
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>상태 변경 API 미구현</span>
+                  ) : (
+                    <>
+                      <button onClick={() => { if (p.active && !confirm(`"${p.title}"을(를) 비활성화할까요? 지금 이 상품은 목록에서 즉시 내려갑니다.`)) return; toggleProductActive(p.id); setProducts(prev => prev.map(x => x.id === p.id ? { ...x, active: !x.active } : x)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${p.active ? 'var(--danger-tint-border)' : 'var(--accent-tint-border)'}`, background: p.active ? 'var(--danger-tint)' : 'var(--accent-tint)', color: p.active ? 'var(--danger)' : 'var(--accent)' }}>{p.active ? '내리기' : '올리기'}</button>
+                      <button onClick={() => { if (!confirm(`"${p.title}"을(를) 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)) return; removeProduct(p.id); setProducts(prev => prev.filter(x => x.id !== p.id)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--danger-tint-border)', background: 'var(--danger-tint)', color: 'var(--danger)' }}>삭제</button>
+                    </>
                   )}
                 </div>
-              </div>
-              {/* 재고 */}
-              <div style={{ flexShrink: 0, textAlign: 'center' }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: p.stock === 0 ? 'var(--danger)' : p.stock <= 3 ? 'var(--gold)' : 'var(--success)' }}>{p.stock}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 2 }}>개</span>
-              </div>
-              <div style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, flexShrink: 0, background: p.active ? 'var(--accent-tint)' : 'var(--bg-subtle)', color: p.active ? 'var(--accent)' : 'var(--text-tertiary)', border: `1px solid ${p.active ? 'var(--accent-tint-border)' : 'var(--border)'}` }}>{p.active ? '활성' : '비활성'}</div>
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                {p.type === '응모' || p.type === '상점(운포인트)' || p.type === '상점(쌀포인트)' ? (
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>상태 변경 API 미구현</span>
-                ) : (
-                  <>
-                    <button onClick={() => { if (p.active && !confirm(`"${p.title}"을(를) 비활성화할까요? 지금 이 상품은 목록에서 즉시 내려갑니다.`)) return; toggleProductActive(p.id); setProducts(prev => prev.map(x => x.id === p.id ? { ...x, active: !x.active } : x)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${p.active ? 'var(--danger-tint-border)' : 'var(--accent-tint-border)'}`, background: p.active ? 'var(--danger-tint)' : 'var(--accent-tint)', color: p.active ? 'var(--danger)' : 'var(--accent)' }}>{p.active ? '내리기' : '올리기'}</button>
-                    <button onClick={() => { if (!confirm(`"${p.title}"을(를) 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)) return; removeProduct(p.id); setProducts(prev => prev.filter(x => x.id !== p.id)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--danger-tint-border)', background: 'var(--danger-tint)', color: 'var(--danger)' }}>삭제</button>
-                  </>
-                )}
               </div>
             </div>
           ))}
         </div>
 
         {!showAddForm ? (
-          <button onClick={() => setShowAddForm(true)} style={{ width: '100%', padding: '14px', borderRadius: 12, border: '1px dashed var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent)', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => setShowAddForm(true)} style={{ width: '100%', padding: '14px', borderRadius: 12, border: '1px dashed var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
             + 새 {productTab} 상품 추가
           </button>
         ) : (
@@ -564,7 +570,7 @@ export default function AdminPage() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>상품명 (상위상, 이미지 포함) *</div>
-                    <button type="button" onClick={addKujiItem} style={{ border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent)', borderRadius: 8, width: 24, height: 24, fontSize: 15, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}>+</button>
+                    <button type="button" onClick={addKujiItem} style={{ border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', borderRadius: 8, width: 24, height: 24, fontSize: 15, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}>+</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {kujiItems.map((item, idx) => (

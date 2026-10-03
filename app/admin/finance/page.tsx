@@ -200,7 +200,7 @@ export default function AdminFinancePage() {
                   <span style={{ color: 'var(--text-tertiary)', fontSize: 12, flexShrink: 0 }}>{r.date}</span>
                   <span style={{ flex: 1, color: 'var(--text)', fontSize: 14 }}>{r.label}</span>
                   {r.auto && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-tint)', border: '1px solid var(--accent-tint-border)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>🌾 쌀포인트 자동</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent-tint)', border: '1px solid var(--accent-tint-border)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>🌾 쌀포인트 자동</span>
                   )}
                   <span style={{ color: 'var(--gold)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{r.amount.toLocaleString()}원</span>
                   {r.auto ? (

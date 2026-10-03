@@ -4,6 +4,7 @@ import './globals.css'
 import NavbarWrapper from '@/components/NavbarWrapper'
 import Footer from '@/components/Footer'
 import { AuthProvider } from '@/contexts/AuthContext'
+import RaffleAlertWatcher from '@/components/RaffleAlertWatcher'
 
 const display = Black_Han_Sans({ weight: '400', subsets: ['latin'], variable: '--font-display', display: 'swap' })
 
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <NavbarWrapper />
           {children}
           <Footer />
+          <RaffleAlertWatcher />
         </AuthProvider>
       </body>
     </html>

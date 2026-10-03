@@ -25,14 +25,17 @@ function formatRaffleCountdown(seconds: number): string {
 
 function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; remainingSeconds: number }) {
   const soldPct = rp.total_slots > 0 ? Math.min(100, Math.round((rp.sold_slots / rp.total_slots) * 100)) : 0;
-  return (
-    <Link className="product-card-home" href={`/eungmo/${rp.raffle_product_id}`}>
+  const soldOut = rp.remaining_slots <= 0;
+  const content = (
+    <>
       <div className="card-img">
         {rp.image_url && <img src={rp.image_url} alt={rp.product_name} />}
-        <div className="card-time-badge">⏱ {formatRaffleCountdown(remainingSeconds)}</div>
+        {soldOut
+          ? <div className="card-soldout-stamp"><span>매진</span></div>
+          : <div className="card-time-badge">⏱ {formatRaffleCountdown(remainingSeconds)}</div>}
       </div>
       <div className="card-body">
-        <div className="card-raffle-badge"><TicketIcon size={11} weight="fill" /> 응모 진행 중</div>
+        <div className="card-raffle-badge"><TicketIcon size={11} weight="fill" /> {soldOut ? "추첨 대기" : "응모 진행 중"}</div>
         <div className="card-title">{rp.product_name}</div>
         <div className="card-price">{rp.ticket_price.toLocaleString()} 운포인트 <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-tertiary)' }}>/ 장당</span></div>
         <div className="card-progress-row">
@@ -46,7 +49,13 @@ function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; r
           <span>총 {rp.total_slots.toLocaleString()}장</span>
         </div>
       </div>
-    </Link>
+    </>
+  );
+  // 매진되면 상세 페이지로 못 들어가게 링크 자체를 없앤다
+  return soldOut ? (
+    <div className="product-card-home is-soldout" aria-disabled="true">{content}</div>
+  ) : (
+    <Link className="product-card-home" href={`/eungmo/${rp.raffle_product_id}`}>{content}</Link>
   );
 }
 
@@ -292,8 +301,6 @@ export default function HomePage() {
     .map((rp) => ({ rp, remainingSeconds: Math.max(0, rp.remaining_seconds - elapsedSeconds) }))
     .filter((item) => item.remainingSeconds > 0)
     .slice(0, 4);
-  // 히어로 사진: 지금 열린 응모 상품 이미지를 자동으로 사용
-  const heroImages = openRaffleItems.map(({ rp }) => rp.image_url).filter((u): u is string => !!u).slice(0, 2);
 
   return (
     <div>
@@ -313,23 +320,14 @@ export default function HomePage() {
           <Link className="hero-cta" href="/eungmo">응모 보러 가기</Link>
         </div>
         <div className="hero-box" aria-hidden="true">
-          {heroImages.length === 0 ? (
-            <div className="hero-ticket">
-              <div className="hero-ticket-main">
-                <span className="hero-ticket-label">ADMIT ONE</span>
-                <span className="hero-ticket-price">1,000<small>운포인트</small></span>
-                <span className="hero-ticket-note">한 장으로 응모</span>
-              </div>
-              <div className="hero-ticket-stub">천운</div>
+          <div className="hero-ticket">
+            <div className="hero-ticket-main">
+              <span className="hero-ticket-label">ADMIT ONE</span>
+              <span className="hero-ticket-price">1,000<small>운포인트</small></span>
+              <span className="hero-ticket-note">한 장으로 응모</span>
             </div>
-          ) : heroImages.length === 1 ? (
-            <img className="hero-box-img hero-box-img-solo" src={heroImages[0]} alt="" />
-          ) : (
-            <>
-              <img className="hero-box-img hero-box-img-a" src={heroImages[1]} alt="" />
-              <img className="hero-box-img hero-box-img-b" src={heroImages[0]} alt="" />
-            </>
-          )}
+            <div className="hero-ticket-stub">천운</div>
+          </div>
         </div>
       </section>
 

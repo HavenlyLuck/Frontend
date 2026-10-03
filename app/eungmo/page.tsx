@@ -64,14 +64,17 @@ export default function EungmoPage() {
           <div className="product-grid-home">
             {openProducts.map(p => {
               const secondsLeft = Math.max(0, Math.floor((p.deadlineAt - Date.now()) / 1000))
-              return (
-                <Link key={p.raffle_product_id} className="product-card-home" href={`/eungmo/${p.raffle_product_id}`}>
+              const soldOut = p.remaining_slots <= 0
+              const content = (
+                <>
                   <div className="card-img">
                     {p.image_url && <img src={p.image_url} alt={p.product_name} />}
-                    <div className="card-time-badge">⏱ {formatCountdown(secondsLeft)}</div>
+                    {soldOut
+                      ? <div className="card-soldout-stamp"><span>매진</span></div>
+                      : <div className="card-time-badge">⏱ {formatCountdown(secondsLeft)}</div>}
                   </div>
                   <div className="card-body">
-                    <div className="card-raffle-badge"><TicketIcon size={11} weight="fill" /> 응모 진행 중</div>
+                    <div className="card-raffle-badge"><TicketIcon size={11} weight="fill" /> {soldOut ? '추첨 대기' : '응모 진행 중'}</div>
                     <div className="card-title">{p.product_name}</div>
                     <div className="card-price">{p.ticket_price.toLocaleString()} 운포인트 <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-tertiary)' }}>/ 장당</span></div>
                     <div className="card-progress-row">
@@ -87,7 +90,13 @@ export default function EungmoPage() {
                       <span>총 {p.total_slots.toLocaleString()}장</span>
                     </div>
                   </div>
-                </Link>
+                </>
+              )
+              // 매진되면 상세 페이지로 못 들어가게 링크 자체를 없앤다
+              return soldOut ? (
+                <div key={p.raffle_product_id} className="product-card-home is-soldout" aria-disabled="true">{content}</div>
+              ) : (
+                <Link key={p.raffle_product_id} className="product-card-home" href={`/eungmo/${p.raffle_product_id}`}>{content}</Link>
               )
             })}
           </div>

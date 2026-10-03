@@ -38,10 +38,10 @@ export const MARBLE_RADIUS = 0.28
 // 사이트 다크 컬렉터블 토큰(globals.css :root)과 맞춘 색 — 캔버스라 var()를 못 써서 값만 그대로 복사.
 // 원래는 채도 100%짜리 네온(주황/보라/핫핑크/시안)이었는데 사이트 톤과 안 맞아서 골드/레드 체계로 교체.
 const PEG_COLOR = '#d4af6a' // --gold
-const PADDLE_COLOR = '#e0384c' // --accent
+const PADDLE_COLOR = '#d93347' // --accent
 const BUMPER_COLOR = '#ff4d63' // --danger (막판 구간 긴장감)
 const FUNNEL_COLOR = '#3a3d4a' // --border-strong (구조용 벽, 시선을 끌 필요 없음)
-const FINAL_PADDLE_COLOR = '#e0384c' // --accent (다른 회전 장애물과 동일 계열 유지)
+const FINAL_PADDLE_COLOR = '#d93347' // --accent (다른 회전 장애물과 동일 계열 유지)
 
 export interface MarbleSpec {
   id: number

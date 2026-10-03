@@ -3,25 +3,24 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { TicketIcon, CalendarIcon } from '@phosphor-icons/react'
-import { useMyRaffleEntries } from '@/hooks/useMyRaffleEntries'
-import { groupEntriesByProduct, type GroupedRaffleEntry } from '@/lib/raffle'
+import { useRaffleEntryPhases, type PhasedRaffleEntry } from '@/hooks/useRaffleEntryPhases'
+import { isOngoingPhase, isWinningEntry } from '@/lib/raffle'
 import { formatRelativeDate } from '@/lib/date'
 
-const STATUS_LABEL: Record<'open' | 'completed' | 'cancelled', string> = {
-  open: '진행중',
-  completed: '종료',
-  cancelled: '취소',
-}
-
 export default function RaffleEntriesPage() {
-  const { entries } = useMyRaffleEntries()
-  const grouped = groupEntriesByProduct(entries)
-  const [resultItem, setResultItem] = useState<GroupedRaffleEntry | null>(null)
-  const isWin = resultItem != null && resultItem.entryNumber === resultItem.winnerEntryNumber
+  const { items, entries, checkResult } = useRaffleEntryPhases()
+  const [resultItem, setResultItem] = useState<PhasedRaffleEntry | null>(null)
+  const isWin = resultItem != null && isWinningEntry(resultItem)
 
-  const ongoing = grouped.filter(e => e.status === 'open')
-  const past = grouped.filter(e => e.status !== 'open')
+  const ongoing = items.filter(e => isOngoingPhase(e.phase))
+  const past = items.filter(e => !isOngoingPhase(e.phase))
   const participationCount = entries.filter(e => e.status !== 'cancelled').length
+
+  // 결과를 여는 순간 "확인함"으로 기록 → 모달을 닫으면 참여했던 응모로 내려가 있다
+  function openResult(item: PhasedRaffleEntry) {
+    setResultItem(item)
+    checkResult(item.raffle_product_id)
+  }
 
   return (
     <>
@@ -47,23 +46,44 @@ export default function RaffleEntriesPage() {
         </div>
       ) : (
         <div className="entry-list" style={{ marginBottom: 32 }}>
-          {ongoing.map(item => (
-            <Link key={item.raffle_product_id} href={`/eungmo/${item.raffle_product_id}`} className="entry-item">
-              <div className="entry-emoji">
-                {item.image_url ? <img src={item.image_url} alt={item.product_name} /> : '🎟'}
-              </div>
-              <div className="entry-info">
-                <div className="entry-title">{item.product_name}</div>
-                <div className="entry-meta">
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><TicketIcon size={12} /> 총 {item.totalTicketCount}장 응모</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> 최근 {formatRelativeDate(item.lastEnteredAt)}</span>
+          {ongoing.map(item => {
+            const body = (
+              <>
+                <div className="entry-emoji">
+                  {item.image_url ? <img src={item.image_url} alt={item.product_name} /> : '🎟'}
                 </div>
-              </div>
-              <div className="entry-status">
-                <span className="status-badge waiting">대기 중</span>
-              </div>
-            </Link>
-          ))}
+                <div className="entry-info">
+                  <div className="entry-title">{item.product_name}</div>
+                  <div className="entry-meta">
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><TicketIcon size={12} /> 총 {item.totalTicketCount}장 응모</span>
+                    {item.phase === 'drawPending' ? (
+                      // TODO(backend): 매진 시각(sold_out_at)이 오면 "추첨까지 4:32" 카운트다운으로 교체
+                      <span style={{ color: 'var(--gold)' }}>응모 마감 · 곧 추첨이 시작돼요</span>
+                    ) : item.phase === 'resultReady' ? (
+                      <span style={{ color: 'var(--gold)' }}>추첨이 끝났어요</span>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> 최근 {formatRelativeDate(item.lastEnteredAt)}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="entry-status">
+                  {item.phase === 'resultReady' ? (
+                    <button className="btn-win-confirm" onClick={() => openResult(item)}>당첨결과 확인하기</button>
+                  ) : item.phase === 'drawPending' ? (
+                    <span className="status-badge ongoing">추첨 대기 중</span>
+                  ) : (
+                    <span className="status-badge waiting">대기 중</span>
+                  )}
+                </div>
+              </>
+            )
+            // 응모권이 남아 있을 때만 상세 페이지로 이동 (매진 이후엔 상세 진입을 막는다)
+            return item.phase === 'waiting' ? (
+              <Link key={item.raffle_product_id} href={`/eungmo/${item.raffle_product_id}`} className="entry-item">{body}</Link>
+            ) : (
+              <div key={item.raffle_product_id} className="entry-item" style={{ cursor: 'default' }}>{body}</div>
+            )
+          })}
         </div>
       )}
 
@@ -76,25 +96,27 @@ export default function RaffleEntriesPage() {
         <div className="entry-list">
           {past.map(item => (
             <div key={item.raffle_product_id} className="entry-item" style={{ cursor: 'default' }}>
-              <div className="entry-emoji" style={{ filter: 'grayscale(1)', opacity: 0.7 }}>
+              <div className="entry-emoji" style={item.phase === 'won' ? undefined : { filter: 'grayscale(1)', opacity: 0.7 }}>
                 {item.image_url ? <img src={item.image_url} alt={item.product_name} /> : '🎟'}
               </div>
               <div className="entry-info">
-                <div className="entry-title" style={{ color: 'var(--text-tertiary)' }}>{item.product_name}</div>
+                <div className="entry-title" style={item.phase === 'won' ? undefined : { color: 'var(--text-tertiary)' }}>{item.product_name}</div>
                 <div className="entry-meta">
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><TicketIcon size={12} /> 총 {item.totalTicketCount}장 응모</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> 최근 {formatRelativeDate(item.lastEnteredAt)}</span>
+                  {item.phase === 'failed' ? (
+                    <span>시간 내에 응모권이 다 팔리지 않았어요</span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> 최근 {formatRelativeDate(item.lastEnteredAt)}</span>
+                  )}
                 </div>
               </div>
               <div className="entry-status">
-                {item.status === 'completed' && item.drawVideoUrl ? (
-                  <button className="btn-win-confirm" onClick={() => setResultItem(item)}>
-                    당첨결과 확인하기
-                  </button>
+                {item.phase === 'won' ? (
+                  <span className="status-badge win">당첨</span>
+                ) : item.phase === 'lost' ? (
+                  <span className="status-badge lose">낙첨</span>
                 ) : (
-                  <span className={`status-badge ${item.status === 'cancelled' ? 'lose' : 'waiting'}`}>
-                    {STATUS_LABEL[item.status]}
-                  </span>
+                  <span className="status-badge lose">응모실패</span>
                 )}
               </div>
             </div>
@@ -112,7 +134,7 @@ export default function RaffleEntriesPage() {
             <div className="win-product">
               {resultItem.product_name}
               <br />
-              내 응모번호 #{resultItem.entryNumber} · 당첨번호 #{resultItem.winnerEntryNumber}
+              내 응모번호 #{resultItem.entryNumbers.join(', #')} · 당첨번호 #{resultItem.winnerEntryNumber}
             </div>
             {resultItem.drawVideoUrl && (
               <video
