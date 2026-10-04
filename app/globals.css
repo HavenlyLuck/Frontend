@@ -2430,6 +2430,63 @@ nav {
   background: var(--gold-tint-border);
 }
 
+/* 번개 추첨 연출이 들어간 결과 모달 — 장면이 끝나면 결과 문구가 아래로 이어진다 */
+.win-modal.has-scene {
+  padding: 16px 16px 24px;
+  max-width: 440px;
+  border-radius: 24px;
+}
+
+.draw-scene {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0d120c;
+  border: 1px solid var(--border);
+}
+
+.draw-scene-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.draw-scene-skip {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.draw-scene-skip:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.win-reveal {
+  padding-top: 20px;
+  animation: win-reveal 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes win-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .win-reveal { animation: none; }
+}
+
 
 /* ── 네온 테마 (시작화면 전용) ── */
 .nav-neon {
