@@ -6,6 +6,7 @@ import { TicketIcon, CalendarIcon } from '@phosphor-icons/react'
 import { useRaffleEntryPhases, type PhasedRaffleEntry } from '@/hooks/useRaffleEntryPhases'
 import { isOngoingPhase, isWinningEntry } from '@/lib/raffle'
 import { formatRelativeDate } from '@/lib/date'
+import LightningDrawScene from '@/components/LightningDrawScene'
 
 // 매진 후 추첨까지 남은 시간 — 0이 됐는데 아직 결과가 없으면(폴링 전) 기다림 문구로 바뀐다
 function DrawCountdown({ drawAt }: { drawAt: number | null }) {
@@ -30,6 +31,8 @@ function DrawCountdown({ drawAt }: { drawAt: number | null }) {
 export default function RaffleEntriesPage() {
   const { items, entries, checkResult } = useRaffleEntryPhases()
   const [resultItem, setResultItem] = useState<PhasedRaffleEntry | null>(null)
+  // 번개 연출이 끝나야 결과 문구가 이어서 나온다
+  const [revealed, setRevealed] = useState(false)
   const isWin = resultItem != null && isWinningEntry(resultItem)
 
   const ongoing = items.filter(e => isOngoingPhase(e.phase))
@@ -38,6 +41,7 @@ export default function RaffleEntriesPage() {
 
   // 결과를 여는 순간 "확인함"으로 기록 → 모달을 닫으면 참여했던 응모로 내려가 있다
   function openResult(item: PhasedRaffleEntry) {
+    setRevealed(false)
     setResultItem(item)
     checkResult(item.raffle_product_id)
   }
@@ -144,25 +148,28 @@ export default function RaffleEntriesPage() {
       )}
 
       <div className={`win-overlay ${resultItem ? 'open' : ''}`} onClick={() => setResultItem(null)}>
-        {resultItem && (
-          <div className="win-modal" onClick={e => e.stopPropagation()}>
-            <span className="win-icon">{isWin ? '🎉' : '💔'}</span>
-            <div className="win-title" style={!isWin ? { color: 'var(--text-tertiary)' } : undefined}>
-              {isWin ? '당첨을 축하드려요!' : '아쉽게도 낙첨되었어요'}
-            </div>
-            <div className="win-product">
-              {resultItem.product_name}
-              <br />
-              내 응모번호 #{resultItem.entryNumbers.join(', #')} · 당첨번호 #{resultItem.winnerEntryNumber}
-            </div>
-            {resultItem.drawVideoUrl && (
-              <video
-                src={resultItem.drawVideoUrl}
-                controls
-                style={{ width: '100%', borderRadius: 12, marginBottom: 20, background: '#000' }}
-              />
+        {resultItem && resultItem.winnerEntryNumber != null && (
+          <div className="win-modal has-scene" onClick={e => e.stopPropagation()}>
+            <LightningDrawScene
+              key={resultItem.raffle_product_id}
+              seed={resultItem.raffle_product_id}
+              myEntryNumbers={resultItem.entryNumbers}
+              winnerEntryNumber={resultItem.winnerEntryNumber}
+              onFinish={() => setRevealed(true)}
+            />
+            {revealed && (
+              <div className="win-reveal">
+                <div className="win-title" style={!isWin ? { color: 'var(--text-tertiary)' } : undefined}>
+                  {isWin ? '당첨을 축하드려요!' : '아쉽게도 낙첨되었어요'}
+                </div>
+                <div className="win-product">
+                  {resultItem.product_name}
+                  <br />
+                  내 응모번호 #{resultItem.entryNumbers.join(', #')} · 당첨번호 #{resultItem.winnerEntryNumber}
+                </div>
+                <button className="win-close" onClick={() => setResultItem(null)}>닫기</button>
+              </div>
             )}
-            <button className="win-close" onClick={() => setResultItem(null)}>닫기</button>
           </div>
         )}
       </div>
