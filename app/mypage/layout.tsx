@@ -12,18 +12,18 @@ import {
   TicketIcon,
   UserIcon,
 } from '@phosphor-icons/react'
-import { getReadyStorageCount } from '@/lib/storage'
+import { useStorage } from '@/hooks/useStorage'
 import { getValidSession, clearAuth } from '@/lib/auth'
 import { getMyProfile, ApiError, type MyProfileResponse } from '@/lib/api'
 import { useRaffleEntryPhases } from '@/hooks/useRaffleEntryPhases'
 import { isOngoingPhase } from '@/lib/raffle'
 
-function getMenuItems(ongoingCount: number) {
+function getMenuItems(ongoingCount: number, readyStorageCount: number) {
   return [
     { icon: <HouseIcon size={16} weight="fill" />, label: '내 활동 요약', href: '/mypage', badge: 0 },
     { icon: <TicketIcon size={16} weight="fill" />, label: '응모 내역', href: '/mypage/entries', badge: ongoingCount },
     { icon: <ReceiptIcon size={16} weight="fill" />, label: '구매 내역', href: '/mypage/purchases', badge: 0 },
-    { icon: <ArchiveIcon size={16} weight="fill" />, label: '보관함', href: '/mypage/storage', badge: getReadyStorageCount() },
+    { icon: <ArchiveIcon size={16} weight="fill" />, label: '보관함', href: '/mypage/storage', badge: readyStorageCount },
     { icon: <HeartIcon size={16} weight="fill" />, label: '찜한 상품', href: '/mypage/wishlist', badge: 0 },
     { icon: <GearIcon size={16} weight="fill" />, label: '설정', href: '/mypage/settings', badge: 0 },
   ]
@@ -36,6 +36,7 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
   const [profile, setProfile] = useState<MyProfileResponse | null>(null)
   const { items: raffleItems, entries } = useRaffleEntryPhases()
   const ongoingCount = raffleItems.filter(e => isOngoingPhase(e.phase)).length
+  const { readyCount: readyStorageCount } = useStorage()
   const participationCount = entries.filter(e => e.status !== 'cancelled').length
   // 결과를 확인한 당첨만 센다 — 확인 전에 숫자가 오르면 결과를 미리 알게 되므로
   const winCount = raffleItems.filter(e => e.phase === 'won').length
@@ -98,7 +99,7 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
         </div>
 
         <div className="sidebar-menu">
-          {getMenuItems(ongoingCount).map((item) => {
+          {getMenuItems(ongoingCount, readyStorageCount).map((item) => {
             const active = item.href === '/mypage' ? pathname === '/mypage' : pathname.startsWith(item.href)
             const badge = item.badge
             return (

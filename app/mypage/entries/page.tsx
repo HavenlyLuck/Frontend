@@ -162,6 +162,11 @@ export default function RaffleEntriesPage() {
                 style={{ width: '100%', borderRadius: 12, marginBottom: 20, background: '#000' }}
               />
             )}
+            {isWin && (
+              <Link className="win-close" href="/mypage/storage" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginBottom: 8 }}>
+                보관함에서 확인하기 →
+              </Link>
+            )}
             <button className="win-close" onClick={() => setResultItem(null)}>닫기</button>
           </div>
         )}

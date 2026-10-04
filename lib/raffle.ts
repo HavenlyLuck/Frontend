@@ -112,7 +112,7 @@ export function getEntryPhase(
   }
   if (product) {
     if (product.remaining_slots <= 0) return 'drawPending'
-    // TODO(backend): 시간 초과 시 백엔드가 status를 cancelled로 바꿔주면 이 분기는 필요 없어진다
+    // 백엔드가 다음 조회 때 cancelled로 바꾸고 환급하지만, 그 전에 화면에 남아 있는 데이터를 위한 분기
     if (product.remaining_seconds <= 0) return 'failed'
   }
   return 'waiting'

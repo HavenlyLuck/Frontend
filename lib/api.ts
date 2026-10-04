@@ -281,6 +281,94 @@ export function getStoreProducts(pointType?: 'woon' | 'ssal') {
   return request<StoreProductResponse[]>(`/store-products${query}`)
 }
 
+export function getStoreProduct(storeProductId: number) {
+  return request<StoreProductResponse>(`/store-products/${storeProductId}`)
+}
+
+export interface StorePurchaseResponse {
+  storage_item_id: number
+  store_product_id: number
+  quantity: number
+  points_spent: number
+  point_type: 'woon' | 'ssal'
+  remaining_stock: number
+}
+
+export function purchaseStoreProduct(token: string, storeProductId: number, quantity: number) {
+  return request<StorePurchaseResponse>(`/store-products/${storeProductId}/purchase`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ quantity }),
+  })
+}
+
+export interface StorageItemResponse {
+  storage_item_id: number
+  source: 'raffle' | 'store'
+  raffle_product_id: number | null
+  store_product_id: number | null
+  product_name: string
+  image_url: string | null
+  quantity: number
+  price_krw: number | null
+  point_type: 'woon' | 'ssal' | null
+  points_spent: number | null
+  status: 'ready' | 'requested' | 'shipped'
+  address_id: number | null
+  requested_at: string | null
+  created_at: string
+}
+
+export function getMyStorage(token: string) {
+  return request<StorageItemResponse[]>('/storage/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export function requestShipping(token: string, storageItemIds: number[], addressId: number) {
+  return request<StorageItemResponse[]>('/storage/ship', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ storage_item_ids: storageItemIds, address_id: addressId }),
+  })
+}
+
+export interface AddressResponse {
+  address_id: number
+  label: string
+  recipient: string
+  phone: string
+  zip_code: string | null
+  address1: string
+  address2: string | null
+  is_default: boolean
+  created_at: string
+}
+
+export interface CreateAddressPayload {
+  label?: string
+  recipient: string
+  phone: string
+  zip_code?: string
+  address1: string
+  address2?: string
+  is_default?: boolean
+}
+
+export function getMyAddresses(token: string) {
+  return request<AddressResponse[]>('/addresses/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export function createAddress(token: string, payload: CreateAddressPayload) {
+  return request<AddressResponse>('/addresses', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  })
+}
+
 export interface CreateStoreProductPayload {
   product_name: string
   description?: string

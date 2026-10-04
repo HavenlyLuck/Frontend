@@ -1,9 +1,18 @@
 'use client'
 
-import { useState } from 'react'
-import { ArchiveIcon, CalendarIcon, ConfettiIcon, TicketIcon, TruckIcon, XIcon } from '@phosphor-icons/react'
-import { STORAGE_ITEMS } from '@/lib/storage'
-import { ADDRESSES, addAddress, type Address } from '@/lib/address'
+import { useEffect, useState } from 'react'
+import { ArchiveIcon, CalendarIcon, ConfettiIcon, ShoppingBagIcon, TruckIcon, XIcon } from '@phosphor-icons/react'
+import { useStorage } from '@/hooks/useStorage'
+import { notifyStorageUpdated } from '@/lib/storage'
+import { getValidSession } from '@/lib/auth'
+import {
+  ApiError,
+  createAddress,
+  getMyAddresses,
+  requestShipping,
+  type AddressResponse,
+  type StorageItemResponse,
+} from '@/lib/api'
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: 8,
@@ -24,27 +33,56 @@ const modalCard: React.CSSProperties = {
 
 const EMPTY_ADDR_FORM = { label: '', recipient: '', phone: '', zipCode: '', address1: '', address2: '' }
 
-export default function StoragePage() {
-  const [items, setItems] = useState(STORAGE_ITEMS)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [toast, setToast] = useState('')
+const POINT_LABEL = { woon: '운포인트', ssal: '쌀포인트' } as const
+const STATUS_LABEL = { ready: '보관 중', requested: '배송 신청됨', shipped: '배송 완료' } as const
 
-  const [addresses, setAddresses] = useState<Address[]>(() => [...ADDRESSES])
+function itemTitle(item: StorageItemResponse) {
+  return item.quantity > 1 ? `${item.product_name} x${item.quantity}` : item.product_name
+}
+
+function itemValue(item: StorageItemResponse) {
+  if (item.source === 'raffle') return item.price_krw != null ? `정가 ${item.price_krw.toLocaleString()}원` : ''
+  if (item.points_spent != null && item.point_type) return `${item.points_spent.toLocaleString()} ${POINT_LABEL[item.point_type]}`
+  return ''
+}
+
+function errorMessage(err: unknown) {
+  return err instanceof ApiError ? err.message : '요청 처리 중 오류가 발생했습니다.'
+}
+
+export default function StoragePage() {
+  const { items, setItems, loaded } = useStorage()
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [toast, setToast] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const [addresses, setAddresses] = useState<AddressResponse[]>([])
   const [showAddrModal, setShowAddrModal] = useState(false)
   const [newAddr, setNewAddr] = useState(EMPTY_ADDR_FORM)
 
   const [showShipModal, setShowShipModal] = useState(false)
-  const [selectedAddrId, setSelectedAddrId] = useState<string | null>(null)
+  const [selectedAddrId, setSelectedAddrId] = useState<number | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getValidSession().then(session => {
+      if (!session) return
+      getMyAddresses(session.token)
+        .then(data => { if (!cancelled) setAddresses(data) })
+        .catch(() => {})
+    })
+    return () => { cancelled = true }
+  }, [])
 
   const readyItems = items.filter(i => i.status === 'ready')
-  const allSelected = readyItems.length > 0 && readyItems.every(i => selected.has(i.id))
+  const allSelected = readyItems.length > 0 && readyItems.every(i => selected.has(i.storage_item_id))
 
   const showToast = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(''), 3000)
   }
 
-  const toggle = (id: string) => {
+  const toggle = (id: number) => {
     setSelected(prev => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
@@ -53,41 +91,58 @@ export default function StoragePage() {
   }
 
   const toggleAll = () => {
-    setSelected(allSelected ? new Set() : new Set(readyItems.map(i => i.id)))
+    setSelected(allSelected ? new Set() : new Set(readyItems.map(i => i.storage_item_id)))
   }
 
   const openShipModal = () => {
     if (selected.size === 0) return
-    setSelectedAddrId(addresses.find(a => a.isDefault)?.id ?? addresses[0]?.id ?? null)
+    setSelectedAddrId(addresses.find(a => a.is_default)?.address_id ?? addresses[0]?.address_id ?? null)
     setShowShipModal(true)
   }
 
-  const confirmShipping = () => {
-    if (!selectedAddrId) return
-    setItems(prev => prev.map(i => (selected.has(i.id) ? { ...i, status: 'requested' } : i)))
-    setSelected(new Set())
-    setShowShipModal(false)
-    showToast('택배 신청이 접수되었습니다!')
+  const confirmShipping = async () => {
+    if (!selectedAddrId || submitting) return
+    const session = await getValidSession()
+    if (!session) return
+    setSubmitting(true)
+    try {
+      setItems(await requestShipping(session.token, Array.from(selected), selectedAddrId))
+      setSelected(new Set())
+      setShowShipModal(false)
+      notifyStorageUpdated()
+      showToast('택배 신청이 접수되었습니다!')
+    } catch (err) {
+      showToast(errorMessage(err))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const handleAddAddress = () => {
-    if (!newAddr.recipient.trim() || !newAddr.phone.trim() || !newAddr.address1.trim()) return
-    const addr: Address = {
-      id: String(Date.now()),
-      label: newAddr.label.trim() || '배송지',
-      recipient: newAddr.recipient.trim(),
-      phone: newAddr.phone.trim(),
-      zipCode: newAddr.zipCode.trim(),
-      address1: newAddr.address1.trim(),
-      address2: newAddr.address2.trim(),
-      isDefault: addresses.length === 0,
+  const handleAddAddress = async () => {
+    if (!newAddr.recipient.trim() || !newAddr.phone.trim() || !newAddr.address1.trim() || submitting) return
+    const session = await getValidSession()
+    if (!session) return
+    setSubmitting(true)
+    try {
+      const addr = await createAddress(session.token, {
+        label: newAddr.label,
+        recipient: newAddr.recipient,
+        phone: newAddr.phone,
+        zip_code: newAddr.zipCode,
+        address1: newAddr.address1,
+        address2: newAddr.address2,
+      })
+      // 새 배송지가 기본이 되면 기존 기본 표시는 해제된다
+      setAddresses(prev => [addr, ...prev.map(a => (addr.is_default ? { ...a, is_default: false } : a))])
+      setSelectedAddrId(addr.address_id)
+      setNewAddr(EMPTY_ADDR_FORM)
+      setShowAddrModal(false)
+      showToast('배송지가 등록되었습니다.')
+    } catch (err) {
+      showToast(errorMessage(err))
+    } finally {
+      setSubmitting(false)
     }
-    addAddress(addr)
-    setAddresses(prev => [addr, ...prev])
-    setSelectedAddrId(addr.id)
-    setNewAddr(EMPTY_ADDR_FORM)
-    setShowAddrModal(false)
-    showToast('배송지가 등록되었습니다.')
   }
 
   return (
@@ -109,12 +164,14 @@ export default function StoragePage() {
 
       <div className="entry-list">
         {items.map(item => {
-          const isSelected = selected.has(item.id)
+          const isSelected = selected.has(item.storage_item_id)
           const isReady = item.status === 'ready'
+          const title = itemTitle(item)
+          const value = itemValue(item)
           return (
             <div
-              key={item.id}
-              onClick={() => isReady && toggle(item.id)}
+              key={item.storage_item_id}
+              onClick={() => isReady && toggle(item.storage_item_id)}
               className="entry-item"
               style={{
                 cursor: isReady ? 'pointer' : 'default',
@@ -126,30 +183,30 @@ export default function StoragePage() {
                 type="checkbox"
                 checked={isSelected}
                 disabled={!isReady}
-                onChange={() => toggle(item.id)}
+                onChange={() => toggle(item.storage_item_id)}
                 onClick={e => e.stopPropagation()}
                 style={{ width: 18, height: 18, accentColor: 'var(--accent)', flexShrink: 0, cursor: isReady ? 'pointer' : 'default' }}
               />
               <div className="entry-emoji">
-                {item.img != null ? (
-                  <img src={item.img} alt={item.title} />
+                {item.image_url != null ? (
+                  <img src={item.image_url} alt={title} />
                 ) : (
-                  item.emoji ?? '📦'
+                  '📦'
                 )}
               </div>
               <div className="entry-info">
-                <div className="entry-title">{item.title}</div>
+                <div className="entry-title">{title}</div>
                 <div className="entry-meta">
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                    {item.source === '당첨' ? <ConfettiIcon size={12} color="var(--gold)" /> : <TicketIcon size={12} />} {item.source === '당첨' ? '당첨' : '구매'}
+                    {item.source === 'raffle' ? <ConfettiIcon size={12} color="var(--gold)" /> : <ShoppingBagIcon size={12} />} {item.source === 'raffle' ? '당첨' : '구매'}
                   </span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {item.date}</span>
-                  <span>{item.value}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {item.created_at.slice(0, 10)}</span>
+                  {value && <span>{value}</span>}
                 </div>
               </div>
               <div className="entry-status">
                 <span className={`status-badge ${isReady ? 'waiting' : 'lose'}`}>
-                  {isReady ? '보관 중' : '배송 신청됨'}
+                  {STATUS_LABEL[item.status]}
                 </span>
               </div>
             </div>
@@ -157,7 +214,7 @@ export default function StoragePage() {
         })}
       </div>
 
-      {items.length === 0 && (
+      {loaded && items.length === 0 && (
         <div className="coming-soon-box">
           <div className="desc">보관함이 비어 있어요.</div>
         </div>
@@ -208,10 +265,10 @@ export default function StoragePage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
                 {addresses.map(addr => {
-                  const isSel = selectedAddrId === addr.id
+                  const isSel = selectedAddrId === addr.address_id
                   return (
                     <label
-                      key={addr.id}
+                      key={addr.address_id}
                       style={{
                         display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px',
                         borderRadius: 10, border: `1px solid ${isSel ? 'var(--accent-tint-border)' : 'var(--border)'}`,
@@ -222,20 +279,20 @@ export default function StoragePage() {
                         type="radio"
                         name="ship-address"
                         checked={isSel}
-                        onChange={() => setSelectedAddrId(addr.id)}
+                        onChange={() => setSelectedAddrId(addr.address_id)}
                         style={{ width: 16, height: 16, accentColor: 'var(--accent)', marginTop: 2, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{addr.label}</span>
-                          {addr.isDefault && (
+                          {addr.is_default && (
                             <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--accent-tint)', border: '1px solid var(--accent-tint-border)', borderRadius: 20, padding: '1px 8px' }}>기본</span>
                           )}
                           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{addr.recipient}</span>
                           <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{addr.phone}</span>
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                          ({addr.zipCode}) {addr.address1} {addr.address2}
+                          {addr.zip_code && `(${addr.zip_code}) `}{addr.address1} {addr.address2}
                         </div>
                       </div>
                     </label>
@@ -253,7 +310,7 @@ export default function StoragePage() {
 
             <button
               onClick={confirmShipping}
-              disabled={!selectedAddrId}
+              disabled={!selectedAddrId || submitting}
               style={{
                 width: '100%', padding: '12px', borderRadius: 10, border: 'none',
                 background: selectedAddrId ? 'var(--accent)' : 'var(--border)',
