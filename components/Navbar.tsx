@@ -11,7 +11,7 @@ import {
   UserIcon,
 } from "@phosphor-icons/react";
 import { useMyPoints } from "@/hooks/useMyPoints";
-import { getReadyStorageCount } from "@/lib/storage";
+import { useStorage } from "@/hooks/useStorage";
 import { getValidSession, clearAuth } from "@/lib/auth";
 
 const NAV_CATEGORIES = [
@@ -32,6 +32,7 @@ export default function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const { eungPoint, ssalPoint } = useMyPoints();
+  const { readyCount: readyStorageCount } = useStorage();
 
   useEffect(() => {
     let cancelled = false;
@@ -94,8 +95,8 @@ export default function Navbar() {
               <Link href="/mypage/storage" className="nav-btn">
                 <ArchiveIcon size={16} weight="bold" />
                 <span>보관함</span>
-                {getReadyStorageCount() > 0 && (
-                  <span className="nav-btn-badge">{getReadyStorageCount()}</span>
+                {readyStorageCount > 0 && (
+                  <span className="nav-btn-badge">{readyStorageCount}</span>
                 )}
               </Link>
               <Link href="/mypage/wishlist" className="nav-btn">

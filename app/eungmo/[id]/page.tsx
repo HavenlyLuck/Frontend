@@ -466,8 +466,8 @@ export default function RaffleProductPage({
                 style={{ flexShrink: 0, marginTop: "2px" }}
               />
               <span>
-                응모권 구매 후 취소 및 환불이 불가합니다. 추첨 결과는 마감일 기준
-                24시간 이내에 알림으로 발송됩니다.
+                응모권 구매 후 직접 취소는 불가합니다. 기간 내에 응모권이 모두
+                팔리지 않으면 사용한 운포인트가 자동으로 환급됩니다.
               </span>
             </div>
 

@@ -18,7 +18,6 @@ import {
   drawKujiTickets,
   type KujiTicket,
 } from '@/lib/kujiData'
-import { addStorageItem } from '@/lib/storage'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
 import { isLoggedIn } from '@/lib/auth'
 
@@ -87,18 +86,7 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
     }
 
     setConflictIds([])
-    drawn.forEach(r => {
-      addStorageItem({
-        id: `kuji-${product.id}-${r.ticketId}-${Date.now()}`,
-        img: r.tier.image,
-        emoji: r.tier.image ? undefined : '🎁',
-        title: `[${r.grade}상] ${r.tier.title}`,
-        source: '당첨',
-        date: new Date().toISOString().slice(0, 10),
-        value: `쿠지 ${r.grade}상`,
-        status: 'ready',
-      })
-    })
+    // TODO(backend): 쿠지 백엔드가 생기면 뽑은 상품을 서버 보관함에 적재한다
     setResults(drawn)
     setSelected([])
     setQty(prev => Math.max(1, Math.min(prev, getRemainingTickets(product) || 1)))

@@ -1,16 +1,34 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { FlaskIcon } from '@phosphor-icons/react'
 import { verifyAdmin, ApiError } from '@/lib/api'
 import { getValidSession, clearAuth } from '@/lib/auth'
 import LightningDrawScene from '@/components/LightningDrawScene'
+import { mulberry32, type SceneEntrant } from '@/lib/lightningDraw/scene'
+import { AVATAR_LIMITS, type AvatarNumberKey } from '@/lib/avatar/compose'
 
 // 실제 상품/응모 데이터 없이 번개 추첨 연출만 확인해보는 페이지
 const MY_ENTRY = 3
 const OTHER_WINNER = 11
+
+// 실제 응모자 대신 장면 번호로 만든 샘플 응모자들 — 일부는 캐릭터를 안 꾸민 사람(임시 아바타)
+function sampleEntrants(seed: number): SceneEntrant[] {
+  const rng = mulberry32(seed * 31 + 7)
+  const pick = (k: AvatarNumberKey) => Math.floor(rng() * AVATAR_LIMITS[k])
+  const count = 14 + Math.floor(rng() * 8)
+  return Array.from({ length: count }, (_, i) => ({
+    entryNumber: i + 1,
+    avatar: rng() < 0.2 ? null : {
+      v: 2 as const,
+      gender: rng() < 0.5 ? 'm' as const : 'f' as const,
+      skin: pick('skin'), hair: pick('hair'), hairColor: pick('hairColor'),
+      top: pick('top'), topColor: pick('topColor'), bottom: pick('bottom'), bottomColor: pick('bottomColor'),
+    },
+  }))
+}
 
 export default function RaffleDrawDemoPage() {
   const router = useRouter()
@@ -18,6 +36,7 @@ export default function RaffleDrawDemoPage() {
   const [seed, setSeed] = useState(1)
   const [meWins, setMeWins] = useState(false)
   const [finished, setFinished] = useState(false)
+  const entrants = useMemo(() => sampleEntrants(seed), [seed])
 
   useEffect(() => {
     let cancelled = false
@@ -59,7 +78,8 @@ export default function RaffleDrawDemoPage() {
 
       <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 20, lineHeight: 1.6 }}>
         사용자가 마이페이지에서 &lsquo;당첨결과 확인하기&rsquo;를 누르면 나오는 번개 추첨 연출이에요.
-        실제 상품·응모 데이터 없이 장면만 확인합니다. 장면 번호를 바꾸면 공원 배치와 사람들이 달라져요.
+        실제 상품·응모 데이터 없이 샘플 응모자(꾸민 캐릭터 + 안 꾸민 임시 아바타)로 장면만 확인합니다.
+        장면 번호를 바꾸면 공원 배치와 사람들이 달라져요.
       </div>
 
       <LightningDrawScene
@@ -67,6 +87,7 @@ export default function RaffleDrawDemoPage() {
         seed={seed}
         myEntryNumbers={[MY_ENTRY]}
         winnerEntryNumber={meWins ? MY_ENTRY : OTHER_WINNER}
+        entrants={entrants}
         onFinish={() => setFinished(true)}
       />
 

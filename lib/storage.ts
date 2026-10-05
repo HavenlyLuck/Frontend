@@ -1,21 +1,7 @@
-export interface StorageItem {
-  id: string
-  img: string | null
-  emoji?: string
-  title: string
-  source: '당첨' | '구매'
-  date: string
-  value: string
-  status: 'ready' | 'requested'
-}
+// 보관함 내용이 바뀌는 동작(상점 구매, 배송 신청 등) 이후 이 이벤트를 dispatch하면
+// useStorage를 쓰는 모든 곳(네브바·마이페이지 배지 등)이 보관함을 다시 불러온다.
+export const STORAGE_UPDATED_EVENT = 'storage-updated'
 
-// 당첨/구매 상품을 보관하는 백엔드 기능이 아직 없어 항상 빈 배열로 시작한다.
-export const STORAGE_ITEMS: StorageItem[] = []
-
-export function getReadyStorageCount(): number {
-  return STORAGE_ITEMS.filter(i => i.status === 'ready').length
-}
-
-export function addStorageItem(item: StorageItem) {
-  STORAGE_ITEMS.unshift(item)
+export function notifyStorageUpdated() {
+  window.dispatchEvent(new Event(STORAGE_UPDATED_EVENT))
 }
