@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -8,19 +8,24 @@ import {
   GearIcon,
   HeartIcon,
   HouseIcon,
+  PaintBrushIcon,
+  PencilSimpleIcon,
   ReceiptIcon,
   TicketIcon,
-  UserIcon,
 } from '@phosphor-icons/react'
 import { useStorage } from '@/hooks/useStorage'
 import { getValidSession, clearAuth } from '@/lib/auth'
 import { getMyProfile, ApiError, type MyProfileResponse } from '@/lib/api'
 import { useRaffleEntryPhases } from '@/hooks/useRaffleEntryPhases'
 import { isOngoingPhase } from '@/lib/raffle'
+import PixelAvatar from '@/components/PixelAvatar'
+import { normalizeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
+import { AVATAR_UPDATED_EVENT } from '@/lib/avatar/events'
 
 function getMenuItems(ongoingCount: number, readyStorageCount: number) {
   return [
     { icon: <HouseIcon size={16} weight="fill" />, label: '내 활동 요약', href: '/mypage', badge: 0 },
+    { icon: <PaintBrushIcon size={16} weight="fill" />, label: '캐릭터 꾸미기', href: '/mypage/avatar', badge: 0 },
     { icon: <TicketIcon size={16} weight="fill" />, label: '응모 내역', href: '/mypage/entries', badge: ongoingCount },
     { icon: <ReceiptIcon size={16} weight="fill" />, label: '구매 내역', href: '/mypage/purchases', badge: 0 },
     { icon: <ArchiveIcon size={16} weight="fill" />, label: '보관함', href: '/mypage/storage', badge: readyStorageCount },
@@ -40,6 +45,7 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
   const participationCount = entries.filter(e => e.status !== 'cancelled').length
   // 결과를 확인한 당첨만 센다 — 확인 전에 숫자가 오르면 결과를 미리 알게 되므로
   const winCount = raffleItems.filter(e => e.phase === 'won').length
+  const avatarConfig = useMemo(() => normalizeAvatar(profile?.avatar_config), [profile?.avatar_config])
 
   useEffect(() => {
     let cancelled = false
@@ -67,23 +73,33 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
     return () => { cancelled = true }
   }, [router])
 
+  // 캐릭터 꾸미기에서 저장하면 프로필 카드도 바로 바꾼다
+  useEffect(() => {
+    const onUpdate = (e: Event) => {
+      const config = (e as CustomEvent<AvatarConfig>).detail
+      setProfile((prev) => (prev ? { ...prev, avatar_config: config } : prev))
+    }
+    window.addEventListener(AVATAR_UPDATED_EVENT, onUpdate)
+    return () => window.removeEventListener(AVATAR_UPDATED_EVENT, onUpdate)
+  }, [])
+
   if (!authChecked) return null
 
   return (
     <div className="mypage-layout">
       <div className="sidebar">
         <div className="profile-card">
-          <div className="profile-avatar">
-            {profile?.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={profile.nickname}
-                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+          <Link href="/mypage/avatar" className="profile-avatar profile-avatar-pixel" aria-label="캐릭터 꾸미기">
+            {profile && (
+              <PixelAvatar
+                config={avatarConfig}
+                size={80}
+                alt={`${profile.nickname}의 캐릭터`}
+                persist
               />
-            ) : (
-              <UserIcon size={36} weight="fill" color="#fff" />
             )}
-          </div>
+            <span className="profile-avatar-edit"><PencilSimpleIcon size={12} weight="bold" /></span>
+          </Link>
           <div className="profile-name">{profile?.nickname ?? '불러오는 중...'}</div>
           <div className="profile-email">{profile?.email ?? ''}</div>
           <div className="profile-stats">

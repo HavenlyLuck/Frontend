@@ -1,3 +1,5 @@
+import type { AvatarConfig } from './avatar/compose'
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export class ApiError extends Error {
@@ -124,12 +126,21 @@ export interface MyProfileResponse {
   nickname: string
   email: string
   avatar_url: string | null
+  avatar_config: AvatarConfig | null
   trade_count: number
 }
 
 export function getMyProfile(token: string) {
   return request<MyProfileResponse>('/users/me', {
     headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export function updateMyAvatar(token: string, config: AvatarConfig) {
+  return request<MyProfileResponse>('/users/me/avatar', {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(config),
   })
 }
 
@@ -152,8 +163,8 @@ export interface RaffleProductResponse {
   remaining_seconds: number
   is_open: boolean
   remaining_slots: number
-  // TODO(backend): 아직 운영 서버에 없음 — 매진된 시각(UTC). 생기면 추첨 5분 타이머가 이 값 기준으로 정확해진다
-  sold_out_at?: string | null
+  // 응모권이 매진된 시각(UTC) — 이 시각 + 5분에 서버가 자동 추첨한다
+  sold_out_at: string | null
 }
 
 export function getRaffleProducts(status?: 'open' | 'completed' | 'cancelled') {
@@ -182,30 +193,25 @@ export function getRaffleEntrants(token: string, raffleProductId: number) {
   })
 }
 
-export async function drawRaffleWinner(token: string, raffleProductId: number, winnerEntryNumber: number, video: Blob) {
-  const formData = new FormData()
-  formData.append('winner_entry_number', String(winnerEntryNumber))
-  formData.append('video', video, 'draw.webm')
+// 번개 추첨 화면에 세울 응모자 — 응모 번호와 캐릭터 착장(저장 안 한 사람은 null)
+export interface RaffleCastMember {
+  entry_number: number
+  ticket_count: number
+  avatar_config: AvatarConfig | null
+}
 
-  const res = await fetch(`${API_URL}/raffles/${raffleProductId}/draw`, {
-    method: 'POST',
+export interface RaffleDrawCastResponse {
+  raffle_product_id: number
+  sold_out_at: string | null
+  draw_at: string | null
+  winner_entry_number: number | null
+  cast: RaffleCastMember[]
+}
+
+export function getRaffleDrawCast(token: string, raffleProductId: number) {
+  return request<RaffleDrawCastResponse>(`/raffles/${raffleProductId}/draw-cast`, {
     headers: { Authorization: `Bearer ${token}` },
-    body: formData,
   })
-
-  const data = await res.json().catch(() => null)
-
-  if (!res.ok) {
-    const detail = data?.detail
-    const message = typeof detail === 'string'
-      ? detail
-      : Array.isArray(detail)
-        ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join(', ')
-        : '요청 처리 중 오류가 발생했습니다.'
-    throw new ApiError(res.status, message)
-  }
-
-  return data as RaffleProductResponse
 }
 
 export interface RaffleEntryResponse {
@@ -247,6 +253,7 @@ export interface MyRaffleEntryResponse {
   price_krw: number
   status: 'open' | 'completed' | 'cancelled'
   ends_at: string
+  sold_out_at: string | null
   winner_entry_number: number | null
   draw_video_url: string | null
 }

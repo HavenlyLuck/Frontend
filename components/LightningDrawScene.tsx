@@ -4,21 +4,23 @@ import { useEffect, useRef, useState } from 'react'
 import {
   AVATAR_H, CLOUD_ALT, WORLD_H, WORLD_W,
   buildCloudSprites, buildScene, drawAvatar, fillPixelEllipse, hash01, plotLine, strokePixelCircle,
-  type CastMember, type Scene,
+  type CastMember, type Scene, type SceneEntrant,
 } from '@/lib/lightningDraw/scene'
 
 /*
- * 번개 추첨 연출 — 공원의 내 아바타에서 시작해 하늘로 줌아웃 → 먹구름이 사람들 위를 맴돌다
+ * 번개 추첨 연출 — 같은 상품이면 모든 응모자가 같은 장면(자리·구름 동선·번개)을 본다.
+ * 내 아바타에서 시작해 하늘로 줌아웃 → 먹구름이 사람들 위를 맴돌다
  * 당첨자에게 번개(가끔은 구름 밑 사람을 비껴가 옆 사람에게 꺾여 내리는 반전). 결과(winnerEntryNumber)는 서버가 이미 정한 값이고 이 화면은 보여주기만 한다.
  *
- * TODO(backend): 사용자용 응모자 목록 API(닉네임·아바타 착장)가 생기면 crowdSize/임시 아바타 대신
- *   실제 응모자로 채운다. 지금은 나 + (낙첨이면) 당첨자 1명 + 시드로 만든 임시 아바타들.
+ * entrants(실제 응모자와 마이페이지 캐릭터)를 주면 공원이 그 사람들로 채워진다.
+ * 주지 않으면(데모) 시드로 만든 임시 아바타들이 선다.
  */
 
 interface Props {
   seed: number
   myEntryNumbers: number[]
   winnerEntryNumber: number
+  entrants?: SceneEntrant[]
   crowdSize?: number
   onFinish?: () => void
 }
@@ -60,7 +62,7 @@ function clampCam(c: Cam): Cam {
   return { zoom: c.zoom, cx: Math.min(WORLD_W - hw, Math.max(hw, c.cx)), cy: Math.min(WORLD_H - hh, Math.max(hh, c.cy)) }
 }
 
-export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNumber, crowdSize, onFinish }: Props) {
+export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNumber, entrants, crowdSize, onFinish }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const skipRef = useRef(false)
   const onFinishRef = useRef(onFinish)
@@ -68,6 +70,7 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
   const [finished, setFinished] = useState(false)
 
   const meIsWinner = myEntryNumbers.includes(winnerEntryNumber)
+  const myEntryNumber = myEntryNumbers[0]
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -75,8 +78,14 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const crowd = crowdSize ?? 14 + Math.floor(hash01(seed) * 8)
-    const scene = buildScene(seed, { meIsWinner, crowdSize: crowd })
+    // 응모자 목록이 없으면(데모, 목록을 못 받았을 때) 1번부터 임시 응모자를 세운다 — 나와 당첨자는 꼭 포함
+    let cast = entrants
+    if (!cast || cast.length === 0) {
+      const crowd = crowdSize ?? 14 + Math.floor(hash01(seed) * 8)
+      const numbers = new Set([...Array.from({ length: crowd }, (_, i) => i + 1), winnerEntryNumber, ...myEntryNumbers])
+      cast = Array.from(numbers, n => ({ entryNumber: n, avatar: null }))
+    }
+    const scene = buildScene(seed, { entrants: cast, winnerEntryNumber, myEntryNumber })
     const clouds = buildCloudSprites()
     const tl = timeline(scene)
     const { me, winner } = scene
@@ -90,8 +99,9 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
     overlay.height = WORLD_H
     const octx = overlay.getContext('2d')!
 
-    const closeCam: Cam = { cx: me.x, cy: me.y - 6, zoom: CLOSE_ZOOM }
+    // 장면은 모두 같고, 시작할 때 카메라가 비추는 곳만 각자 자기 캐릭터다 (내가 못 섰으면 공원 전체에서 시작)
     const fullCam: Cam = { cx: WORLD_W / 2, cy: WORLD_H / 2, zoom: 1 }
+    const closeCam: Cam = me ? { cx: me.x, cy: me.y - 6, zoom: CLOSE_ZOOM } : fullCam
     const winnerCam: Cam = { cx: winner.x, cy: winner.y - 8, zoom: WINNER_ZOOM }
 
     const camAt = (t: number): Cam => {
@@ -321,7 +331,7 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
 
       // 이름표
       const winnerLabelOn = ds > 700
-      if (!(me === winner && winnerLabelOn)) drawLabel('나', me, cam, scale, ox, oy, false, dpr)
+      if (me && !(me === winner && winnerLabelOn)) drawLabel('나', me, cam, scale, ox, oy, false, dpr)
       if (winnerLabelOn) drawLabel(me === winner ? '당첨! 나' : `당첨 #${winnerEntryNumber}`, winner, cam, scale, ox, oy, true, dpr)
 
       // 번개 섬광
@@ -342,7 +352,8 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [seed, meIsWinner, winnerEntryNumber, crowdSize])
+    // myEntryNumbers는 배열이라 매 렌더 새로 만들어지므로 의존성에서 빼고 첫 번호(myEntryNumber)로 대신한다
+  }, [seed, myEntryNumber, winnerEntryNumber, entrants, crowdSize])
 
   return (
     <div className="draw-scene">

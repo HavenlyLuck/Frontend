@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { TicketIcon, CalendarIcon } from "@phosphor-icons/react";
 import {
@@ -10,6 +10,10 @@ import {
 import { isOngoingPhase, isWinningEntry } from "@/lib/raffle";
 import { formatRelativeDate } from "@/lib/date";
 import LightningDrawScene from "@/components/LightningDrawScene";
+import { prefetchDrawCast } from "@/lib/raffleCast";
+import { normalizeAvatar } from "@/lib/avatar/compose";
+import type { RaffleCastMember } from "@/lib/api";
+import type { SceneEntrant } from "@/lib/lightningDraw/scene";
 
 // 매진 후 추첨까지 남은 시간 — 0이 됐는데 아직 결과가 없으면(폴링 전) 기다림 문구로 바뀐다
 function DrawCountdown({ drawAt }: { drawAt: number | null }) {
@@ -25,7 +29,7 @@ function DrawCountdown({ drawAt }: { drawAt: number | null }) {
   if (left === 0)
     return (
       <span style={{ color: "var(--gold)" }}>
-        응모 마감 · 추첨 결과를 기다리는 중이에요
+        응모 마감 · 추첨 결과를 불러오는 중이에요
       </span>
     );
   const mm = Math.floor(left / 60);
@@ -45,7 +49,31 @@ export default function RaffleEntriesPage() {
   const [resultItem, setResultItem] = useState<PhasedRaffleEntry | null>(null);
   // 번개 연출이 끝나야 결과 문구가 이어서 나온다
   const [revealed, setRevealed] = useState(false);
+  // 결과 연출에 세울 실제 응모자들 — 대기 5분 동안 미리 받아 두었으면 바로, 아니면 받는 즉시 시작
+  const [cast, setCast] = useState<RaffleCastMember[] | null>(null);
+  const [castFailed, setCastFailed] = useState(false);
   const isWin = resultItem != null && isWinningEntry(resultItem);
+
+  useEffect(() => {
+    if (!resultItem) return;
+    let cancelled = false;
+    setCast(null);
+    setCastFailed(false);
+    prefetchDrawCast(resultItem.raffle_product_id)
+      .then((list) => { if (!cancelled) setCast(list); })
+      .catch(() => { if (!cancelled) setCastFailed(true); });
+    return () => { cancelled = true; };
+  }, [resultItem]);
+
+  // 꾸민 적 없는 사람(avatar_config 없음)은 null로 두면 장면에서 임시 아바타로 그린다
+  const entrants = useMemo<SceneEntrant[] | undefined>(
+    () =>
+      cast?.map((c) => ({
+        entryNumber: c.entry_number,
+        avatar: c.avatar_config?.v === 2 ? normalizeAvatar(c.avatar_config) : null,
+      })),
+    [cast],
+  );
 
   const ongoing = items.filter((e) => isOngoingPhase(e.phase));
   const past = items.filter((e) => !isOngoingPhase(e.phase));
@@ -283,13 +311,19 @@ export default function RaffleEntriesPage() {
             className="win-modal has-scene"
             onClick={(e) => e.stopPropagation()}
           >
-            <LightningDrawScene
-              key={resultItem.raffle_product_id}
-              seed={resultItem.raffle_product_id}
-              myEntryNumbers={resultItem.entryNumbers}
-              winnerEntryNumber={resultItem.winnerEntryNumber}
-              onFinish={() => setRevealed(true)}
-            />
+            {entrants || castFailed ? (
+              // 응모자 목록을 못 받았으면 임시 아바타로라도 결과 연출은 보여준다
+              <LightningDrawScene
+                key={resultItem.raffle_product_id}
+                seed={resultItem.raffle_product_id}
+                myEntryNumbers={resultItem.entryNumbers}
+                winnerEntryNumber={resultItem.winnerEntryNumber}
+                entrants={entrants}
+                onFinish={() => setRevealed(true)}
+              />
+            ) : (
+              <div className="draw-scene draw-scene-loading">응모자들을 공원에 모으는 중...</div>
+            )}
             {revealed && (
               <div className="win-reveal">
                 <div

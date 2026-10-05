@@ -1919,6 +1919,190 @@ nav {
   position: relative;
 }
 
+/* 픽셀 캐릭터 프로필 — 누르면 캐릭터 꾸미기로 이동 */
+.profile-avatar-pixel {
+  overflow: visible;
+  text-decoration: none;
+}
+.profile-avatar-pixel img,
+.profile-avatar-pixel > span:first-child {
+  border-radius: 50%;
+}
+.profile-avatar-edit {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+.profile-avatar-pixel:hover .profile-avatar-edit {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+/* ── 캐릭터 꾸미기 ── */
+.avatar-editor {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.avatar-preview-card,
+.avatar-options-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 22px;
+}
+.avatar-preview-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.avatar-preview img,
+.avatar-preview > span {
+  border-radius: var(--radius-lg);
+}
+.avatar-small-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 9px 10px;
+}
+.avatar-save-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.avatar-small-btn:disabled,
+.avatar-save-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+.avatar-message {
+  font-size: 13px;
+}
+.avatar-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 24px 0 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.avatar-option-hint {
+  color: var(--accent-fg);
+  font-weight: 500;
+}
+.avatar-gender-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 120px));
+  gap: 10px;
+}
+.avatar-gender-option span {
+  font-size: 14px;
+  font-weight: 600;
+}
+.avatar-tab {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.avatar-tab:hover {
+  color: var(--text);
+}
+.avatar-tab.active {
+  background: var(--accent-tint);
+  border-color: var(--accent-tint-border);
+  color: var(--accent-fg);
+}
+.avatar-option-group + .avatar-option-group {
+  margin-top: 22px;
+}
+.avatar-option-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+}
+.avatar-style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 10px;
+}
+.avatar-style-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px 8px;
+  background: var(--bg-subtle);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.avatar-style-option img,
+.avatar-style-option > span:first-child {
+  border-radius: var(--radius-sm);
+}
+.avatar-style-option:hover {
+  border-color: var(--border-strong);
+}
+.avatar-style-option.selected {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.avatar-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.avatar-swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.avatar-swatch:hover {
+  transform: scale(1.08);
+}
+.avatar-swatch.selected {
+  border-color: var(--surface);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+@media (max-width: 900px) {
+  .avatar-editor {
+    grid-template-columns: 1fr;
+  }
+}
+
 .profile-name {
   font-size: 18px;
   font-weight: 700;
@@ -2445,6 +2629,14 @@ nav {
   overflow: hidden;
   background: #0d120c;
   border: 1px solid var(--border);
+}
+
+.draw-scene-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
 }
 
 .draw-scene-canvas {

@@ -4,6 +4,8 @@
  * 연출은 이미 정해진 당첨 결과를 보여주기만 한다 — 여기서 당첨자를 고르지 않는다.
  */
 
+import { avatarColors, avatarKey, buildAvatarGrid, OUTLINED_W, type AvatarConfig } from '@/lib/avatar/compose'
+
 export const WORLD_W = 208
 export const WORLD_H = 156
 // 먹구름이 아바타 머리 위 얼마나 높이 떠 있는지 (월드 픽셀)
@@ -53,6 +55,9 @@ export interface CastMember {
   x: number // 발 위치
   y: number
   look: AvatarLook
+  // 실제 응모자를 세웠으면 그 사람의 응모 번호와 마이페이지 캐릭터(저장 안 했으면 null → look으로 그림)
+  entryNumber?: number
+  avatar?: AvatarConfig | null
   isMe: boolean
   isWinner: boolean
   phase: number // 숨쉬기/눈깜빡임 타이밍을 사람마다 어긋나게
@@ -62,14 +67,12 @@ const SKINS = ['#f5d3b3', '#eab890', '#c99066', '#8f5b3c'] as const
 const HAIRS = ['#2b2118', '#5a3a22', '#c9a063', '#1f1f2e', '#a83f3a', '#ece4d4'] as const
 const SHIRTS = ['#4a7fd6', '#e3a33a', '#46b37b', '#9a6fd8', '#e0e0e0', '#39a6b3', '#e872a0', '#6b7280'] as const
 const PANTS = ['#2d3a5c', '#3b3b44', '#5c4630', '#26303a'] as const
-// 내 아바타는 브랜드 레드 셔츠로 고정 — 꾸미기가 생기면 저장된 착장으로 교체
-const MY_SHIRT = '#d93347'
 
-function randomLook(rng: Rng, shirt?: string): AvatarLook {
+function randomLook(rng: Rng): AvatarLook {
   return {
     skin: pick(rng, SKINS),
     hair: pick(rng, HAIRS),
-    shirt: shirt ?? pick(rng, SHIRTS),
+    shirt: pick(rng, SHIRTS),
     pants: pick(rng, PANTS),
     longHair: rng() < 0.4,
   }
@@ -129,6 +132,18 @@ const SPRITES = {
   longBlink: withOutline(BODY_LONG.map(r => r.replace(/E/g, 'S'))),
 }
 
+const customGrids = new Map<string, string[]>()
+function customGrid(avatar: AvatarConfig, blink: boolean): string[] {
+  const key = avatarKey(avatar) + (blink ? '-b' : '')
+  let grid = customGrids.get(key)
+  if (!grid) {
+    grid = buildAvatarGrid(avatar)
+    if (blink) grid = grid.map(r => r.replace(/E/g, 'S'))
+    customGrids.set(key, grid)
+  }
+  return grid
+}
+
 export interface AvatarDrawOptions {
   lift?: number // 위로 뜬 높이 (점프, 숨쉬기)
   blink?: boolean
@@ -143,14 +158,26 @@ export function drawAvatar(ctx: CanvasRenderingContext2D, m: CastMember, opts: A
   ctx.fillRect(m.x - 3, m.y, 7, 1)
   ctx.fillRect(m.x - 2, m.y + 1, 5, 1)
 
-  const key = (m.look.longHair ? 'long' : 'short') + (opts.blink ? 'Blink' : '')
-  const grid = SPRITES[key as keyof typeof SPRITES]
-  const ox = m.x - 5
   const oy = m.y - AVATAR_H - 1 - lift
   const zapColor = opts.zap === 0 ? '#ffffff' : '#ffe66b'
-  const colors: Record<string, string> = opts.zap != null
-    ? { H: zapColor, S: zapColor, E: '#3a2a00', T: zapColor, P: zapColor, B: zapColor, O: '#fff3a0' }
-    : { H: m.look.hair, S: m.look.skin, E: '#1a1a22', T: m.look.shirt, P: m.look.pants, B: '#2a2420', O: opts.outline ?? '#16200f' }
+  let grid: string[]
+  let ox: number
+  let colors: Record<string, string>
+  if (m.avatar) {
+    // 마이페이지에서 꾸민 캐릭터 — 몸 비율이 같아서 그대로 세울 수 있다(양갈래 여유 1칸만큼 폭이 넓음)
+    grid = customGrid(m.avatar, !!opts.blink)
+    ox = m.x - OUTLINED_W / 2
+    colors = opts.zap != null
+      ? { H: zapColor, S: zapColor, E: '#3a2a00', T: zapColor, P: zapColor, B: zapColor, W: zapColor, O: '#fff3a0' }
+      : { ...avatarColors(m.avatar), O: opts.outline ?? '#16200f' }
+  } else {
+    const key = (m.look.longHair ? 'long' : 'short') + (opts.blink ? 'Blink' : '')
+    grid = SPRITES[key as keyof typeof SPRITES]
+    ox = m.x - 5
+    colors = opts.zap != null
+      ? { H: zapColor, S: zapColor, E: '#3a2a00', T: zapColor, P: zapColor, B: zapColor, O: '#fff3a0' }
+      : { H: m.look.hair, S: m.look.skin, E: '#1a1a22', T: m.look.shirt, P: m.look.pants, B: '#2a2420', O: opts.outline ?? '#16200f' }
+  }
 
   for (let y = 0; y < grid.length; y++) {
     const row = grid[y]
@@ -200,7 +227,7 @@ const Ground = { Grass: 0, Path: 1, Water: 2, Tree: 3, Bench: 4 } as const
 export interface Scene {
   base: HTMLCanvasElement
   cast: CastMember[]
-  me: CastMember
+  me: CastMember | null // 보는 사람의 캐릭터 (응모자가 아니거나 자리가 모자라 못 섰으면 null)
   winner: CastMember
   cloudStops: CastMember[] // 먹구름이 들르는 순서 (마지막이 번개 직전에 멈추는 사람)
   fakeTarget: CastMember | null // 구름은 이 사람 위에 있는데 번개는 당첨자에게 꺾여 가는 반전 (없으면 null)
@@ -212,7 +239,23 @@ function hexToRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
-export function buildScene(seed: number, opts: { meIsWinner: boolean; crowdSize: number }): Scene {
+export interface SceneEntrant {
+  entryNumber: number
+  avatar: AvatarConfig | null
+}
+
+/*
+ * 장면은 seed(상품 ID)와 응모자 목록·당첨 번호만으로 정해진다 — 보는 사람이 누구든 같은 자리에 같은 사람이 서고,
+ * 구름도 같은 길로 가서 같은 곳에 번개가 떨어진다. myEntryNumber는 배치가 끝난 뒤 "나"를 찾는 데만 쓴다.
+ */
+export function buildScene(
+  seed: number,
+  opts: {
+    entrants: SceneEntrant[]
+    winnerEntryNumber: number
+    myEntryNumber?: number
+  },
+): Scene {
   const rng = mulberry32(seed * 7919 + 17)
   const W = WORLD_W
   const H = WORLD_H
@@ -353,61 +396,63 @@ export function buildScene(seed: number, opts: { meIsWinner: boolean; crowdSize:
     return placed.every(p => (p.x - fx) ** 2 + (p.y - fy) ** 2 >= 13 * 13)
   }
   const spots: { x: number; y: number }[] = []
-  for (let tries = 0; tries < 6000 && spots.length < opts.crowdSize; tries++) {
+  for (let tries = 0; tries < 6000 && spots.length < opts.entrants.length; tries++) {
     const x = 12 + Math.floor(rng() * (W - 24))
     const y = 18 + Math.floor(rng() * (H - 26))
     if (canStand(x, y, spots)) spots.push({ x, y })
   }
 
-  const cast: CastMember[] = spots.map((s, i) => ({
-    x: s.x,
-    y: s.y,
-    look: randomLook(rng),
+  // 먹구름은 머리 위 CLOUD_ALT 높이에 뜨므로, 구름이 들르는 사람은 위쪽에 여유가 있어야 화면 밖으로 안 잘린다
+  const openSky = (p: { y: number }) => p.y >= CLOUD_ALT + 16
+  const orAll = <T,>(list: T[], fallback: T[]) => (list.length > 0 ? list : fallback)
+
+  // 응모자 배치: 당첨자를 먼저 하늘이 트인 자리에 세우고, 나머지는 시드로 섞어 남은 자리에 채운다.
+  // 응모 번호 순으로 정렬한 뒤 섞으므로, 목록을 받은 순서와 상관없이 누구에게나 같은 배치가 나온다.
+  const entrants = [...opts.entrants].sort((a, b) => a.entryNumber - b.entryNumber)
+  const winnerEntrant = entrants.find(e => e.entryNumber === opts.winnerEntryNumber)
+    ?? { entryNumber: opts.winnerEntryNumber, avatar: null }
+  const others = entrants.filter(e => e !== winnerEntrant)
+  for (let i = others.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[others[i], others[j]] = [others[j], others[i]]
+  }
+  const freeSpots = [...spots]
+  const winnerSpot = pick(rng, orAll(freeSpots.filter(openSky), freeSpots))
+  freeSpots.splice(freeSpots.indexOf(winnerSpot), 1)
+
+  const toMember = (spot: { x: number; y: number }, e: SceneEntrant): CastMember => ({
+    x: spot.x,
+    y: spot.y,
+    // 캐릭터를 꾸미지 않은 사람은 응모 번호로 정한 임시 착장 — 누가 봐도 같은 모습
+    look: randomLook(mulberry32(seed * 131 + e.entryNumber * 7)),
+    entryNumber: e.entryNumber,
+    avatar: e.avatar,
     isMe: false,
     isWinner: false,
-    phase: Math.floor(hash01(seed + i * 31) * 4000),
-  }))
-
-  // 먹구름은 머리 위 CLOUD_ALT 높이에 뜨므로, 구름이 들르는 사람은 위쪽에 여유가 있어야 화면 밖으로 안 잘린다
-  const underOpenSky = (m: CastMember) => m.y >= CLOUD_ALT + 16
-  const skyCast = cast.filter(underOpenSky)
-  const orAll = (list: CastMember[], fallback: CastMember[]) => (list.length > 0 ? list : fallback)
-
-  // 나는 화면 가운데 쪽 사람으로 — 첫 클로즈업이 공원 구석에 박히지 않게
-  const centerScore = (m: CastMember) => (m.x - W / 2) ** 2 + ((m.y - H / 2) * 1.3) ** 2
-  const meCandidates = orAll(skyCast, cast)
-  const nearCenter = [...meCandidates].sort((a, b) => centerScore(a) - centerScore(b)).slice(0, Math.max(1, Math.ceil(meCandidates.length / 3)))
-  const me = pick(rng, nearCenter)
-  me.isMe = true
-  me.look = randomLook(rng, MY_SHIRT)
-
-  let winner = me
-  if (!opts.meIsWinner) {
-    const others = cast.filter(m => m !== me)
-    winner = others.length > 0 ? pick(rng, orAll(others.filter(underOpenSky), others)) : me
-  }
+    phase: Math.floor(hash01(seed + e.entryNumber * 31) * 4000),
+  })
+  const winner = toMember(winnerSpot, winnerEntrant)
   winner.isWinner = true
+  // 자리가 모자라면(응모자가 아주 많을 때) 뒤로 섞인 사람은 서지 못한다. 당첨자는 항상 선다.
+  const cast: CastMember[] = [winner, ...freeSpots.slice(0, others.length).map((spot, i) => toMember(spot, others[i]))]
+
+  const me = opts.myEntryNumber == null ? null : cast.find(m => m.entryNumber === opts.myEntryNumber) ?? null
+  if (me) me.isMe = true
 
   // 반전: 가끔은 구름이 엉뚱한 사람(근처) 위에서 충전하다가 번개를 옆으로 꺾어 진짜 당첨자에게 쏜다.
-  // 낙첨인데 내가 근처에 있으면 내가 "가짜 표적"이 될 확률을 높여서 더 아슬아슬하게.
   const distTo = (a: CastMember, b: CastMember) => Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
-  const fakeCandidates = cast.filter(m => m !== winner && underOpenSky(m) && distTo(m, winner) >= 20 && distTo(m, winner) <= 70)
+  const fakeCandidates = cast.filter(m => m !== winner && openSky(m) && distTo(m, winner) >= 20 && distTo(m, winner) <= 70)
   let fakeTarget: CastMember | null = null
-  if (fakeCandidates.length > 0 && rng() < 0.4) {
-    fakeTarget = !opts.meIsWinner && fakeCandidates.includes(me) && rng() < 0.5 ? me : pick(rng, fakeCandidates)
-  }
+  if (fakeCandidates.length > 0 && rng() < 0.4) fakeTarget = pick(rng, fakeCandidates)
   const hoverTarget = fakeTarget ?? winner
 
-  // 먹구름 동선: 다른 사람 머리 위를 지나 (내가 낙첨이면 내 위에서 한 번 멈칫) → 마지막으로 멈추는 사람
-  const decoyPool = orAll(skyCast, cast).filter(m => m !== me && m !== winner && m !== hoverTarget)
+  // 먹구름 동선: 먼 사람 → 다른 사람 머리 위를 지나 → 마지막으로 멈추는 사람
+  const decoyPool = orAll(cast.filter(openSky), cast).filter(m => m !== winner && m !== hoverTarget)
   const far = [...decoyPool].sort((a, b) => distTo(b, hoverTarget) - distTo(a, hoverTarget))
   const cloudStops: CastMember[] = []
   if (far.length > 0) cloudStops.push(pick(rng, far.slice(0, Math.max(1, Math.ceil(far.length / 2)))))
-  if (!opts.meIsWinner && hoverTarget !== me) cloudStops.push(me)
-  else {
-    const second = decoyPool.filter(m => !cloudStops.includes(m))
-    if (second.length > 0) cloudStops.push(pick(rng, second))
-  }
+  const second = decoyPool.filter(m => !cloudStops.includes(m))
+  if (second.length > 0) cloudStops.push(pick(rng, second))
   cloudStops.push(hoverTarget)
 
   // 번개: 구름 밑에서 당첨자 머리까지 지그재그 + 곁가지 (반전이면 비스듬히 꺾여 내려간다)
