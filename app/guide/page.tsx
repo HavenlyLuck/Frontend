@@ -60,7 +60,7 @@ export default function GuidePage() {
             <span style={sentenceStyle}>저희의 주된 시스템인 응모 시스템입니다.</span>
             <span style={sentenceStyle}>응모권은 기본 1,000 🎰 운포인트로 구매할 수 있으며, 인 당 여러 장 구매 가능합니다.</span>
             <span style={sentenceStyle}>상품 당 필수로 채워져야 하는 응모권 개수가 있으며, 응모권이 모두 구매되면 해당 응모가 시작됩니다.</span>
-            <span style={sentenceStyle}>당첨 확률은 (구매하신 응모권 개수 / 상품의 전체 응모권 개수)이고, 추첨은 핀볼 시스템을 통해 공정하게 진행됩니다.</span>
+            <span style={sentenceStyle}>당첨 확률은 (구매하신 응모권 개수 / 상품의 전체 응모권 개수)이고, 추첨은 drand(여러 기관이 함께 만드는 공개 난수)를 이용해 공정하게 진행됩니다.</span>
             <span style={sentenceStyle}>당첨자는 당첨된 상품을 보관함에서 확인하실 수 있습니다.</span>
             <span style={sentenceStyle}>낙첨자에게는 (구매하신 응모권 개수 × 1,000) 🌾 쌀포인트가 지급됩니다.</span>
             <span style={highlight}>다만, 1인이 한 응모에서 여러 장의 응모권을 구매한 경우에 당첨 시 나머지 응모권에 대한 🌾 쌀포인트는 지급되지 않습니다.</span>

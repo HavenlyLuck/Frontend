@@ -175,6 +175,93 @@ export const TOPS: Part[] = [
   ] }] },
 ]
 
+// ───────── 무기 (쌀포인트 상점 아이템) ─────────
+//
+// 몸 격자(10칸) 밖으로 튀어나오므로 몸과 따로, 위에 겹쳐 그린다.
+// dx/dy는 외곽선 포함 캐릭터 격자(OUTLINED_W × OUTLINED_H)의 왼쪽 위 기준 위치.
+// 문자: l 칼날, g 손잡이 장식(금색), h 손잡이, f/y/r 불꽃(외곽선 없음)
+
+export interface HeldItem {
+  name: string
+  dx: number
+  dy: number
+  rows: string[]
+  colors: Record<string, string>
+  // 추첨 화면에서 번갈아 칠할 색(불꽃 깜빡임) — 없으면 그대로
+  flicker?: Record<string, string>
+  // 외곽선을 몸 위에도 그릴지. 모자처럼 얼굴에 닿는 아이템은 false로 해서 이마를 덮지 않게 한다.
+  outlineOverBody?: boolean
+  // 몸 뒤에 그릴지(망토처럼 등 뒤로 두르는 것) — 몸이 앞을 가리고 옆·아래로 삐져나온 부분만 보인다
+  behind?: boolean
+}
+
+export const WEAPONS: HeldItem[] = [
+  {
+    // 오른손에 쥐고 머리 옆으로 비스듬히 치켜든 해적 칼, 칼날을 따라 불이 붙어 있다
+    name: '불칼',
+    dx: 9,
+    dy: 0,
+    rows: [
+      '...yr',
+      '..fl.',
+      '.fyl.',
+      '.yl..',
+      '..l..',
+      '.l...',
+      'ggg..',
+      '.h...',
+      '.h...',
+    ],
+    colors: { l: '#dfe6f0', g: '#e3b341', h: '#5a3a22', f: '#ff7a1a', y: '#ffd23f', r: '#e8401c' },
+    flicker: { f: '#ffd23f', y: '#ff7a1a', r: '#ff9a3c' },
+    outlineOverBody: true,
+  },
+]
+
+// ───────── 모자 (쌀포인트 상점 아이템) ─────────
+// 머리 위에 겹쳐 그린다. 문자: c 빨강, d 빨강 그늘, w 흰 털, p 방울
+
+export const HATS: HeldItem[] = [
+  {
+    // 고깔 끝이 왼쪽으로 늘어져 방울이 달린 산타 모자 — 흰 털 테두리가 이마 위를 두른다
+    name: '산타 모자',
+    dx: 1,
+    dy: 0,
+    rows: [
+      'pcccc....',
+      '..ccccdd.',
+      '..wwwwww.',
+    ],
+    colors: { c: '#d63a3a', d: '#a82a2a', w: '#f4f1ea', p: '#ffffff' },
+  },
+]
+
+// ───────── 망토 (쌀포인트 상점 아이템) ─────────
+// 등 뒤에 두르는 것이라 몸 뒤에 그린다. 문자: k 망토, n 망토 그늘(밑단)
+
+export const CAPES: HeldItem[] = [
+  {
+    // 어깨에서 시작해 아래로 갈수록 넓게 퍼지는 빨간 망토 — 팔 바깥과 다리 사이로 보인다
+    name: '빨간 망토',
+    dx: 0,
+    dy: 5,
+    rows: [
+      '...kkkkkk...',
+      '.kkkkkkkkkk.',
+      'kkkkkkkkkkkk',
+      'kkkkkkkkkkkk',
+      'kkkkkkkkkkkk',
+      'nkkkkkkkkkkn',
+      '.nnnnnnnnnn.',
+    ],
+    colors: { k: '#c22f3f', n: '#8a1f2c' },
+    behind: true,
+  },
+]
+
+// 외곽선을 붙이는 아이템 문자 (불꽃은 테두리 없이 번지듯이)
+export const HELD_OUTLINED = new Set(['l', 'g', 'h', 'c', 'd', 'w', 'p', 'k', 'n'])
+
 // ───────── 하의 (성별마다 따로, 개수는 같게) ─────────
 
 export const BOTTOMS: Record<Gender, Part[]> = {

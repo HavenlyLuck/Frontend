@@ -18,7 +18,7 @@ import {
   TicketIcon,
   UsersIcon,
 } from '@phosphor-icons/react'
-import { verifyAdmin, ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse, getStoreProducts, createStoreProduct, type StoreProductResponse } from '@/lib/api'
+import { verifyAdmin, ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse, getStoreProducts, createStoreProduct, STORE_CATEGORIES, type StoreCategory, type StoreProductResponse } from '@/lib/api'
 import { getValidSession, clearAuth } from '@/lib/auth'
 import { TODAY, DAILY_REV, MONTHLY_REV, DAILY_SALES } from '@/lib/adminStats'
 import {
@@ -33,6 +33,7 @@ const TAB_ICON: Record<ProductType, React.ReactNode> = {
   '상점(운포인트)': <CoinsIcon size={13} weight="fill" />,
   '상점(쌀포인트)': <GrainsIcon size={13} weight="fill" />,
 }
+const ADMIN_PAGE_SIZE = 10
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 
@@ -221,12 +222,15 @@ export default function AdminPage() {
   const [saleDate, setSaleDate] = useState(TODAY)
   const [showSalCal, setShowSalCal] = useState(false)
   const [productTab, setProductTab] = useState<ProductType>('응모')
+  const [saleFilter, setSaleFilter] = useState<'selling' | 'done'>('selling')
+  const [productPage, setProductPage] = useState(1)
   const [products, setProducts] = useState<Product[]>(() => [...PRODUCTS])
   const [showAddForm, setShowAddForm] = useState(false)
   const [nextId, setNextId] = useState(100)
   const [newP, setNewP] = useState({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '' })
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [deadlineDays, setDeadlineDays] = useState(1)
+  const [storeCategory, setStoreCategory] = useState<StoreCategory | null>(null)
   const [raffleSubmitting, setRaffleSubmitting] = useState(false)
   const [raffleSubmitError, setRaffleSubmitError] = useState<string | null>(null)
   const autoMaxTickets = Math.floor((Number(newP.price.replace(/[^0-9]/g, '')) || 0) / 1000)
@@ -235,6 +239,7 @@ export default function AdminPage() {
     setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '' })
     setNewImageFile(null)
     setDeadlineDays(1)
+    setStoreCategory(null)
     setKujiItems([{ name: '', img: '', count: '1', cost: '' }])
     setRaffleSubmitError(null)
   }
@@ -288,13 +293,20 @@ export default function AdminPage() {
   const monthlyRevMonths = new Set(Object.keys(MONTHLY_REV))
   const saleDates = new Set(Object.keys(DAILY_SALES))
   const currentSales = DAILY_SALES[saleDate] ?? []
-  const filtered = productTab === '응모'
-    ? raffleProducts.map(raffleToProduct)
+  // 탭별 상품 + 판매중 여부 (응모: 아직 응모권을 팔고 있음 / 상점·쿠지: 재고 있음)
+  const tabItems: { product: Product; selling: boolean }[] = productTab === '응모'
+    ? raffleProducts.map(rp => ({ product: raffleToProduct(rp), selling: rp.status === 'open' && rp.is_open && rp.remaining_slots > 0 }))
     : productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)'
       ? storeProducts
           .filter(sp => sp.point_type === (productTab === '상점(운포인트)' ? 'woon' : 'ssal'))
-          .map(storeToProduct)
-      : products.filter(p => p.type === productTab)
+          .map(sp => ({ product: storeToProduct(sp), selling: sp.stock > 0 }))
+      : products.filter(p => p.type === productTab).map(p => ({ product: p, selling: p.active && p.stock > 0 }))
+  const sellingCount = tabItems.filter(x => x.selling).length
+  const doneCount = tabItems.length - sellingCount
+  const saleFiltered = tabItems.filter(x => x.selling === (saleFilter === 'selling')).map(x => x.product)
+  const pageCount = Math.max(1, Math.ceil(saleFiltered.length / ADMIN_PAGE_SIZE))
+  const currentPage = Math.min(productPage, pageCount)
+  const filtered = saleFiltered.slice((currentPage - 1) * ADMIN_PAGE_SIZE, currentPage * ADMIN_PAGE_SIZE)
 
   const calBtn: React.CSSProperties = {
     padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border-strong)',
@@ -446,7 +458,7 @@ export default function AdminPage() {
         <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 18, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}><PackageIcon size={19} weight="fill" color="var(--accent)" /> 상품 관리</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
           {PRODUCT_TABS.map(t => (
-            <button key={t} onClick={() => { setProductTab(t); setShowAddForm(false) }} style={{
+            <button key={t} onClick={() => { setProductTab(t); setShowAddForm(false); setStoreCategory(null); setSaleFilter('selling'); setProductPage(1) }} style={{
               padding: '9px 20px', borderRadius: 10, fontSize: 14, cursor: 'pointer',
               border: `1px solid ${productTab === t ? 'var(--accent-tint-border)' : 'var(--border-strong)'}`,
               background: productTab === t ? 'var(--accent-tint)' : 'var(--surface)',
@@ -454,6 +466,20 @@ export default function AdminPage() {
               fontWeight: productTab === t ? 700 : 400,
               display: 'inline-flex', alignItems: 'center', gap: 6,
             }}>{TAB_ICON[t]} {t}</button>
+          ))}
+        </div>
+
+        <div className="admin-sale-toggle" role="tablist" aria-label="판매 상태">
+          {([['selling', '판매중', sellingCount], ['done', '판매완료', doneCount]] as const).map(([key, label, count]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={saleFilter === key}
+              className={saleFilter === key ? 'active' : ''}
+              onClick={() => { setSaleFilter(key); setProductPage(1) }}
+            >
+              {label} <span className="count">{count}</span>
+            </button>
           ))}
         </div>
 
@@ -467,7 +493,7 @@ export default function AdminPage() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
           {filtered.length === 0 && (
-            <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '40px 0', border: '1px dashed var(--border-strong)', borderRadius: 12 }}>등록된 상품이 없습니다.</div>
+            <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '40px 0', border: '1px dashed var(--border-strong)', borderRadius: 12 }}>{saleFilter === 'selling' ? '판매중인 상품이 없습니다.' : '판매완료된 상품이 없습니다.'}</div>
           )}
           {filtered.map(p => (
             <div key={p.id} className={`admin-row${p.active ? '' : ' inactive'}`}>
@@ -513,6 +539,24 @@ export default function AdminPage() {
           ))}
         </div>
 
+        {pageCount > 1 && (
+          // 전역 nav 스타일(상단 메뉴용 sticky·세로 정렬)을 피하려고 div + role 사용
+          <div className="admin-pagination" role="navigation" aria-label="상품 목록 페이지">
+            <button onClick={() => setProductPage(currentPage - 1)} disabled={currentPage === 1} aria-label="이전 페이지">‹</button>
+            {Array.from({ length: pageCount }, (_, i) => i + 1).map(n => (
+              <button
+                key={n}
+                className={n === currentPage ? 'active' : ''}
+                aria-current={n === currentPage ? 'page' : undefined}
+                onClick={() => setProductPage(n)}
+              >
+                {n}
+              </button>
+            ))}
+            <button onClick={() => setProductPage(currentPage + 1)} disabled={currentPage === pageCount} aria-label="다음 페이지">›</button>
+          </div>
+        )}
+
         {!showAddForm ? (
           <button onClick={() => setShowAddForm(true)} style={{ width: '100%', padding: '14px', borderRadius: 12, border: '1px dashed var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
             + 새 {productTab} 상품 추가
@@ -525,6 +569,22 @@ export default function AdminPage() {
                 <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>{productTab === '쿠지' ? '쿠지 이름 *' : '상품명 *'}</div>
                 <input style={lightInput} placeholder={productTab === '쿠지' ? '예: 주술회전 나오야 젠인 쿠지' : '상품 이름 입력'} value={newP.title} onChange={e => setNewP(p => ({ ...p, title: e.target.value }))} />
               </div>
+              {(productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)') && (
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>분류 * (상점 세부 탭)</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {STORE_CATEGORIES[productTab === '상점(운포인트)' ? 'woon' : 'ssal'].map(c => (
+                      <button key={c.id} type="button" onClick={() => setStoreCategory(c.id)} style={{
+                        flex: 1, padding: '9px 0', borderRadius: 8, fontSize: 14, cursor: 'pointer',
+                        border: `1px solid ${storeCategory === c.id ? 'var(--accent-tint-border)' : 'var(--border-strong)'}`,
+                        background: storeCategory === c.id ? 'var(--accent-tint)' : 'var(--surface)',
+                        color: storeCategory === c.id ? 'var(--accent)' : 'var(--text-secondary)',
+                        fontWeight: storeCategory === c.id ? 700 : 400,
+                      }}>{c.label}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {productTab !== '쿠지' && (
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>판매가격 *</div>
@@ -722,6 +782,10 @@ export default function AdminPage() {
                     setRaffleSubmitError('상품명, 가격, 수량을 모두 입력해주세요.')
                     return
                   }
+                  if (!storeCategory) {
+                    setRaffleSubmitError('분류를 선택해주세요.')
+                    return
+                  }
                   const priceNum = Number(newP.price.replace(/[^0-9]/g, ''))
                   const stockNum = Number(newP.stock)
                   if (!priceNum) {
@@ -737,6 +801,7 @@ export default function AdminPage() {
                       point_type: productTab === '상점(운포인트)' ? 'woon' : 'ssal',
                       price: priceNum,
                       stock: stockNum,
+                      category: storeCategory,
                       image: newImageFile ?? undefined,
                     })
                     setStoreProducts(prev => [created, ...prev])

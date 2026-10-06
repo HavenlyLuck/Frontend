@@ -281,6 +281,25 @@ export interface StoreProductResponse {
   stock: number
   image_url: string | null
   created_at: string
+  // TODO(backend): 아직 운영 서버에 없음 — 상점 세부 탭 분류
+  //   운포인트: figure | goods | card / 쌀포인트: coupon | goods | avatar
+  category?: StoreCategory | null
+}
+
+export type StoreCategory = 'figure' | 'goods' | 'card' | 'coupon' | 'avatar'
+
+// 상점별 분류 — 상점 세부 탭과 관리자 상품 등록 폼이 같이 쓴다
+export const STORE_CATEGORIES: Record<'woon' | 'ssal', { id: StoreCategory; label: string }[]> = {
+  woon: [
+    { id: 'figure', label: '피규어' },
+    { id: 'goods', label: '굿즈' },
+    { id: 'card', label: '카드' },
+  ],
+  ssal: [
+    { id: 'coupon', label: '쿠폰' },
+    { id: 'goods', label: '굿즈' },
+    { id: 'avatar', label: '아바타' },
+  ],
 }
 
 export function getStoreProducts(pointType?: 'woon' | 'ssal') {
@@ -382,6 +401,8 @@ export interface CreateStoreProductPayload {
   point_type: 'woon' | 'ssal'
   price: number
   stock: number
+  // TODO(backend): 서버가 아직 category를 받지 않음 — 받기 전까지는 보내도 저장되지 않는다
+  category: StoreCategory
   image?: File
 }
 
@@ -392,6 +413,7 @@ export async function createStoreProduct(token: string, payload: CreateStoreProd
   formData.append('point_type', payload.point_type)
   formData.append('price', String(payload.price))
   formData.append('stock', String(payload.stock))
+  formData.append('category', payload.category)
   if (payload.image) formData.append('image', payload.image)
 
   const res = await fetch(`${API_URL}/store-products`, {

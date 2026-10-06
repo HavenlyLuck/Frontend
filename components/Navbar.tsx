@@ -30,6 +30,7 @@ export default function Navbar() {
   const hideTabsRow = pathname === "/login" || pathname === "/signup";
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   const { eungPoint, ssalPoint } = useMyPoints();
   const { readyCount: readyStorageCount } = useStorage();
@@ -128,10 +129,24 @@ export default function Navbar() {
       </div>
 
       {!hideTabsRow && <div className="nav-tabs-row">
-        <div className="search-bar">
+        <form
+          className="search-bar"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const q = searchText.trim();
+            if (q) router.push(`/search?q=${encodeURIComponent(q)}`);
+          }}
+        >
           <MagnifyingGlassIcon size={16} color="var(--text-tertiary)" />
-          <input type="text" placeholder="원하는 상품을 검색해보세요" />
-        </div>
+          <input
+            type="search"
+            placeholder="원하는 상품을 검색해보세요"
+            aria-label="상품 검색"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+        </form>
 
         <div className="nav-categories">
           {NAV_CATEGORIES.map((cat) => (

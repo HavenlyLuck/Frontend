@@ -71,6 +71,7 @@ export default function RaffleEntriesPage() {
       cast?.map((c) => ({
         entryNumber: c.entry_number,
         avatar: c.avatar_config?.v === 2 ? normalizeAvatar(c.avatar_config) : null,
+        ticketCount: c.ticket_count,
       })),
     [cast],
   );

@@ -150,6 +150,30 @@ nav {
   color: var(--text-tertiary);
 }
 
+/* type="search"의 브라우저 기본 지우기(×) 버튼 숨김 */
+.search-bar input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+/* 검색 결과 */
+.search-group {
+  margin-bottom: 36px;
+}
+.search-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+.search-group-title .count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
 .nav-actions {
   margin-left: auto;
   display: flex;
@@ -244,7 +268,6 @@ nav {
 
 .nav-point-plus {
   position: relative;
-  top: -2px;
   width: 13px;
   height: 13px;
   border-radius: 50%;
@@ -1997,6 +2020,143 @@ nav {
 }
 .avatar-message {
   font-size: 13px;
+}
+/* 상점 세부 탭 — 위의 상점 탭(알약 버튼)과 구분되게 밑줄 탭으로 */
+.shop-subtabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.shop-subtab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.shop-subtab:hover {
+  color: var(--text-secondary);
+}
+.shop-subtab.active {
+  color: var(--text);
+  font-weight: 700;
+  border-bottom-color: var(--accent);
+}
+/* 쌀포인트 상점 아바타 탭 — 왼쪽 내 캐릭터(고정) + 오른쪽 아이템 */
+.avatar-shop {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.avatar-shop-preview {
+  position: sticky;
+  top: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.avatar-shop-preview img,
+.avatar-shop-preview > span {
+  border-radius: var(--radius-lg);
+}
+.avatar-shop-preview-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.avatar-shop-login {
+  font-size: 12px;
+  color: var(--accent-fg);
+  text-decoration: none;
+  text-align: center;
+}
+.avatar-shop-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+.avatar-shop-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 16px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  transition: border-color 0.15s;
+}
+.avatar-shop-item.worn {
+  border-color: var(--gold-tint-border);
+}
+.avatar-shop-item img {
+  border-radius: var(--radius-md);
+  margin-bottom: 6px;
+}
+.avatar-shop-item-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.avatar-shop-item-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+.avatar-shop-item-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--gold);
+  margin: 2px 0 6px;
+}
+.avatar-shop-item-actions {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+@media (max-width: 720px) {
+  .avatar-shop {
+    grid-template-columns: 1fr;
+  }
+  .avatar-shop-preview {
+    position: static;
+  }
+}
+/* 번개 추첨 미리보기 모달 (결과 모달 .win-modal.has-scene 재사용) */
+.avatar-scene-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 4px 0 14px;
+}
+.avatar-scene-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.avatar-scene-actions .avatar-small-btn {
+  width: auto;
+  padding: 12px 20px;
 }
 .avatar-tabs {
   display: flex;
@@ -4095,6 +4255,66 @@ nav {
   font-size: 11px;
   color: var(--text-tertiary);
 }
+
+/* -- 관리자 상품 목록: 판매중/판매완료 토글 + 페이지 번호 -- */
+.admin-sale-toggle {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.admin-sale-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.admin-sale-toggle button:hover { color: var(--text); }
+.admin-sale-toggle button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.admin-sale-toggle .count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  background: var(--border);
+  color: var(--text-secondary);
+}
+.admin-sale-toggle button.active .count { background: var(--accent-tint); color: var(--accent-fg); }
+
+.admin-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: -4px 0 24px;
+}
+.admin-pagination button {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.admin-pagination button:hover:not(:disabled):not(.active) { color: var(--text); border-color: var(--text-tertiary); }
+.admin-pagination button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.admin-pagination button:disabled { opacity: 0.35; cursor: default; }
 
 /* -- 관리자 상품 목록 행 -- */
 .admin-row {
