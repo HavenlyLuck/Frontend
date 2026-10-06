@@ -4,7 +4,7 @@
  * 연출은 이미 정해진 당첨 결과를 보여주기만 한다 — 여기서 당첨자를 고르지 않는다.
  */
 
-import { avatarColors, avatarKey, buildAvatarGrid, OUTLINED_W, type AvatarConfig } from '@/lib/avatar/compose'
+import { avatarColors, avatarKey, buildAvatarGrid, buildOverlayGrids, OUTLINED_W, type AvatarConfig, type HeldGrid } from '@/lib/avatar/compose'
 
 export const WORLD_W = 208
 export const WORLD_H = 156
@@ -58,6 +58,7 @@ export interface CastMember {
   // 실제 응모자를 세웠으면 그 사람의 응모 번호와 마이페이지 캐릭터(저장 안 했으면 null → look으로 그림)
   entryNumber?: number
   avatar?: AvatarConfig | null
+  ticketCount?: number
   isMe: boolean
   isWinner: boolean
   phase: number // 숨쉬기/눈깜빡임 타이밍을 사람마다 어긋나게
@@ -149,6 +150,20 @@ export interface AvatarDrawOptions {
   blink?: boolean
   zap?: 0 | 1 | null // 번개 맞은 직후 번쩍임 (두 색을 번갈아)
   outline?: string
+  flicker?: boolean // 손에 든 무기의 불꽃 같은 깜빡이는 색을 바꿔 칠할 차례
+}
+
+// 모자 테두리는 머리 모양에 따라 달라지므로 캐릭터 설정마다 캐싱한다
+const overlayGrids = new Map<string, HeldGrid[]>()
+function overlayGrid(avatar: AvatarConfig): HeldGrid[] {
+  if (avatar.weapon == null && avatar.hat == null && avatar.cape == null) return []
+  const key = avatarKey(avatar)
+  let grids = overlayGrids.get(key)
+  if (!grids) {
+    grids = buildOverlayGrids(avatar)
+    overlayGrids.set(key, grids)
+  }
+  return grids
 }
 
 export function drawAvatar(ctx: CanvasRenderingContext2D, m: CastMember, opts: AvatarDrawOptions = {}) {
@@ -179,6 +194,22 @@ export function drawAvatar(ctx: CanvasRenderingContext2D, m: CastMember, opts: A
       : { H: m.look.hair, S: m.look.skin, E: '#1a1a22', T: m.look.shirt, P: m.look.pants, B: '#2a2420', O: opts.outline ?? '#16200f' }
   }
 
+  // 쌀포인트 상점 아이템 — 망토는 몸 뒤, 모자·무기는 몸 위에 겹쳐 그린다
+  const overlays = m.avatar ? overlayGrid(m.avatar) : []
+  const drawOverlay = (held: HeldGrid) => {
+    const heldColors = opts.zap != null
+      ? Object.fromEntries(Object.keys(held.colors).map(k => [k, k === 'o' ? '#fff3a0' : zapColor]))
+      : { ...held.colors, ...(opts.flicker ? held.flicker : undefined), o: opts.outline ?? '#16200f' }
+    held.rows.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        if (row[x] === '.') continue
+        ctx.fillStyle = heldColors[row[x]]
+        ctx.fillRect(ox + held.dx + x, oy + held.dy + y, 1, 1)
+      }
+    })
+  }
+
+  overlays.filter(o => o.behind).forEach(drawOverlay)
   for (let y = 0; y < grid.length; y++) {
     const row = grid[y]
     for (let x = 0; x < row.length; x++) {
@@ -188,6 +219,7 @@ export function drawAvatar(ctx: CanvasRenderingContext2D, m: CastMember, opts: A
       ctx.fillRect(ox + x, oy + y, 1, 1)
     }
   }
+  overlays.filter(o => !o.behind).forEach(drawOverlay)
 }
 
 // ── 먹구름 ──
@@ -242,6 +274,7 @@ function hexToRgb(hex: string): [number, number, number] {
 export interface SceneEntrant {
   entryNumber: number
   avatar: AvatarConfig | null
+  ticketCount?: number // 산 응모권 장수 — 2장 이상이면 머리 위에 ×N
 }
 
 /*
@@ -427,6 +460,7 @@ export function buildScene(
     look: randomLook(mulberry32(seed * 131 + e.entryNumber * 7)),
     entryNumber: e.entryNumber,
     avatar: e.avatar,
+    ticketCount: e.ticketCount,
     isMe: false,
     isWinner: false,
     phase: Math.floor(hash01(seed + e.entryNumber * 31) * 4000),

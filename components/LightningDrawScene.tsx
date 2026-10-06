@@ -182,7 +182,7 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
         } else if (ds >= 0 && (m.x - winner.x) ** 2 + (m.y - winner.y) ** 2 < 32 * 32) {
           lift = hop(ds, 80, 260, 3) // 근처 사람들은 깜짝 놀라 펄쩍
         }
-        drawAvatar(fctx, m, { lift, blink: (local * 3) % 3400 < 130, zap, outline })
+        drawAvatar(fctx, m, { lift, blink: (local * 3) % 3400 < 130, zap, outline, flicker: Math.floor(local / 140) % 2 === 1 })
       }
 
       // 비
@@ -269,23 +269,33 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
       }
     }
 
-    const drawLabel = (text: string, m: CastMember, cam: Cam, scale: number, ox: number, oy: number, gold: boolean, dpr: number) => {
+    // me: 빨간 "나" 이름표 / gold: 당첨 이름표 / count: 다른 사람 머리 위의 작은 ×N
+    type LabelStyle = 'me' | 'gold' | 'count'
+    const LABEL_COLORS: Record<LabelStyle, { bg: string; fg: string }> = {
+      me: { bg: '#d93347', fg: '#ffffff' },
+      gold: { bg: '#f3c94f', fg: '#2a1d05' },
+      count: { bg: 'rgba(16, 18, 24, 0.72)', fg: '#f2f2f0' },
+    }
+    const drawLabel = (text: string, m: CastMember, cam: Cam, scale: number, ox: number, oy: number, style: LabelStyle, dpr: number) => {
+      const small = style === 'count'
       const px = ox + (m.x - (cam.cx - WORLD_W / (2 * cam.zoom))) * scale
-      const py = oy + (m.y - AVATAR_H - 3 - (cam.cy - WORLD_H / (2 * cam.zoom))) * scale - 6 * dpr
-      ctx.font = `800 ${12 * dpr}px Pretendard, system-ui, sans-serif`
+      const py = oy + (m.y - AVATAR_H - 3 - (cam.cy - WORLD_H / (2 * cam.zoom))) * scale - (small ? 2 : 6) * dpr
+      ctx.font = `800 ${(small ? 10 : 12) * dpr}px Pretendard, system-ui, sans-serif`
       const tw = ctx.measureText(text).width
-      const pw = tw + 14 * dpr
-      const ph = 20 * dpr
+      const pw = tw + (small ? 8 : 14) * dpr
+      const ph = (small ? 15 : 20) * dpr
       const x = px - pw / 2
       const y = py - ph
-      ctx.fillStyle = gold ? '#f3c94f' : '#d93347'
+      ctx.fillStyle = LABEL_COLORS[style].bg
       ctx.beginPath()
-      ctx.roundRect(x, y, pw, ph, 6 * dpr)
-      ctx.moveTo(px - 4 * dpr, y + ph)
-      ctx.lineTo(px + 4 * dpr, y + ph)
-      ctx.lineTo(px, y + ph + 5 * dpr)
+      ctx.roundRect(x, y, pw, ph, (small ? 5 : 6) * dpr)
+      if (!small) {
+        ctx.moveTo(px - 4 * dpr, y + ph)
+        ctx.lineTo(px + 4 * dpr, y + ph)
+        ctx.lineTo(px, y + ph + 5 * dpr)
+      }
       ctx.fill()
-      ctx.fillStyle = gold ? '#2a1d05' : '#ffffff'
+      ctx.fillStyle = LABEL_COLORS[style].fg
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(text, px, y + ph / 2 + dpr)
@@ -331,8 +341,16 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
 
       // 이름표
       const winnerLabelOn = ds > 700
-      if (me && !(me === winner && winnerLabelOn)) drawLabel('나', me, cam, scale, ox, oy, false, dpr)
-      if (winnerLabelOn) drawLabel(me === winner ? '당첨! 나' : `당첨 #${winnerEntryNumber}`, winner, cam, scale, ox, oy, true, dpr)
+      const tickets = (m: CastMember) => (m.ticketCount != null && m.ticketCount >= 2 ? ` ×${m.ticketCount}` : '')
+      // 2장 이상 산 다른 사람은 머리 위에 작게 ×N — 번개가 떨어진 뒤엔 당첨자에게 집중하도록 숨긴다
+      if (ds < 600) {
+        for (const m of scene.cast) {
+          if (m === me || !tickets(m)) continue
+          drawLabel(tickets(m).trim(), m, cam, scale, ox, oy, 'count', dpr)
+        }
+      }
+      if (me && !(me === winner && winnerLabelOn)) drawLabel(`나${tickets(me)}`, me, cam, scale, ox, oy, 'me', dpr)
+      if (winnerLabelOn) drawLabel(me === winner ? '당첨! 나' : `당첨 #${winnerEntryNumber}`, winner, cam, scale, ox, oy, 'gold', dpr)
 
       // 번개 섬광
       let flash = 0

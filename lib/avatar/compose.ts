@@ -3,7 +3,7 @@
 
 import {
   BASE, BOTTOMS, BOTTOM_COLORS, FIXED_COLORS, HAIRS, HAIR_COLORS, SKIN_TONES,
-  SPRITE_H, SPRITE_W, TOPS, TOP_COLORS,
+  CAPES, HATS, HELD_OUTLINED, SPRITE_H, SPRITE_W, TOPS, TOP_COLORS, WEAPONS,
   type Gender, type Layer,
 } from './parts'
 
@@ -17,9 +17,18 @@ export interface AvatarConfig {
   topColor: number
   bottom: number
   bottomColor: number
+  // 쌀포인트 상점 아이템 — 손에 든 무기(WEAPONS 번호), 머리에 쓴 모자(HATS 번호). 없으면 안 그린다.
+  // TODO(backend): 아이템 구매/보유 API가 생기기 전까지는 상점 입어보기에서만 쓰고 저장하지 않는다
+  weapon?: number
+  hat?: number
+  cape?: number
 }
 
-export type AvatarNumberKey = Exclude<keyof AvatarConfig, 'v' | 'gender'>
+// 상점 아이템 칸 — 겹쳐 그리는 순서(뒤 → 앞)이기도 하다
+export const ITEM_SLOTS = { cape: CAPES, hat: HATS, weapon: WEAPONS } as const
+export type ItemSlot = keyof typeof ITEM_SLOTS
+
+export type AvatarNumberKey = Exclude<keyof AvatarConfig, 'v' | 'gender' | ItemSlot>
 
 export const DEFAULT_AVATARS: Record<Gender, AvatarConfig> = {
   m: { v: 2, gender: 'm', skin: 0, hair: 0, hairColor: 0, top: 0, topColor: 0, bottom: 0, bottomColor: 0 },
@@ -49,12 +58,16 @@ export function normalizeAvatar(raw: unknown): AvatarConfig {
     const v = src[key]
     if (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < AVATAR_LIMITS[key]) out[key] = v
   }
+  for (const slot of Object.keys(ITEM_SLOTS) as ItemSlot[]) {
+    const v = src[slot]
+    if (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < ITEM_SLOTS[slot].length) out[slot] = v
+  }
   return out
 }
 
 // 캐시 키로 쓰는 짧은 문자열. 순서가 고정이라 같은 설정이면 항상 같은 값이 나온다.
 export function avatarKey(c: AvatarConfig): string {
-  return [c.v, c.gender, c.skin, c.hair, c.hairColor, c.top, c.topColor, c.bottom, c.bottomColor].join('-')
+  return [c.v, c.gender, c.skin, c.hair, c.hairColor, c.top, c.topColor, c.bottom, c.bottomColor, c.cape ?? 'x', c.hat ?? 'x', c.weapon ?? 'x'].join('-')
 }
 
 // ───────── 스프라이트 ─────────
@@ -90,6 +103,46 @@ export function buildAvatarGrid(c: AvatarConfig): string[] {
       line += ch !== '.' ? ch : [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].some(n => n !== '.') ? 'O' : '.'
     }
     out.push(line)
+  }
+  return out
+}
+
+// 상점 아이템(모자·무기) → 외곽선(o) 포함 문자 격자. dx/dy는 외곽선 포함 캐릭터 격자의 왼쪽 위 기준.
+// 몸 격자 밖으로 나가므로 몸과 따로 만들어 몸 위에 겹쳐 그린다.
+export interface HeldGrid {
+  dx: number
+  dy: number
+  rows: string[]
+  colors: Record<string, string>
+  flicker?: Record<string, string>
+  behind?: boolean // 몸보다 먼저(뒤에) 그린다
+}
+
+// 낀 아이템들을 그리는 순서(뒤 → 앞)대로
+export function buildOverlayGrids(c: AvatarConfig): HeldGrid[] {
+  const body = buildAvatarGrid(c)
+  const onBody = (x: number, y: number) => (body[y]?.[x] ?? '.') !== '.'
+  const out: HeldGrid[] = []
+  for (const slot of Object.keys(ITEM_SLOTS) as ItemSlot[]) {
+    const idx = c[slot]
+    const item = idx == null ? undefined : ITEM_SLOTS[slot][idx]
+    if (!item) continue
+    const h = item.rows.length
+    const w = Math.max(...item.rows.map(r => r.length))
+    const at = (x: number, y: number) => (y >= 0 && y < h && x >= 0 && x < w ? item.rows[y][x] ?? '.' : '.')
+    const rows: string[] = []
+    for (let y = -1; y <= h; y++) {
+      let line = ''
+      for (let x = -1; x <= w; x++) {
+        const ch = at(x, y)
+        if (ch !== '.') { line += ch; continue }
+        const edge = [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].some(n => HELD_OUTLINED.has(n))
+        // 몸 위에 테두리를 안 그리는 아이템은 맨 바깥(투명한 곳)에만 테두리를 붙인다
+        line += edge && (item.outlineOverBody || !onBody(item.dx + x, item.dy + y)) ? 'o' : '.'
+      }
+      rows.push(line)
+    }
+    out.push({ dx: item.dx - 1, dy: item.dy - 1, rows, colors: { ...item.colors, o: FIXED_COLORS.O }, flicker: item.flicker, behind: item.behind })
   }
   return out
 }
@@ -146,6 +199,21 @@ export function composeAvatar(c: AvatarConfig, { background = true } = {}): Uint
     for (let x = ox + 4; x < ox + OUTLINED_W - 4; x++) put(x, footY, shadow, 70)
   }
 
+  // 상점 아이템 — 캔버스 밖으로 나가는 칸(외곽선 일부)은 잘라낸다
+  const overlays = buildOverlayGrids(c)
+  const drawOverlay = (held: HeldGrid) => {
+    held.rows.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        const px0 = ox + held.dx + x
+        const py0 = oy + held.dy + y
+        if (row[x] === '.' || px0 < 0 || py0 < 0 || px0 >= size || py0 >= size) continue
+        put(px0, py0, hexToRgb(held.colors[row[x]]))
+      }
+    })
+  }
+
+  // 망토처럼 등 뒤에 두르는 것 → 몸 → 모자·무기 순으로 겹친다
+  overlays.filter(o => o.behind).forEach(drawOverlay)
   const colors = avatarColors(c)
   buildAvatarGrid(c).forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
@@ -153,5 +221,6 @@ export function composeAvatar(c: AvatarConfig, { background = true } = {}): Uint
       put(ox + x, oy + y, hexToRgb(colors[row[x]]))
     }
   })
+  overlays.filter(o => !o.behind).forEach(drawOverlay)
   return px
 }

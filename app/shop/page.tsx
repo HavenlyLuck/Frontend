@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { CoinsIcon, GrainsIcon, StorefrontIcon } from "@phosphor-icons/react";
-import { getStoreProducts, type StoreProductResponse } from "@/lib/api";
+import {
+  getStoreProducts,
+  STORE_CATEGORIES,
+  type StoreCategory,
+  type StoreProductResponse,
+} from "@/lib/api";
 import StoreProductCard from "@/components/StoreProductCard";
+import AvatarShop from "@/components/AvatarShop";
 
 const SORTS = ["최신순", "낮은 가격순", "높은 가격순", "인기순"];
 
@@ -18,6 +24,13 @@ const TAB_ICON: Record<StoreTab, React.ReactNode> = {
   쌀포인트: <GrainsIcon size={15} weight="fill" />,
 };
 
+// 상점별 세부 탭 — "전체"는 분류가 없는 상품까지 모두 보여준다
+type SubTab = "all" | StoreCategory;
+const SUB_TABS: Record<StoreTab, { id: SubTab; label: string }[]> = {
+  운포인트: [{ id: "all", label: "전체" }, ...STORE_CATEGORIES.woon],
+  쌀포인트: [{ id: "all", label: "전체" }, ...STORE_CATEGORIES.ssal],
+};
+
 export default function ShopPage() {
   const [sort, setSort] = useState("최신순");
   const [storeTab, setStoreTab] = useState<StoreTab>("운포인트");
@@ -26,8 +39,14 @@ export default function ShopPage() {
   const [cache, setCache] = useState<
     Partial<Record<StoreTab, StoreProductResponse[]>>
   >({});
-  const products = cache[storeTab] ?? [];
+  const [subTab, setSubTab] = useState<SubTab>("all");
+  const isAvatarTab = storeTab === "쌀포인트" && subTab === "avatar";
+  const tabProducts = cache[storeTab] ?? [];
   const loaded = cache[storeTab] !== undefined;
+  const products =
+    subTab === "all"
+      ? tabProducts
+      : tabProducts.filter((p) => p.category === subTab);
 
   useEffect(() => {
     if (cache[storeTab] !== undefined) return;
@@ -86,14 +105,17 @@ export default function ShopPage() {
             alignItems: "center",
             justifyContent: "space-between",
             gap: 12,
-            marginBottom: 28,
+            marginBottom: 16,
           }}
         >
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {(["운포인트", "쌀포인트"] as StoreTab[]).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setStoreTab(tab)}
+                onClick={() => {
+                  setStoreTab(tab);
+                  setSubTab("all");
+                }}
                 style={{
                   padding: "8px 20px",
                   borderRadius: 10,
@@ -143,22 +165,56 @@ export default function ShopPage() {
           </div>
         </div>
 
-        {loaded && products.length === 0 && (
-          <div className="coming-soon-box large">
-            <div className="emoji">{TAB_ICON[storeTab]}</div>
-            <div className="title">상품 준비중</div>
-            <div className="desc">
-              {storeTab} 상점 상품을 준비하고 있어요. 조금만 기다려주세요!
-            </div>
-          </div>
-        )}
+        {/* 상점별 세부 탭 */}
+        <div className="shop-subtabs" role="tablist" aria-label={`${storeTab} 상점 분류`}>
+          {SUB_TABS[storeTab].map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={subTab === t.id}
+              className={`shop-subtab${subTab === t.id ? " active" : ""}`}
+              onClick={() => setSubTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-        {products.length > 0 && (
-          <div className="product-grid-home">
-            {products.map((p) => (
-              <StoreProductCard key={p.store_product_id} product={p} />
-            ))}
-          </div>
+        {/* 아바타 탭은 일반 상품 목록 대신 내 캐릭터에 입어보는 화면 */}
+        {isAvatarTab ? (
+          <AvatarShop />
+        ) : (
+          <>
+            {loaded && tabProducts.length > 0 && products.length === 0 && (
+              <div className="coming-soon-box large">
+                <div className="emoji">{TAB_ICON[storeTab]}</div>
+                <div className="title">상품 준비중</div>
+                <div className="desc">
+                  {SUB_TABS[storeTab].find((t) => t.id === subTab)?.label} 상품을
+                  준비하고 있어요. 조금만 기다려주세요!
+                </div>
+              </div>
+            )}
+
+            {loaded && tabProducts.length === 0 && (
+              <div className="coming-soon-box large">
+                <div className="emoji">{TAB_ICON[storeTab]}</div>
+                <div className="title">상품 준비중</div>
+                <div className="desc">
+                  {storeTab} 상점 상품을 준비하고 있어요. 조금만 기다려주세요!
+                </div>
+              </div>
+            )}
+
+            {products.length > 0 && (
+              <div className="product-grid-home">
+                {products.map((p) => (
+                  <StoreProductCard key={p.store_product_id} product={p} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

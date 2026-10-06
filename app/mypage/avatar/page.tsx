@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowCounterClockwiseIcon, CheckIcon, PaintBrushIcon } from '@phosphor-icons/react'
+import { ArrowCounterClockwiseIcon, CheckIcon, LightningIcon, PaintBrushIcon } from '@phosphor-icons/react'
 import PixelAvatar from '@/components/PixelAvatar'
+import LightningDrawScene from '@/components/LightningDrawScene'
+import { SAMPLE_MY_ENTRY, sampleEntrants } from '@/lib/lightningDraw/sample'
 import { getValidSession } from '@/lib/auth'
 import { getMyProfile, updateMyAvatar, ApiError } from '@/lib/api'
 import {
@@ -61,6 +63,7 @@ export default function AvatarPage() {
   const [tabId, setTabId] = useState(TABS[0].id)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [preview, setPreview] = useState<{ config: AvatarConfig; seed: number } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -96,6 +99,28 @@ export default function AvatarPage() {
     () => GENDERS.map(g => ({ ...g, config: withGender(draft, g.id) })),
     [draft],
   )
+
+  // 고르던 모습(저장 전이어도) 그대로 샘플 공원에 세워서 "내가 당첨"되는 장면으로 보여준다.
+  // 다시 보기는 장면 번호를 바꿔 다른 공원·다른 사람들로.
+  const openPreview = (seed = Math.floor(Math.random() * 100000) + 1) => {
+    setPreview({ config: draft, seed })
+  }
+
+  // 장면은 entrants가 바뀌면 처음부터 다시 그리므로, 렌더마다 새 배열을 만들지 않게 고정한다
+  // 꾸미기 미리보기에선 내 이름표가 "나"만 보이게 1장으로 둔다 (샘플 장수가 붙으면 실제로 산 것처럼 보임)
+  const previewEntrants = useMemo(
+    () => preview
+      ? sampleEntrants(preview.seed, preview.config).map(e => (e.entryNumber === SAMPLE_MY_ENTRY ? { ...e, ticketCount: 1 } : e))
+      : undefined,
+    [preview],
+  )
+
+  useEffect(() => {
+    if (!preview) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreview(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [preview])
 
   const update = (next: AvatarConfig) => {
     setDraft(next)
@@ -140,6 +165,9 @@ export default function AvatarPage() {
             onClick={() => { if (saved) update(saved) }}
           >
             <ArrowCounterClockwiseIcon size={16} weight="bold" /> 되돌리기
+          </button>
+          <button type="button" className="btn-ghost avatar-small-btn" onClick={() => openPreview()}>
+            <LightningIcon size={16} weight="fill" /> 추첨영상 미리보기
           </button>
           <button type="button" className="btn-primary avatar-save-btn" disabled={!dirty || saving} onClick={handleSave}>
             {saving ? '저장 중...' : <><CheckIcon size={16} weight="bold" /> 저장하기</>}
@@ -232,6 +260,27 @@ export default function AvatarPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className={`win-overlay ${preview ? 'open' : ''}`} onClick={() => setPreview(null)}>
+        {preview && (
+          <div className="win-modal has-scene" role="dialog" aria-label="추첨영상 미리보기" onClick={e => e.stopPropagation()}>
+            <div className="avatar-scene-title">추첨영상 미리보기</div>
+            <LightningDrawScene
+              key={preview.seed}
+              seed={preview.seed}
+              myEntryNumbers={[SAMPLE_MY_ENTRY]}
+              winnerEntryNumber={SAMPLE_MY_ENTRY}
+              entrants={previewEntrants}
+            />
+            <div className="avatar-scene-actions">
+              <button type="button" className="btn-ghost avatar-small-btn" onClick={() => openPreview(preview.seed + 1)}>
+                <ArrowCounterClockwiseIcon size={16} weight="bold" /> 다시 보기
+              </button>
+              <button type="button" className="win-close" onClick={() => setPreview(null)}>닫기</button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
