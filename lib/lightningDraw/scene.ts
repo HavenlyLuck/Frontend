@@ -156,7 +156,7 @@ export interface AvatarDrawOptions {
 // 모자 테두리는 머리 모양에 따라 달라지므로 캐릭터 설정마다 캐싱한다
 const overlayGrids = new Map<string, HeldGrid[]>()
 function overlayGrid(avatar: AvatarConfig): HeldGrid[] {
-  if (avatar.weapon == null && avatar.hat == null && avatar.cape == null) return []
+  if (avatar.weapon == null && avatar.hat == null && avatar.cape == null && avatar.costume == null) return []
   const key = avatarKey(avatar)
   let grids = overlayGrids.get(key)
   if (!grids) {
@@ -182,9 +182,11 @@ export function drawAvatar(ctx: CanvasRenderingContext2D, m: CastMember, opts: A
     // 마이페이지에서 꾸민 캐릭터 — 몸 비율이 같아서 그대로 세울 수 있다(양갈래 여유 1칸만큼 폭이 넓음)
     grid = customGrid(m.avatar, !!opts.blink)
     ox = m.x - OUTLINED_W / 2
+    // 전체 스킨은 쓰는 문자가 제각각이라, 번쩍일 때는 쓰는 색을 전부 번개색으로 바꾼다
+    const base = avatarColors(m.avatar)
     colors = opts.zap != null
-      ? { H: zapColor, S: zapColor, E: '#3a2a00', T: zapColor, P: zapColor, B: zapColor, W: zapColor, O: '#fff3a0' }
-      : { ...avatarColors(m.avatar), O: opts.outline ?? '#16200f' }
+      ? { ...Object.fromEntries(Object.keys(base).map(k => [k, zapColor])), E: '#3a2a00', O: '#fff3a0' }
+      : { ...base, O: opts.outline ?? '#16200f' }
   } else {
     const key = (m.look.longHair ? 'long' : 'short') + (opts.blink ? 'Blink' : '')
     grid = SPRITES[key as keyof typeof SPRITES]

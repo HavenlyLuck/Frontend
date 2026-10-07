@@ -144,6 +144,38 @@ export function updateMyAvatar(token: string, config: AvatarConfig) {
   })
 }
 
+export interface AvatarItemResponse {
+  item_id: string
+  name: string
+  price: number // 쌀포인트
+  slot: 'weapon' | 'hat' | 'cape' | 'costume'
+  index: number
+}
+
+export interface AvatarItemPurchaseResponse {
+  item_id: string
+  points_spent: number
+  remaining_ssal_point: number
+}
+
+export function getAvatarItems() {
+  return request<AvatarItemResponse[]>('/avatar-items')
+}
+
+// 내가 보유한 아바타 아이템 id 목록
+export function getMyAvatarItems(token: string) {
+  return request<string[]>('/avatar-items/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export function purchaseAvatarItem(token: string, itemId: string) {
+  return request<AvatarItemPurchaseResponse>(`/avatar-items/${itemId}/purchase`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 export interface RaffleProductResponse {
   raffle_product_id: number
   product_name: string
@@ -281,9 +313,9 @@ export interface StoreProductResponse {
   stock: number
   image_url: string | null
   created_at: string
-  // TODO(backend): 아직 운영 서버에 없음 — 상점 세부 탭 분류
-  //   운포인트: figure | goods | card / 쌀포인트: coupon | goods | avatar
-  category?: StoreCategory | null
+  // 상점 세부 탭 분류 — 운포인트: figure | goods | card / 쌀포인트: coupon | goods | avatar
+  // 분류 도입 전에 등록된 상품은 null
+  category: StoreCategory | null
 }
 
 export type StoreCategory = 'figure' | 'goods' | 'card' | 'coupon' | 'avatar'
@@ -401,7 +433,6 @@ export interface CreateStoreProductPayload {
   point_type: 'woon' | 'ssal'
   price: number
   stock: number
-  // TODO(backend): 서버가 아직 category를 받지 않음 — 받기 전까지는 보내도 저장되지 않는다
   category: StoreCategory
   image?: File
 }

@@ -1,16 +1,18 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { ArrowCounterClockwiseIcon, CheckIcon, LightningIcon, PaintBrushIcon } from '@phosphor-icons/react'
 import PixelAvatar from '@/components/PixelAvatar'
 import LightningDrawScene from '@/components/LightningDrawScene'
 import { SAMPLE_MY_ENTRY, sampleEntrants } from '@/lib/lightningDraw/sample'
 import { getValidSession } from '@/lib/auth'
-import { getMyProfile, updateMyAvatar, ApiError } from '@/lib/api'
+import { getMyAvatarItems, getMyProfile, updateMyAvatar, ApiError } from '@/lib/api'
 import {
-  DEFAULT_AVATAR, avatarKey, normalizeAvatar,
-  type AvatarConfig, type AvatarNumberKey,
+  DEFAULT_AVATAR, ITEM_SLOTS, avatarKey, normalizeAvatar, withItem,
+  type AvatarConfig, type AvatarNumberKey, type ItemSlot,
 } from '@/lib/avatar/compose'
+import { AVATAR_SHOP_ITEMS } from '@/lib/avatar/shopItems'
 import {
   BOTTOMS, BOTTOM_COLORS, HAIRS, HAIR_COLORS, SKIN_TONES, TOPS, TOP_COLORS,
   type Gender, type Part, type Swatch,
@@ -46,6 +48,20 @@ const TABS: Tab[] = [
   },
 ]
 
+// 기본 모드의 "아이템" 탭 — 쌀포인트 상점에서 산 무기·모자·망토를 끼고 벗는다
+const ITEMS_TAB_ID = 'items'
+const ITEM_SLOT_LABELS: Record<ItemSlot, string> = { weapon: '무기', hat: '모자', cape: '망토' }
+
+// 기본 모드: 직접 꾸민 캐릭터 + 아이템 / 스킨 모드: 산 전체 스킨으로 통째로 바꾼다
+type Mode = 'basic' | 'skin'
+
+type StashedItems = Partial<Pick<AvatarConfig, ItemSlot>>
+function pickItems(c: AvatarConfig): StashedItems {
+  const out: StashedItems = {}
+  for (const slot of Object.keys(ITEM_SLOTS) as ItemSlot[]) if (c[slot] != null) out[slot] = c[slot]
+  return out
+}
+
 const GENDERS: { id: Gender; label: string }[] = [
   { id: 'm', label: '남자' },
   { id: 'f', label: '여자' },
@@ -64,6 +80,11 @@ export default function AvatarPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [preview, setPreview] = useState<{ config: AvatarConfig; seed: number } | null>(null)
+  const [owned, setOwned] = useState<Set<string>>(new Set())
+  const [mode, setMode] = useState<Mode>('basic')
+  // 스킨 모드로 바꾸면 무기·모자·망토가 벗겨지므로, 기본 모드로 돌아올 때 다시 끼워 준다
+  const [stashedItems, setStashedItems] = useState<StashedItems>({})
+  const [lastSkin, setLastSkin] = useState<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -76,21 +97,30 @@ export default function AvatarPage() {
           setSaved(config)
           setDraft(config)
           setHasSaved(profile.avatar_config?.v === 2)
+          if (config.costume != null) {
+            setMode('skin')
+            setLastSkin(config.costume)
+          }
         })
         .catch(() => {
           if (!cancelled) setSaved(DEFAULT_AVATAR)
         })
+      getMyAvatarItems(session.token)
+        .then((ids) => { if (!cancelled) setOwned(new Set(ids)) })
+        .catch(() => {}) // 못 불러오면 아이템·스킨 목록이 비어 보인다
     })
     return () => { cancelled = true }
   }, [])
 
-  const tab = TABS.find(t => t.id === tabId)!
+  const tab = TABS.find(t => t.id === tabId)
+  const ownedItems = AVATAR_SHOP_ITEMS.filter(item => owned.has(item.id) && item.slot !== 'costume')
+  const ownedSkins = AVATAR_SHOP_ITEMS.filter(item => owned.has(item.id) && item.slot === 'costume')
   // 아직 한 번도 저장하지 않았으면 기본 캐릭터 그대로라도 저장할 수 있게 한다
   const dirty = saved !== null && (!hasSaved || avatarKey(saved) !== avatarKey(draft))
 
   // 스타일 썸네일은 지금 고른 다른 값들을 그대로 두고 해당 항목만 바꿔서 보여준다
   const styleOptions = useMemo(() => {
-    if (!tab.style) return []
+    if (!tab?.style) return []
     const key = tab.style.key
     return tab.style.parts(draft.gender).map((part, i) => ({ name: part.name, i, config: { ...draft, [key]: i } as AvatarConfig }))
   }, [tab, draft])
@@ -125,6 +155,27 @@ export default function AvatarPage() {
   const update = (next: AvatarConfig) => {
     setDraft(next)
     setMessage(null)
+  }
+
+  const applySkin = (index: number) => {
+    if (draft.costume == null) setStashedItems(pickItems(draft))
+    setLastSkin(index)
+    update(withItem(draft, 'costume', index))
+  }
+
+  const changeMode = (next: Mode) => {
+    if (next === mode) return
+    setMode(next)
+    if (next === 'basic') {
+      // 스킨을 벗기고 스킨 모드로 가기 전에 끼고 있던 아이템을 다시 끼운다
+      let config = withItem(draft, 'costume', undefined)
+      for (const [slot, index] of Object.entries(stashedItems) as [ItemSlot, number][]) config = withItem(config, slot, index)
+      update(config)
+    } else {
+      // 마지막으로 고른 스킨(없으면 처음 산 스킨)을 바로 입혀 본다
+      const skin = lastSkin ?? ownedSkins[0]?.index
+      if (skin != null) applySkin(skin)
+    }
   }
 
   const handleSave = async () => {
@@ -162,7 +213,11 @@ export default function AvatarPage() {
             type="button"
             className="btn-ghost avatar-small-btn"
             disabled={!saved || avatarKey(saved) === avatarKey(draft)}
-            onClick={() => { if (saved) update(saved) }}
+            onClick={() => {
+              if (!saved) return
+              update(saved)
+              setMode(saved.costume != null ? 'skin' : 'basic')
+            }}
           >
             <ArrowCounterClockwiseIcon size={16} weight="bold" /> 되돌리기
           </button>
@@ -178,6 +233,49 @@ export default function AvatarPage() {
         </div>
 
         <div className="avatar-options-card">
+          <div className="avatar-tabs avatar-mode-tabs" role="tablist" aria-label="꾸미기 모드">
+            {([['basic', '기본 모드'], ['skin', '스킨 모드']] as [Mode, string][]).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={mode === id}
+                className={`avatar-tab${mode === id ? ' active' : ''}`}
+                onClick={() => changeMode(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'skin' ? (
+            <div className="avatar-option-group">
+              <div className="avatar-option-label">
+                스킨<span className="avatar-option-hint"> · 스킨을 끼면 무기·모자·망토는 같이 못 껴요</span>
+              </div>
+              {ownedSkins.length === 0 ? (
+                <Link href="/shop" className="avatar-shop-login">쌀포인트 상점에서 스킨을 구매하면 여기서 바꿔 낄 수 있어요</Link>
+              ) : (
+                <div className="avatar-style-grid">
+                  {ownedSkins.map(item => {
+                    const selected = draft.costume === item.index
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`avatar-style-option${selected ? ' selected' : ''}`}
+                        aria-pressed={selected}
+                        onClick={() => applySkin(item.index)}
+                      >
+                        <PixelAvatar config={withItem(draft, 'costume', item.index)} size={64} />
+                        <span>{item.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (<>
           <div className="avatar-option-group">
             <div className="avatar-option-label">
               성별{!hasSaved && <span className="avatar-option-hint"> · 먼저 골라 주세요</span>}
@@ -202,7 +300,7 @@ export default function AvatarPage() {
           </div>
 
           <div className="avatar-tabs" role="tablist">
-            {TABS.map(t => (
+            {[...TABS, { id: ITEMS_TAB_ID, label: '아이템' }].map(t => (
               <button
                 key={t.id}
                 type="button"
@@ -216,7 +314,41 @@ export default function AvatarPage() {
             ))}
           </div>
 
-          {tab.style && (
+          {tabId === ITEMS_TAB_ID && (
+            <div className="avatar-option-group">
+              <div className="avatar-option-label">
+                내 아이템<span className="avatar-option-hint"> · 한 번 더 누르면 벗어요</span>
+              </div>
+              {ownedItems.length === 0 ? (
+                <Link href="/shop" className="avatar-shop-login">쌀포인트 상점에서 아이템을 구매하면 여기서 끼고 벗을 수 있어요</Link>
+              ) : (
+                <div className="avatar-style-grid">
+                  {ownedItems.map(item => {
+                    const slot = item.slot as ItemSlot
+                    const selected = draft[slot] === item.index
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`avatar-style-option${selected ? ' selected' : ''}`}
+                        aria-pressed={selected}
+                        onClick={() => {
+                          const next = withItem(draft, slot, selected ? undefined : item.index)
+                          update(next)
+                          setStashedItems(pickItems(next))
+                        }}
+                      >
+                        <PixelAvatar config={withItem(draft, slot, item.index)} size={64} />
+                        <span>{item.name} · {ITEM_SLOT_LABELS[slot]}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab?.style && (
             <div className="avatar-option-group">
               <div className="avatar-option-label">스타일</div>
               <div className="avatar-style-grid">
@@ -239,7 +371,7 @@ export default function AvatarPage() {
             </div>
           )}
 
-          <div className="avatar-option-group">
+          {tab && <div className="avatar-option-group">
             <div className="avatar-option-label">{tab.color.label}</div>
             <div className="avatar-swatches">
               {tab.color.swatches.map((sw, i) => {
@@ -258,7 +390,8 @@ export default function AvatarPage() {
                 )
               })}
             </div>
-          </div>
+          </div>}
+          </>)}
         </div>
       </div>
 

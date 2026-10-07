@@ -1,16 +1,16 @@
 // 쌀포인트 상점 "아바타" 탭에서 파는 아이템. 픽셀 파츠는 코드(parts.ts)에 그려져 있어서
 // 관리자 상품 등록이 아니라 여기 목록으로 관리한다.
-// TODO(backend): 아이템 구매(쌀포인트 차감)·보유 목록 API — 생기면 가격도 서버 기준으로 맞춘다
+// 백엔드 app/core/avatar_items.py와 id·slot·index를 맞춰야 한다. 화면의 가격은 서버(/avatar-items) 값으로 덮어쓴다.
 
-import type { ItemSlot } from './compose'
+import type { WearSlot } from './compose'
 
 export interface AvatarShopItem {
   id: string
   name: string
   description: string
   price: number // 쌀포인트
-  slot: ItemSlot
-  index: number // 해당 칸의 파츠 번호 (WEAPONS, HATS)
+  slot: WearSlot
+  index: number // 해당 칸의 파츠 번호 (WEAPONS, HATS, CAPES, COSTUMES)
 }
 
 export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
@@ -37,5 +37,21 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
     price: 2500,
     slot: 'cape',
     index: 0,
+  },
+  {
+    id: 'nanami-skin',
+    name: '나나미 스킨',
+    description: '베이지 정장에 초록 고글, 표범무늬 넥타이, 점박이 천을 감은 식칼까지. 캐릭터 전체가 바뀌어서 무기·모자·망토와는 같이 못 껴요.',
+    price: 5000,
+    slot: 'costume',
+    index: 0,
+  },
+  {
+    id: 'warwick-skin',
+    name: '워윅 스킨',
+    description: '송곳니를 드러낸 채 노려보는 늑대 인간. 어깨 뒤 초록 화학 탱크와 청동 건틀릿까지. 캐릭터 전체가 바뀌어서 무기·모자·망토와는 같이 못 껴요.',
+    price: 5000,
+    slot: 'costume',
+    index: 1,
   },
 ]
