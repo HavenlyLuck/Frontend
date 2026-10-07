@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowCounterClockwiseIcon, GrainsIcon, LightningIcon } from '@phosphor-icons/react'
 import PixelAvatar from '@/components/PixelAvatar'
+import PixelItem from '@/components/PixelItem'
 import LightningDrawScene from '@/components/LightningDrawScene'
 import { getValidSession } from '@/lib/auth'
 import { notifyPointsUpdated } from '@/hooks/useMyPoints'
-import { ApiError, getAvatarItems, getMyAvatarItems, getMyProfile, purchaseAvatarItem, updateMyAvatar } from '@/lib/api'
+import { ApiError, getAvatarItems, getMyAvatarItems, getMyProfile, purchaseAvatarItem } from '@/lib/api'
 import { DEFAULT_AVATAR, normalizeAvatar, withItem, type AvatarConfig, type WearSlot } from '@/lib/avatar/compose'
 import { AVATAR_SHOP_ITEMS, type AvatarShopItem } from '@/lib/avatar/shopItems'
 import { SAMPLE_MY_ENTRY, sampleEntrants } from '@/lib/lightningDraw/sample'
@@ -44,7 +45,6 @@ export default function AvatarShop() {
   }, [])
 
   const priceOf = (item: AvatarShopItem) => prices[item.id] ?? item.price
-  const isEquipped = (item: AvatarShopItem) => base[item.slot] === item.index
 
   const buy = async (item: AvatarShopItem) => {
     if (!confirm(`${item.name}을(를) 쌀포인트 ${priceOf(item).toLocaleString()}P로 구매할까요?`)) return
@@ -57,27 +57,6 @@ export default function AvatarShop() {
       notifyPointsUpdated()
     } catch (e) {
       alert(e instanceof ApiError ? e.message : '구매 중 오류가 발생했습니다.')
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  // 보유한 아이템을 내 캐릭터에 바로 저장한다
-  const toggleEquip = async (item: AvatarShopItem) => {
-    const session = await getValidSession()
-    if (!session) { alert('로그인 후 이용해주세요.'); return }
-    const next = withItem(base, item.slot, isEquipped(item) ? undefined : item.index)
-    setBusyId(item.id)
-    try {
-      const profile = await updateMyAvatar(session.token, next)
-      setBase(normalizeAvatar(profile.avatar_config))
-      setTried((prev) => {
-        const rest = { ...prev }
-        delete rest[item.slot]
-        return rest
-      })
-    } catch (e) {
-      alert(e instanceof ApiError ? e.message : '저장 중 오류가 발생했습니다.')
     } finally {
       setBusyId(null)
     }
@@ -148,7 +127,9 @@ export default function AvatarShop() {
           const worn = isWorn(item)
           return (
             <div key={item.id} className={`avatar-shop-item${worn ? ' worn' : ''}`}>
-              <PixelAvatar config={withItem(base, item.slot, item.index)} size={112} alt={`${item.name}을(를) 든 캐릭터`} />
+              <div className="avatar-shop-item-thumb">
+                <PixelItem slot={item.slot} index={item.index} size={112} alt={item.name} />
+              </div>
               <div className="avatar-shop-item-name">{item.name}</div>
               <div className="avatar-shop-item-desc">{item.description}</div>
               <div className="avatar-shop-item-price">
@@ -163,8 +144,9 @@ export default function AvatarShop() {
                     로그인 후 구매
                   </button>
                 ) : owned.has(item.id) ? (
-                  <button type="button" className="btn-primary avatar-small-btn" disabled={busyId === item.id} onClick={() => toggleEquip(item)}>
-                    {isEquipped(item) ? '착용 해제' : '착용하기'}
+                  // 착용은 마이페이지 캐릭터 꾸미기(보유 아이템)에서 한다
+                  <button type="button" className="btn-primary avatar-small-btn" disabled>
+                    구매 완료
                   </button>
                 ) : (
                   <button type="button" className="btn-primary avatar-small-btn" disabled={busyId === item.id} onClick={() => buy(item)}>

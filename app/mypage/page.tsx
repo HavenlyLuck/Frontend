@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BellIcon, CoinsIcon, TicketIcon } from "@phosphor-icons/react";
+import { BellIcon, CoinsIcon, TicketIcon, XIcon } from "@phosphor-icons/react";
 import { useMyPoints } from "@/hooks/useMyPoints";
 import { formatTimeAgo } from "@/lib/date";
 import {
+  clearNotifications,
   getNotifications,
+  removeNotification,
   markAllNotificationsRead,
   NOTIFICATIONS_UPDATED_EVENT,
   type AppNotification,
@@ -51,6 +53,17 @@ export default function MyPage() {
       {/* 최근 알림 */}
       <div className="mypage-section-header">
         <div className="mypage-section-title"><BellIcon size={17} weight="fill" color="var(--accent)" /> 최근 알림</div>
+        {notifications.length > 0 && (
+          <button
+            type="button"
+            className="notif-clear"
+            onClick={() => {
+              if (confirm("알림을 모두 삭제할까요?")) clearNotifications();
+            }}
+          >
+            전체 삭제
+          </button>
+        )}
       </div>
 
       {notifications.length === 0 ? (
@@ -70,10 +83,23 @@ export default function MyPage() {
                 </div>
               </>
             );
-            return n.href ? (
-              <Link key={n.id} href={n.href} className={`notif-item${n.read ? "" : " unread"}`} style={{ textDecoration: "none" }}>{inner}</Link>
-            ) : (
-              <div key={n.id} className={`notif-item${n.read ? "" : " unread"}`}>{inner}</div>
+            // 링크 안에 버튼을 넣지 않도록, 알림 본문(링크)과 삭제 버튼을 나란히 둔다
+            return (
+              <div key={n.id} className={`notif-item${n.read ? "" : " unread"}`}>
+                {n.href ? (
+                  <Link href={n.href} className="notif-main">{inner}</Link>
+                ) : (
+                  <div className="notif-main">{inner}</div>
+                )}
+                <button
+                  type="button"
+                  className="notif-remove"
+                  aria-label={`알림 삭제: ${n.title}`}
+                  onClick={() => removeNotification(n.id)}
+                >
+                  <XIcon size={14} weight="bold" />
+                </button>
+              </div>
             );
           })}
         </div>

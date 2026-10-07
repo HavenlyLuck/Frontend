@@ -2105,9 +2105,16 @@ nav {
 .avatar-shop-item.worn {
   border-color: var(--gold-tint-border);
 }
-.avatar-shop-item img {
-  border-radius: var(--radius-md);
+/* 아이템만 그린 이미지(배경 투명)를 올려 두는 칸 */
+.avatar-shop-item-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 128px;
+  height: 128px;
   margin-bottom: 6px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
 }
 .avatar-shop-item-name {
   font-size: 15px;
@@ -2640,10 +2647,52 @@ nav {
 
 .notif-item {
   display: flex;
-  gap: 14px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
   align-items: flex-start;
+  border-bottom: 1px solid var(--border);
+}
+
+/* 알림 본문(링크) — 삭제 버튼과 나란히 */
+.notif-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 14px;
+  padding: 16px 0 16px 20px;
+  align-items: flex-start;
+  color: inherit;
+  text-decoration: none;
+}
+
+.notif-remove {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 10px 10px 0 4px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.notif-remove:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+
+.notif-clear {
+  border: none;
+  background: none;
+  padding: 4px 6px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.notif-clear:hover {
+  color: var(--text);
 }
 
 .notif-item:last-child {
