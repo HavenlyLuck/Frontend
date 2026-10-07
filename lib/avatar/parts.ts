@@ -259,6 +259,85 @@ export const CAPES: HeldItem[] = [
   },
 ]
 
+// ───────── 전체 스킨 (쌀포인트 상점 아이템) ─────────
+// 몸 전체(10×11칸)를 통째로 바꾸는 스킨. 끼면 피부·머리·옷 설정과 무기·모자·망토는 쓰지 않는다.
+// 문자는 스킨마다 colors에 정의한다(O·o는 외곽선이라 쓰지 않는다). E를 쓰면 추첨 화면에서 눈을 깜빡인다.
+
+export interface Costume {
+  name: string
+  rows: string[] // SPRITE_W × SPRITE_H
+  colors: Record<string, string>
+  // 스킨에 딸린 소품(손에 든 무기 등) — 무기 아이템처럼 몸 위에 겹쳐 그린다
+  held?: HeldItem
+}
+
+export const COSTUMES: Costume[] = [
+  {
+    // 금발 가르마, 초록 고글, 밝은 베이지 정장에 파란 셔츠·표범무늬 넥타이, 오른손에 천을 감은 식칼
+    // 문자: H 머리, S 피부, G 고글 렌즈, F 고글 테, J 정장, U 셔츠, Y 넥타이, D 넥타이 무늬, L 바지, B 구두
+    name: '나나미',
+    rows: [
+      '...HHHH...',
+      '..HHHHHH..',
+      '..HHSSSH..',
+      '..SGFFGS..',
+      '...SSSS...',
+      '..JUYDUJ..',
+      '.SJJYJJJS.',
+      '..JJYJJJ..',
+      '...LLLL...',
+      '...L..L...',
+      '..BB..BB..',
+    ],
+    colors: {
+      H: '#d9cf86', S: '#f2cfae', G: '#3f8f5a', F: '#c9ccd2', J: '#ddd8cf',
+      U: '#3f6f95', Y: '#cdb43c', D: '#4a3a1a', L: '#cfc9be', B: '#8a4a2a',
+    },
+    held: {
+      // 오른손 옆에 세워 쥔 넓적한 식칼 — 칼날에 흰 바탕·남색 점박이 천을 감았다
+      // 문자: w 천(흰색), k 천 무늬(남색), h 손잡이
+      name: '점박이 식칼',
+      dx: 10,
+      dy: 1,
+      rows: [
+        '.wk',
+        'wkw',
+        'kww',
+        'wwk',
+        'wkw',
+        'kwk',
+        'h..',
+        'h..',
+      ],
+      colors: { w: '#f4f2ec', k: '#1f2547', h: '#4a4458' },
+    },
+  },
+  {
+    // 어두운 털의 늑대 인간 — 찌푸린 눈썹 아래 빨간 눈, 크게 벌린 입과 위아래 송곳니,
+    // 머리 옆으로 삐친 털, 어깨 뒤 초록 화학 탱크, 초록 약품이 든 청동 건틀릿
+    // 문자: F 털, D 찌푸린 눈썹, M 주둥이·가슴 털, N 코, R 눈, W 송곳니, K 벌린 입, r 귀 안쪽,
+    //       Z 청동, G 화학 약품(초록), C 발톱(금색), P 발
+    name: '워윅',
+    rows: [
+      '.Fr....rF.',
+      '.FFFFFFFF.',
+      'FDDFFFFDDF',
+      '.FRDFFDRF.',
+      'ZFMMNNMMFZ',
+      'GFWWKKWWFG',
+      'GZZWFFWF.G',
+      'ZGGZFMFFF.',
+      'ZGGZFFFFC.',
+      'CZZC.F..FC',
+      'C..C.PP.PP',
+    ],
+    colors: {
+      F: '#3d4a44', D: '#101512', M: '#6f7c74', N: '#141414', R: '#ff2a1a', W: '#f4f1ea', K: '#6a1212',
+      r: '#c8452f', Z: '#a8823a', G: '#62f04a', C: '#e3c25a', P: '#2a332f',
+    },
+  },
+]
+
 // 외곽선을 붙이는 아이템 문자 (불꽃은 테두리 없이 번지듯이)
 export const HELD_OUTLINED = new Set(['l', 'g', 'h', 'c', 'd', 'w', 'p', 'k', 'n'])
 

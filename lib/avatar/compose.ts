@@ -2,9 +2,9 @@
 // 미리보기 스크립트나 추첨 화면 같은 다른 캔버스에서도 그대로 재사용할 수 있다.
 
 import {
-  BASE, BOTTOMS, BOTTOM_COLORS, FIXED_COLORS, HAIRS, HAIR_COLORS, SKIN_TONES,
+  BASE, BOTTOMS, COSTUMES, BOTTOM_COLORS, FIXED_COLORS, HAIRS, HAIR_COLORS, SKIN_TONES,
   CAPES, HATS, HELD_OUTLINED, SPRITE_H, SPRITE_W, TOPS, TOP_COLORS, WEAPONS,
-  type Gender, type Layer,
+  type Gender, type HeldItem, type Layer,
 } from './parts'
 
 export interface AvatarConfig {
@@ -17,18 +17,21 @@ export interface AvatarConfig {
   topColor: number
   bottom: number
   bottomColor: number
-  // 쌀포인트 상점 아이템 — 손에 든 무기(WEAPONS 번호), 머리에 쓴 모자(HATS 번호). 없으면 안 그린다.
-  // TODO(backend): 아이템 구매/보유 API가 생기기 전까지는 상점 입어보기에서만 쓰고 저장하지 않는다
+  // 쌀포인트 상점 아이템 — 손에 든 무기(WEAPONS 번호), 머리에 쓴 모자(HATS 번호), 망토(CAPES 번호). 없으면 안 그린다.
   weapon?: number
   hat?: number
   cape?: number
+  // 전체 스킨(COSTUMES 번호) — 끼면 몸 전체를 스킨으로 그리고 무기·모자·망토와는 같이 못 낀다
+  costume?: number
 }
 
 // 상점 아이템 칸 — 겹쳐 그리는 순서(뒤 → 앞)이기도 하다
 export const ITEM_SLOTS = { cape: CAPES, hat: HATS, weapon: WEAPONS } as const
 export type ItemSlot = keyof typeof ITEM_SLOTS
+// 상점에서 낄 수 있는 칸 — 겹쳐 끼는 아이템 + 전체 스킨
+export type WearSlot = ItemSlot | 'costume'
 
-export type AvatarNumberKey = Exclude<keyof AvatarConfig, 'v' | 'gender' | ItemSlot>
+export type AvatarNumberKey = Exclude<keyof AvatarConfig, 'v' | 'gender' | WearSlot>
 
 export const DEFAULT_AVATARS: Record<Gender, AvatarConfig> = {
   m: { v: 2, gender: 'm', skin: 0, hair: 0, hairColor: 0, top: 0, topColor: 0, bottom: 0, bottomColor: 0 },
@@ -62,12 +65,33 @@ export function normalizeAvatar(raw: unknown): AvatarConfig {
     const v = src[slot]
     if (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < ITEM_SLOTS[slot].length) out[slot] = v
   }
+  const costume = src.costume
+  if (typeof costume === 'number' && Number.isInteger(costume) && costume >= 0 && costume < COSTUMES.length) {
+    return withItem(out, 'costume', costume)
+  }
   return out
+}
+
+// 아이템을 끼우거나(index) 벗긴다(undefined). 전체 스킨과 무기·모자·망토는 같이 못 끼므로
+// 스킨을 끼면 다른 아이템을 벗기고, 다른 아이템을 끼면 스킨을 벗긴다.
+export function withItem(c: AvatarConfig, slot: WearSlot, index: number | undefined): AvatarConfig {
+  const next = { ...c }
+  if (index == null) {
+    delete next[slot]
+    return next
+  }
+  if (slot === 'costume') {
+    for (const s of Object.keys(ITEM_SLOTS) as ItemSlot[]) delete next[s]
+  } else {
+    delete next.costume
+  }
+  next[slot] = index
+  return next
 }
 
 // 캐시 키로 쓰는 짧은 문자열. 순서가 고정이라 같은 설정이면 항상 같은 값이 나온다.
 export function avatarKey(c: AvatarConfig): string {
-  return [c.v, c.gender, c.skin, c.hair, c.hairColor, c.top, c.topColor, c.bottom, c.bottomColor, c.cape ?? 'x', c.hat ?? 'x', c.weapon ?? 'x'].join('-')
+  return [c.v, c.gender, c.skin, c.hair, c.hairColor, c.top, c.topColor, c.bottom, c.bottomColor, c.cape ?? 'x', c.hat ?? 'x', c.weapon ?? 'x', c.costume ?? 'x'].join('-')
 }
 
 // ───────── 스프라이트 ─────────
@@ -78,7 +102,10 @@ export const OUTLINED_H = SPRITE_H + 2
 
 // 설정 → 외곽선 포함 문자 격자. 추첨 화면처럼 직접 칸을 칠하는 곳에서 쓴다.
 export function buildAvatarGrid(c: AvatarConfig): string[] {
-  const grid: string[][] = Array.from({ length: SPRITE_H }, () => Array(SPRITE_W).fill('.'))
+  const costume = c.costume == null ? undefined : COSTUMES[c.costume]
+  const grid: string[][] = costume
+    ? costume.rows.map(r => r.split(''))
+    : Array.from({ length: SPRITE_H }, () => Array(SPRITE_W).fill('.'))
   const draw = (layers: Layer[]) => {
     for (const layer of layers) {
       layer.rows.forEach((raw, dy) => {
@@ -87,11 +114,13 @@ export function buildAvatarGrid(c: AvatarConfig): string[] {
       })
     }
   }
-  // 그리는 순서 = 겹치는 순서(뒤 → 앞)
-  draw(BASE)
-  draw(BOTTOMS[c.gender][c.bottom].layers)
-  draw(TOPS[c.top].layers)
-  draw(HAIRS[c.gender][c.hair].layers)
+  // 그리는 순서 = 겹치는 순서(뒤 → 앞). 전체 스킨은 격자를 통째로 쓴다.
+  if (!costume) {
+    draw(BASE)
+    draw(BOTTOMS[c.gender][c.bottom].layers)
+    draw(TOPS[c.top].layers)
+    draw(HAIRS[c.gender][c.hair].layers)
+  }
 
   // 바깥 1칸 외곽선(O) — 잔디 위에서도 실루엣이 또렷하게
   const at = (x: number, y: number) => (y >= 1 && y <= SPRITE_H && x >= 1 && x <= SPRITE_W ? grid[y - 1][x - 1] : '.')
@@ -122,11 +151,16 @@ export interface HeldGrid {
 export function buildOverlayGrids(c: AvatarConfig): HeldGrid[] {
   const body = buildAvatarGrid(c)
   const onBody = (x: number, y: number) => (body[y]?.[x] ?? '.') !== '.'
+  // 전체 스킨은 다른 아이템을 같이 못 끼고, 스킨에 딸린 소품만 그린다
+  const items: HeldItem[] = c.costume != null
+    ? [COSTUMES[c.costume]?.held].filter((h): h is HeldItem => !!h)
+    : (Object.keys(ITEM_SLOTS) as ItemSlot[]).flatMap((slot) => {
+      const idx = c[slot]
+      const item = idx == null ? undefined : ITEM_SLOTS[slot][idx]
+      return item ? [item] : []
+    })
   const out: HeldGrid[] = []
-  for (const slot of Object.keys(ITEM_SLOTS) as ItemSlot[]) {
-    const idx = c[slot]
-    const item = idx == null ? undefined : ITEM_SLOTS[slot][idx]
-    if (!item) continue
+  for (const item of items) {
     const h = item.rows.length
     const w = Math.max(...item.rows.map(r => r.length))
     const at = (x: number, y: number) => (y >= 0 && y < h && x >= 0 && x < w ? item.rows[y][x] ?? '.' : '.')
@@ -148,6 +182,8 @@ export function buildOverlayGrids(c: AvatarConfig): HeldGrid[] {
 }
 
 export function avatarColors(c: AvatarConfig): Record<string, string> {
+  const costume = c.costume == null ? undefined : COSTUMES[c.costume]
+  if (costume) return { ...FIXED_COLORS, ...costume.colors }
   return {
     ...FIXED_COLORS,
     S: SKIN_TONES[c.skin].color,

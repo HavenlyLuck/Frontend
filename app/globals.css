@@ -2166,6 +2166,18 @@ nav {
   padding-top: 20px;
   border-top: 1px solid var(--border);
 }
+/* 꾸미기 모드 전환 — 카드 맨 위라 구분선 없이 */
+.avatar-tabs.avatar-mode-tabs {
+  margin: 0 0 22px;
+  padding: 0 0 18px;
+  border-top: none;
+  border-bottom: 1px solid var(--border);
+}
+.avatar-option-group .avatar-shop-login {
+  display: block;
+  text-align: left;
+  font-size: 13px;
+}
 .avatar-option-hint {
   color: var(--accent-fg);
   font-weight: 500;
