@@ -40,10 +40,48 @@ function save(list: AppNotification[]) {
   window.dispatchEvent(new Event(NOTIFICATIONS_UPDATED_EVENT))
 }
 
-// 같은 id 알림이 이미 있으면 추가하지 않고 false를 반환 (중복 팝업 방지)
+// 지운 알림 id — 알림 감시가 같은 상황(추첨 대기 중)을 다시 감지해도 지운 알림이 되살아나지 않게 기억해 둔다
+const DISMISSED_PREFIX = 'notificationsDismissed:'
+const MAX_DISMISSED = 200
+
+function dismissedKey(): string {
+  return DISMISSED_PREFIX + (localStorage.getItem('userId') ?? '')
+}
+
+function getDismissed(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(dismissedKey()) ?? '[]')
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+function addDismissed(ids: string[]) {
+  try {
+    const next = [...ids, ...getDismissed().filter(id => !ids.includes(id))]
+    localStorage.setItem(dismissedKey(), JSON.stringify(next.slice(0, MAX_DISMISSED)))
+  } catch {
+    // 저장이 막힌 환경에서는 지운 알림이 다시 감지되면 돌아올 수 있다
+  }
+}
+
+export function removeNotification(id: string) {
+  addDismissed([id])
+  save(getNotifications().filter(n => n.id !== id))
+}
+
+export function clearNotifications() {
+  const list = getNotifications()
+  if (list.length === 0) return
+  addDismissed(list.map(n => n.id))
+  save([])
+}
+
+// 같은 id 알림이 이미 있거나 지운 적 있으면 추가하지 않고 false를 반환 (중복 팝업 방지)
 export function addNotification(n: Omit<AppNotification, 'createdAt' | 'read'>): boolean {
   const list = getNotifications()
-  if (list.some(item => item.id === n.id)) return false
+  if (list.some(item => item.id === n.id) || getDismissed().includes(n.id)) return false
   save([{ ...n, createdAt: new Date().toISOString(), read: false }, ...list])
   return true
 }

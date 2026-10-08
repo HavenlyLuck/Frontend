@@ -159,26 +159,27 @@ export function buildOverlayGrids(c: AvatarConfig): HeldGrid[] {
       const item = idx == null ? undefined : ITEM_SLOTS[slot][idx]
       return item ? [item] : []
     })
-  const out: HeldGrid[] = []
-  for (const item of items) {
-    const h = item.rows.length
-    const w = Math.max(...item.rows.map(r => r.length))
-    const at = (x: number, y: number) => (y >= 0 && y < h && x >= 0 && x < w ? item.rows[y][x] ?? '.' : '.')
-    const rows: string[] = []
-    for (let y = -1; y <= h; y++) {
-      let line = ''
-      for (let x = -1; x <= w; x++) {
-        const ch = at(x, y)
-        if (ch !== '.') { line += ch; continue }
-        const edge = [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].some(n => HELD_OUTLINED.has(n))
-        // 몸 위에 테두리를 안 그리는 아이템은 맨 바깥(투명한 곳)에만 테두리를 붙인다
-        line += edge && (item.outlineOverBody || !onBody(item.dx + x, item.dy + y)) ? 'o' : '.'
-      }
-      rows.push(line)
+  return items.map(item => outlineHeld(item, onBody))
+}
+
+// 아이템 격자에 외곽선(o)을 붙인다. onBody가 참인 칸은 몸이 있는 자리라, 몸 위에 테두리를 안 그리는 아이템은 건너뛴다.
+function outlineHeld(item: HeldItem, onBody: (x: number, y: number) => boolean = () => false): HeldGrid {
+  const h = item.rows.length
+  const w = Math.max(...item.rows.map(r => r.length))
+  const at = (x: number, y: number) => (y >= 0 && y < h && x >= 0 && x < w ? item.rows[y][x] ?? '.' : '.')
+  const rows: string[] = []
+  for (let y = -1; y <= h; y++) {
+    let line = ''
+    for (let x = -1; x <= w; x++) {
+      const ch = at(x, y)
+      if (ch !== '.') { line += ch; continue }
+      const edge = [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].some(n => HELD_OUTLINED.has(n))
+      // 몸 위에 테두리를 안 그리는 아이템은 맨 바깥(투명한 곳)에만 테두리를 붙인다
+      line += edge && (item.outlineOverBody || !onBody(item.dx + x, item.dy + y)) ? 'o' : '.'
     }
-    out.push({ dx: item.dx - 1, dy: item.dy - 1, rows, colors: { ...item.colors, o: FIXED_COLORS.O }, flicker: item.flicker, behind: item.behind })
+    rows.push(line)
   }
-  return out
+  return { dx: item.dx - 1, dy: item.dy - 1, rows, colors: { ...item.colors, o: FIXED_COLORS.O }, flicker: item.flicker, behind: item.behind }
 }
 
 export function avatarColors(c: AvatarConfig): Record<string, string> {
@@ -259,4 +260,45 @@ export function composeAvatar(c: AvatarConfig, { background = true } = {}): Uint
   })
   overlays.filter(o => !o.behind).forEach(drawOverlay)
   return px
+}
+
+// ───────── 상점 아이템 이미지 ─────────
+
+// 아이템만 단독으로 그린 정사각형 이미지(배경 투명) — 한 변이 side칸인 픽셀.
+// 무기·모자·망토는 아이템 크기에 꼭 맞는 캔버스 가운데에, 전체 스킨은 스킨 자체가 캐릭터라
+// 스킨을 입은 모습(딸린 소품 포함)을 그린다.
+export function composeItem(slot: WearSlot, index: number): { pixels: Uint8ClampedArray<ArrayBuffer>; side: number } {
+  if (slot === 'costume') {
+    return { pixels: composeAvatar(withItem(DEFAULT_AVATAR, 'costume', index), { background: false }), side: AVATAR_CANVAS }
+  }
+
+  const item = ITEM_SLOTS[slot][index]
+  if (!item) return { pixels: new Uint8ClampedArray(4), side: 1 }
+  // 몸이 없으니 테두리를 사방에 붙인다
+  const grid = outlineHeld({ ...item, outlineOverBody: true })
+  // 망토처럼 몸 뒤에 두르는 아이템은 몸이 서는 자리를 안감처럼 어둡게 칠해 펼친 모양으로 보이게 한다
+  const body = item.behind ? buildAvatarGrid(DEFAULT_AVATAR) : null
+  const w = Math.max(...grid.rows.map(r => r.length))
+  const h = grid.rows.length
+  const side = Math.max(w, h) + 2
+  const px = new Uint8ClampedArray(side * side * 4)
+  const ox = Math.floor((side - w) / 2)
+  const oy = Math.floor((side - h) / 2)
+  grid.rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      if (row[x] === '.') continue
+      let [r, g, b] = hexToRgb(grid.colors[row[x]])
+      if (body && row[x] !== 'o' && (body[grid.dy + y]?.[grid.dx + x] ?? '.') !== '.') {
+        r = Math.round(r * 0.45)
+        g = Math.round(g * 0.45)
+        b = Math.round(b * 0.45)
+      }
+      const i = ((oy + y) * side + ox + x) * 4
+      px[i] = r
+      px[i + 1] = g
+      px[i + 2] = b
+      px[i + 3] = 255
+    }
+  })
+  return { pixels: px, side }
 }

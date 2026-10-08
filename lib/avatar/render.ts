@@ -1,7 +1,7 @@
 // 합성한 픽셀을 PNG(data URL)로 만들고 캐싱한다.
 // 같은 설정은 한 번만 그리고, 메모리 → localStorage 순으로 재사용한다.
 
-import { AVATAR_CANVAS, avatarKey, composeAvatar, type AvatarConfig } from './compose'
+import { AVATAR_CANVAS, avatarKey, composeAvatar, composeItem, type AvatarConfig, type WearSlot } from './compose'
 
 // 16px 원본을 정수배로 키워 저장해 두면 어디에 붙여도 흐려지지 않는다
 const EXPORT_SCALE = 8
@@ -34,11 +34,14 @@ function writeStored(key: string, url: string) {
 }
 
 function draw(config: AvatarConfig, background: boolean): string {
-  const size = AVATAR_CANVAS
+  return toPng(composeAvatar(config, { background }), AVATAR_CANVAS)
+}
+
+function toPng(pixels: Uint8ClampedArray<ArrayBuffer>, size: number): string {
   const src = document.createElement('canvas')
   src.width = size
   src.height = size
-  src.getContext('2d')!.putImageData(new ImageData(composeAvatar(config, { background }), size, size), 0, 0)
+  src.getContext('2d')!.putImageData(new ImageData(pixels, size, size), 0, 0)
 
   const out = document.createElement('canvas')
   out.width = size * EXPORT_SCALE
@@ -60,5 +63,16 @@ export function avatarToDataUrl(config: AvatarConfig, { background = true, persi
   const url = draw(config, background)
   memory.set(key, url)
   if (persist) writeStored(key, url)
+  return url
+}
+
+// 상점 아이템만 그린 이미지 (배경 투명)
+export function itemToDataUrl(slot: WearSlot, index: number): string {
+  const key = `item:${slot}:${index}`
+  const cached = memory.get(key)
+  if (cached) return cached
+  const { pixels, side } = composeItem(slot, index)
+  const url = toPng(pixels, side)
+  memory.set(key, url)
   return url
 }
