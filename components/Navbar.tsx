@@ -20,6 +20,7 @@ const NAV_CATEGORIES = [
   { label: "상점", href: "/shop" },
   { label: "가이드", href: "/guide" },
   { label: "후기/문의", href: "/review" },
+  { label: "공지사항", href: "/notice" },
 ];
 
 export default function Navbar() {

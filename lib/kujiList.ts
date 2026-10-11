@@ -19,4 +19,6 @@ export const KUJI_LIST: KujiListItem[] = [
   { href: '/kuji/dragonball', img: '/images/demo-7.jpg', alt: '드래곤볼 쿠지', badge: '쿠지 진행 중', title: '드래곤볼 갓 오브 데스티니 쿠지', price: '10,000 운포인트 / 1장', pct: 55, count: 55, max: 100 },
   { href: '/kuji/conan', img: '/images/demo-8.jpg', alt: '명탐정 코난 쿠지', badge: '쿠지 진행 중', title: '명탐정 코난 랜덤 쿠지', price: '10,000 운포인트 / 1장', pct: 18, count: 18, max: 100 },
   { href: '/kuji/sanrio', img: '/images/demo-9.jpg', alt: '산리오 쿠지', badge: '쿠지 진행 중', title: '산리오 캐릭터즈 쿠지', price: '10,000 운포인트 / 1장', pct: 65, count: 65, max: 100 },
+  // TODO: 뽑기·결과 연출 확인용 임시 쿠지 — 확인 끝나면 지운다 (kujiData.ts에도 있음)
+  { href: '/kuji/test5', img: '/images/demo-1.jpg', alt: '테스트 쿠지', badge: '테스트', title: '[테스트] 5장 쿠지', price: '10,000 운포인트 / 1장', pct: 0, count: 0, max: 5 },
 ]

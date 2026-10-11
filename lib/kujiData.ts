@@ -21,6 +21,13 @@ export interface KujiProduct {
   totalTickets: number
   tiers: KujiTier[]
   tickets: KujiTicket[]
+  // 라스트원상 — 판의 마지막 제비를 뽑은 사람에게 추가로 주는 상 (상위상이 다 나가도 남은 판에 메리트를 준다)
+  lastOne?: KujiLastOne
+}
+
+export interface KujiLastOne {
+  title: string
+  image: string
 }
 
 // 시드 기반 의사난수 (상품마다 항상 같은 배치가 나오도록)
@@ -74,18 +81,20 @@ function buildProduct(
   description: string,
   topPrizes: TopPrizeSeed[],
   preDrawnRatio: number,
-  forceTopDrawn: { grade: string; drawnCount: number }[] = []
+  forceTopDrawn: { grade: string; drawnCount: number }[] = [],
+  lowerTiers: { grade: string; title: string; count: number }[] = LOWER_TIER_TEMPLATE
 ): KujiProduct {
-  const totalTickets = 100
   const tiers: KujiTier[] = [
     ...topPrizes.map(t => ({ grade: t.grade, title: t.title, image: t.image, count: t.count, isTop: true })),
-    ...LOWER_TIER_TEMPLATE.map(t => ({ grade: t.grade, title: t.title, image: null, count: t.count, isTop: false })),
+    ...lowerTiers.map(t => ({ grade: t.grade, title: t.title, image: null, count: t.count, isTop: false })),
   ]
 
   const bag: string[] = []
   tiers.forEach(t => {
     for (let i = 0; i < t.count; i++) bag.push(t.grade)
   })
+  // 상품 구성 장수의 합 (기본 구성은 상위상 3 + 하위상 97 = 100장)
+  const totalTickets = bag.length
 
   const rand = mulberry32(hashSeed(id))
   const shuffledGrades = shuffle(bag, rand)
@@ -183,44 +192,36 @@ export const kujiProducts: KujiProduct[] = [
     ],
     0.65
   ),
+  // TODO: 뽑기·결과 연출 확인용 임시 쿠지 (상위상 1 + 하위상 4 = 5장) — 확인 끝나면 지운다 (kujiList.ts에도 있음)
+  buildProduct(
+    'test5',
+    '[테스트] 5장 쿠지',
+    '/images/demo-1.jpg',
+    '뽑기와 결과 연출을 빠르게 확인하기 위한 테스트 쿠지예요. A상 1장, 하위상 4장으로 총 5장입니다.',
+    [{ grade: 'A', title: '테스트 A상 피규어', image: '/images/demo-1.jpg', count: 1 }],
+    0,
+    [],
+    [
+      { grade: 'C', title: '캔뱃지', count: 2 },
+      { grade: 'D', title: '스티커', count: 2 },
+    ]
+  ),
 ]
+
+// 판별 라스트원상 (보통 좋은 피규어로 구성)
+const LAST_ONES: Record<string, KujiLastOne> = {
+  naoya: { title: '나오야 젠인 라스트원 스페셜 컬러 피규어', image: '/images/naoya.jpg' },
+  onepiece: { title: '루피 기어5 라스트원 메탈릭 피규어', image: '/images/demo-5.jpg' },
+  kimetsu: { title: '렌고쿠 쿄쥬로 라스트원 화염 이펙트 피규어', image: '/images/demo-6.jpg' },
+  dragonball: { title: '손오공 라스트원 초사이어인 블루 피규어', image: '/images/demo-7.jpg' },
+  conan: { title: '코난 & 괴도 키드 라스트원 세트 피규어', image: '/images/demo-8.jpg' },
+  sanrio: { title: '쿠로미 라스트원 스페셜 피규어', image: '/images/demo-9.jpg' },
+  test5: { title: '테스트 라스트원 피규어', image: '/images/demo-3.jpg' },
+}
+kujiProducts.forEach(p => { p.lastOne = LAST_ONES[p.id] })
 
 export function getKujiProduct(id: string): KujiProduct | undefined {
   return kujiProducts.find(p => p.id === id)
 }
 
-export function getRemainingTickets(product: KujiProduct): number {
-  return product.tickets.filter(t => t.status === 'available').length
-}
-
-export function getTierRemaining(product: KujiProduct, grade: string): number {
-  return product.tickets.filter(t => t.grade === grade && t.status === 'available').length
-}
-
-export interface KujiDrawResult {
-  drawn: { ticketId: number; grade: string; tier: KujiTier }[]
-  unavailableIds: number[]
-}
-
-// 선택한 제비가 그 사이에 다른 사람에게 뽑혔을 수 있으니, 실제로 뽑기 전에
-// 전부 아직 available인지 먼저 확인한다. 하나라도 이미 나갔으면 아무것도
-// 뽑지 않고 unavailableIds로 알려줘서, 호출한 쪽이 그 제비만 선택 해제하고
-// 나머지는 유지한 채 다시 고르게 할 수 있도록 한다 (부분 성공은 만들지 않음).
-export function drawKujiTickets(productId: string, ticketIds: number[]): KujiDrawResult {
-  const product = getKujiProduct(productId)
-  if (!product) return { drawn: [], unavailableIds: ticketIds }
-
-  const unavailableIds = ticketIds.filter(id => {
-    const ticket = product.tickets.find(t => t.id === id)
-    return !ticket || ticket.status !== 'available'
-  })
-  if (unavailableIds.length > 0) return { drawn: [], unavailableIds }
-
-  const drawn = ticketIds.map(id => {
-    const ticket = product.tickets.find(t => t.id === id)!
-    ticket.status = 'drawn'
-    const tier = product.tiers.find(t => t.grade === ticket.grade)!
-    return { ticketId: id, grade: ticket.grade, tier }
-  })
-  return { drawn, unavailableIds: [] }
-}
+// 제비판 조회·뽑기 확정은 lib/kujiBoard.ts (서버 API 자리)에서 한다
