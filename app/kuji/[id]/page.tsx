@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { notFound, useRouter } from 'next/navigation'
 import {
@@ -11,17 +11,22 @@ import {
   LockIcon,
   TicketIcon,
 } from '@phosphor-icons/react'
-import {
-  getKujiProduct,
-  getRemainingTickets,
-  getTierRemaining,
-  drawKujiTickets,
-  type KujiTicket,
-} from '@/lib/kujiData'
+import { getKujiProduct, type KujiLastOne, type KujiTier } from '@/lib/kujiData'
+import { confirmKujiDraw, fetchKujiBoard, type KujiBoard } from '@/lib/kujiBoard'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
-import { isLoggedIn } from '@/lib/auth'
+import { getValidSession, isLoggedIn } from '@/lib/auth'
+import KujiReveal from '@/components/KujiReveal'
+import KujiAvatarScene from '@/components/KujiAvatarScene'
+import { getMyProfile } from '@/lib/api'
+import { DEFAULT_AVATAR, normalizeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 
-type DrawResult = ReturnType<typeof drawKujiTickets>['drawn']
+type DrawResult = { ticketId: number; grade: string; tier: KujiTier }[]
+
+// 제비판이 열려 있을 땐 자주, 닫혀 있을 땐 남은 개수만 가끔 맞춘다
+const POLL_OPEN_MS = 4_000
+const POLL_CLOSED_MS = 15_000
+// 다른 사람이 방금 뽑은 제비를 번쩍 표시해 두는 시간
+const TAKEN_FLASH_MS = 1_400
 
 export default function KujiProductPage({ params }: { params: { id: string } }) {
   const product = getKujiProduct(params.id)
@@ -36,8 +41,6 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
   }, [router])
 
   const wishId = `kuji-${product.id}`
-  const [, bump] = useState(0)
-  const rerender = () => bump(n => n + 1)
 
   const [qty, setQty] = useState(1)
   const [isLiked, setIsLiked] = useState(() => isWished(wishId))
@@ -45,11 +48,74 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
   const [selected, setSelected] = useState<number[]>([])
   const [results, setResults] = useState<DrawResult | null>(null)
   const [conflictIds, setConflictIds] = useState<number[]>([])
+  const [confirming, setConfirming] = useState(false)
+  const [justTaken, setJustTaken] = useState<number[]>([])
+  // 뽑기 결과 카드 — 연 제비, "모두 열기"로 한꺼번에 연 제비(차례로 뒤집히는 순서)
+  const [revealed, setRevealed] = useState<number[]>([])
+  const [skipped, setSkipped] = useState<number[]>([])
+  const selectedRef = useRef(selected)
+  selectedRef.current = selected
 
-  const remaining = getRemainingTickets(product)
+  // 제비판 상태는 서버(지금은 lib/kujiBoard 흉내) 기준. 첫 조회 전엔 데모 데이터로 그리고, version 0이라 첫 조회는 항상 전체를 받는다.
+  const [board, setBoard] = useState<KujiBoard>(() => ({
+    version: 0,
+    drawn: product.tickets.filter(t => t.status === 'drawn').map(t => ({ id: t.id, grade: t.grade })),
+  }))
+  const boardRef = useRef(board)
+  const drawnGrade = useMemo(() => new Map(board.drawn.map(d => [d.id, d.grade])), [board])
+
+  // 새 제비판 반영. 다른 사람이 뽑은 제비는 번쩍 표시하고, 내가 고르던 제비였으면 선택을 풀고 알려준다.
+  const applyBoard = (next: KujiBoard, mine: number[] = []) => {
+    const prevIds = new Set(boardRef.current.drawn.map(d => d.id))
+    const taken = next.drawn.map(d => d.id).filter(id => !prevIds.has(id) && !mine.includes(id))
+    boardRef.current = next
+    setBoard(next)
+    if (taken.length === 0) return
+    setJustTaken(prev => [...prev, ...taken])
+    setTimeout(() => setJustTaken(prev => prev.filter(id => !taken.includes(id))), TAKEN_FLASH_MS)
+    const lost = selectedRef.current.filter(id => taken.includes(id))
+    if (lost.length > 0) {
+      setSelected(prev => prev.filter(id => !lost.includes(id)))
+      setConflictIds(lost)
+    }
+  }
+  const applyBoardRef = useRef(applyBoard)
+  applyBoardRef.current = applyBoard
+
+  // 화면이 보일 때만 주기적으로 제비판을 다시 받는다 (바뀐 게 없으면 서버는 빈 응답)
+  useEffect(() => {
+    let cancelled = false
+    const tick = async () => {
+      if (document.visibilityState !== 'visible') return
+      try {
+        const next = await fetchKujiBoard(product.id, boardRef.current.version)
+        if (!cancelled && next) applyBoardRef.current(next)
+      } catch {
+        // 네트워크 오류면 다음 주기에 다시 받는다
+      }
+    }
+    tick()
+    const timer = setInterval(tick, drawOpen ? POLL_OPEN_MS : POLL_CLOSED_MS)
+    const onVisible = () => { if (document.visibilityState === 'visible') tick() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [product.id, drawOpen])
+
+  const remaining = product.totalTickets - board.drawn.length
+  const tierRemaining = (grade: string) =>
+    (product.tiers.find(t => t.grade === grade)?.count ?? 0) - board.drawn.filter(d => d.grade === grade).length
   const topTiers = product.tiers.filter(t => t.isTop)
   const lowerTiers = product.tiers.filter(t => !t.isTop)
   const maxQty = Math.max(1, Math.min(10, remaining))
+
+  // 남은 제비가 줄어 고른 개수보다 적어지면 개수를 맞춘다
+  useEffect(() => {
+    setQty(prev => Math.min(prev, maxQty))
+  }, [maxQty])
 
   const changeQty = (delta: number) =>
     setQty(prev => Math.min(maxQty, Math.max(1, prev + delta)))
@@ -57,40 +123,112 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
   const openDraw = () => {
     setSelected([])
     setResults(null)
+    setRevealed([])
+    setSkipped([])
+    setLastOne(null)
+    setShowLastOne(false)
+    setScenePhase('draw')
+    setCardsReady(false)
     setConflictIds([])
     setDrawOpen(true)
   }
 
+  const allRevealed = results != null && revealed.length >= results.length
+
+  // 결과 무대 위 픽셀 장면 — 내 아바타가 상자에서 제비를 뽑은 뒤에 카드가 깔린다
+  const [myAvatar, setMyAvatar] = useState<AvatarConfig>(DEFAULT_AVATAR)
+  const [scenePhase, setScenePhase] = useState<'draw' | 'idle' | 'strike'>('draw')
+  const [cardsReady, setCardsReady] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    getValidSession().then(session => {
+      if (!session) return
+      getMyProfile(session.token)
+        .then(p => { if (!cancelled) setMyAvatar(normalizeAvatar(p.avatar_config)) })
+        .catch(() => {}) // 못 불러오면 기본 캐릭터로
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  // 라스트원상 — 내 카드를 다 연 뒤 잠깐 뜸을 들였다가, 장면 속 내 아바타에게 번개가 떨어지고 나타난다
+  const [lastOne, setLastOne] = useState<KujiLastOne | null>(null)
+  const [showLastOne, setShowLastOne] = useState(false)
+  const [boltFlash, setBoltFlash] = useState(false)
+  useEffect(() => {
+    if (!allRevealed || !lastOne || showLastOne || scenePhase !== 'idle') return
+    const t = setTimeout(() => {
+      setScenePhase('strike')
+      setBoltFlash(true)
+    }, 600)
+    return () => clearTimeout(t)
+  }, [allRevealed, lastOne, showLastOne, scenePhase])
+  const onStrikeDone = () => {
+    setShowLastOne(true)
+    setScenePhase('idle')
+    setTimeout(() => setBoltFlash(false), 300)
+  }
+  // 라스트원상이 있으면 그것까지 나타난 뒤에 끝난 것으로 본다
+  const revealFinished = allRevealed && (!lastOne || showLastOne)
+
+  // 상위상이 열리는 순간 화면 전체가 한 번 금빛으로 번쩍인다 (카드가 뒤집히는 시간에 맞춰 조금 늦게)
+  const [topFlash, setTopFlash] = useState(false)
+  const flashTop = (delayMs: number) => {
+    setTimeout(() => {
+      setTopFlash(true)
+      setTimeout(() => setTopFlash(false), 700)
+    }, delayMs)
+  }
+  const isTopTicket = (id: number) => results?.find(r => r.ticketId === id)?.tier.isTop ?? false
+
+  const revealOne = (id: number) => {
+    setRevealed(prev => (prev.includes(id) ? prev : [...prev, id]))
+    if (isTopTicket(id)) flashTop(350)
+  }
+  const revealAll = () => {
+    if (!results) return
+    const rest = results.map(r => r.ticketId).filter(id => !revealed.includes(id))
+    setSkipped(rest)
+    setRevealed(prev => [...prev, ...rest])
+    const firstTop = rest.findIndex(isTopTicket)
+    if (firstTop >= 0) flashTop(firstTop * 110 + 350)
+  }
+
   const closeDraw = () => setDrawOpen(false)
 
-  const toggleTicket = (ticket: KujiTicket) => {
-    if (ticket.status !== 'available') return
+  const toggleTicket = (ticketId: number) => {
+    if (drawnGrade.has(ticketId) || confirming) return
     setConflictIds([])
     setSelected(prev => {
-      if (prev.includes(ticket.id)) return prev.filter(id => id !== ticket.id)
+      if (prev.includes(ticketId)) return prev.filter(id => id !== ticketId)
       if (prev.length >= qty) return prev
-      return [...prev, ticket.id]
+      return [...prev, ticketId]
     })
   }
 
-  const confirmDraw = () => {
-    const { drawn, unavailableIds } = drawKujiTickets(product.id, selected)
-
-    if (unavailableIds.length > 0) {
-      // 확정 직전에 다른 사람이 먼저 가져간 제비 — 그 제비만 선택 해제하고
-      // 나머지 선택은 그대로 둔 채 다시 고르게 한다 (부분 뽑기는 하지 않음)
-      setSelected(prev => prev.filter(id => !unavailableIds.includes(id)))
-      setConflictIds(unavailableIds)
-      rerender()
-      return
+  const confirmDraw = async () => {
+    if (confirming) return
+    setConfirming(true)
+    try {
+      const res = await confirmKujiDraw(product.id, selected)
+      if (!res.ok) {
+        // 확정 직전에 다른 사람이 먼저 가져간 제비 — 그 제비만 선택 해제하고
+        // 나머지 선택은 그대로 둔 채 다시 고르게 한다 (부분 뽑기는 하지 않음)
+        applyBoard(res.board)
+        setSelected(prev => prev.filter(id => !res.conflictIds.includes(id)))
+        setConflictIds(res.conflictIds)
+        return
+      }
+      applyBoard(res.board, res.drawn.map(d => d.ticketId))
+      setConflictIds([])
+      // TODO(backend): 서버가 뽑기 확정과 같은 트랜잭션에서 포인트 차감·보관함 적재를 한다
+      setResults(res.drawn.map(d => ({ ...d, tier: product.tiers.find(t => t.grade === d.grade)! })))
+      setLastOne(res.lastOne)
+      setSelected([])
+    } catch {
+      alert('뽑기 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setConfirming(false)
     }
-
-    setConflictIds([])
-    // TODO(backend): 쿠지 백엔드가 생기면 뽑은 상품을 서버 보관함에 적재한다
-    setResults(drawn)
-    setSelected([])
-    setQty(prev => Math.max(1, Math.min(prev, getRemainingTickets(product) || 1)))
-    rerender()
   }
 
   return (
@@ -118,7 +256,7 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', marginBottom: 28 }}>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              <span>남은 제비</span>
+              <span>남은 수량</span>
               <span style={{ fontWeight: 700, color: 'var(--text)' }}>{remaining} / {product.totalTickets}</span>
             </div>
             <div style={{ height: 8, borderRadius: 4, background: 'var(--border)', overflow: 'hidden' }}>
@@ -133,8 +271,8 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
         <div className="section-title" style={{ marginBottom: 14 }}>상위상</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14, marginBottom: 28 }}>
           {topTiers.map(tier => {
-            const tierRemaining = getTierRemaining(product, tier.grade)
-            const soldOut = tierRemaining === 0
+            const left = tierRemaining(tier.grade)
+            const soldOut = left === 0
             return (
               <div key={tier.grade} style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: 'var(--surface)', boxShadow: 'var(--shadow-sm)' }}>
                 <div style={{ position: 'relative', aspectRatio: '1 / 1', background: 'var(--bg-subtle)' }}>
@@ -149,12 +287,30 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
                 <div style={{ padding: '10px 12px' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{tier.title}</div>
                   <div style={{ fontSize: 12, color: soldOut ? 'var(--text-tertiary)' : 'var(--text-secondary)' }}>
-                    {soldOut ? '모두 소진되었습니다' : `${tierRemaining} / ${tier.count}개 남음`}
+                    {soldOut ? '모두 소진되었습니다' : `${left} / ${tier.count}개 남음`}
                   </div>
                 </div>
               </div>
             )
           })}
+          {product.lastOne && (
+            <div className="kuji-lastone-tile">
+              <div style={{ position: 'relative', aspectRatio: '1 / 1', background: 'var(--bg-subtle)' }}>
+                <img
+                  src={product.lastOne.image}
+                  alt={product.lastOne.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', filter: remaining === 0 ? 'blur(2px) brightness(0.5)' : undefined }}
+                />
+                <span className="kuji-last-badge" style={{ top: 8, left: 8, transform: 'none' }}>LAST ONE</span>
+              </div>
+              <div style={{ padding: '10px 12px' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{product.lastOne.title}</div>
+                <div style={{ fontSize: 12, color: remaining === 0 ? 'var(--text-tertiary)' : '#c9b2ff' }}>
+                  {remaining === 0 ? '주인공이 나왔어요' : '마지막 1장을 뽑은 분께 추가로 드려요'}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="section-title" style={{ marginBottom: 14 }}>하위상</div>
@@ -214,32 +370,39 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
         </div>
       </div>
 
-      {drawOpen && (
+      {drawOpen && !results && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--surface)', borderRadius: 18, width: '100%', maxWidth: 680, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                {results ? <><ConfettiIcon size={18} weight="fill" color="var(--gold)" /> 뽑기 결과</> : `제비를 선택해주세요 (${selected.length}/${qty})`}
+                {`번호를 선택해주세요 (${selected.length}/${qty})`}
               </div>
               <button onClick={closeDraw} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-tertiary)' }}>×</button>
             </div>
 
             {conflictIds.length > 0 && !results && (
-              <div style={{ margin: '14px 20px 0', padding: '10px 14px', borderRadius: 10, background: 'var(--danger-tint)', border: '1px solid var(--danger-tint-border)', color: 'var(--danger)', fontSize: 13, fontWeight: 600 }}>
-                제비 {conflictIds.map(id => `#${id}`).join(', ')}은(는) 방금 다른 분이 먼저 선택하셔서 해제됐어요. 나머지 선택은 그대로 남아있으니 빈 자리만 다시 골라주세요.
+              <div role="status" style={{ margin: '14px 20px 0', padding: '10px 14px', borderRadius: 10, background: 'var(--danger-tint)', border: '1px solid var(--danger-tint-border)', color: 'var(--danger)', fontSize: 13, fontWeight: 600 }}>
+                제비 {conflictIds.map(id => `#${id}`).join(', ')}은(는) 방금 다른 분이 먼저 뽑아서 선택이 해제됐어요. 나머지 선택은 그대로 남아있으니 빈 자리만 다시 골라주세요.
+              </div>
+            )}
+            {!results && (
+              <div style={{ margin: '12px 20px 0', fontSize: 12, color: 'var(--text-tertiary)' }}>
+                다른 분이 뽑은 제비는 실시간으로 회색으로 바뀌어요.
               </div>
             )}
 
             <div className="kuji-draw-modal-body" style={{ padding: 20, overflowY: 'auto' }}>
-              {!results ? (
+              {(
                 <div className="kuji-ticket-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 6 }}>
                   {product.tickets.map(ticket => {
                     const isSelected = selected.includes(ticket.id)
-                    const isDrawn = ticket.status === 'drawn'
+                    const drawnAs = drawnGrade.get(ticket.id)
+                    const isDrawn = drawnAs != null
                     return (
                       <button
                         key={ticket.id}
-                        onClick={() => toggleTicket(ticket)}
+                        className={justTaken.includes(ticket.id) ? 'kuji-ticket-taken' : undefined}
+                        onClick={() => toggleTicket(ticket.id)}
                         disabled={isDrawn}
                         style={{
                           aspectRatio: '3 / 4',
@@ -258,7 +421,7 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
                         {isDrawn ? (
                           <>
                             <LockIcon size={12} weight="fill" />
-                            <span>{ticket.grade}상</span>
+                            <span>{drawnAs}상</span>
                           </>
                         ) : (
                           <>
@@ -270,47 +433,86 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
                     )
                   })}
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {results.map(r => (
-                    <div key={r.ticketId} style={{ display: 'flex', alignItems: 'center', gap: 14, border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', background: 'var(--surface)' }}>
-                      <div style={{ width: 52, height: 52, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
-                        {r.tier.image ? <img src={r.tier.image} alt={r.tier.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <GiftIcon size={24} weight="fill" />}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)' }}>#{r.ticketId} · {r.grade}상</div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{r.tier.title}</div>
-                      </div>
-                    </div>
-                  ))}
-                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>당첨된 상품은 보관함에서 확인하고 택배로 받으실 수 있어요.</p>
-                </div>
               )}
             </div>
 
             <div style={{ padding: 16, borderTop: '1px solid var(--border)' }}>
-              {!results ? (
-                <button
-                  onClick={confirmDraw}
-                  disabled={selected.length !== qty}
-                  style={{
-                    width: '100%', padding: 14, borderRadius: 12, border: 'none',
-                    background: selected.length === qty ? 'var(--accent)' : 'var(--border)',
-                    color: selected.length === qty ? '#ffffff' : 'var(--text-tertiary)',
-                    fontSize: 15, fontWeight: 700, cursor: selected.length === qty ? 'pointer' : 'default',
-                  }}
-                >
-                  선택 완료 ({selected.length}/{qty})
-                </button>
-              ) : (
-                <button
-                  onClick={closeDraw}
-                  style={{ width: '100%', padding: 14, borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#ffffff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
-                >
-                  확인
-                </button>
-              )}
+              <button
+                onClick={confirmDraw}
+                disabled={selected.length !== qty || confirming}
+                style={{
+                  width: '100%', padding: 14, borderRadius: 12, border: 'none',
+                  background: selected.length === qty ? 'var(--accent)' : 'var(--border)',
+                  color: selected.length === qty ? '#ffffff' : 'var(--text-tertiary)',
+                  fontSize: 15, fontWeight: 700, cursor: selected.length === qty && !confirming ? 'pointer' : 'default',
+                  opacity: confirming ? 0.7 : 1,
+                }}
+              >
+                {confirming ? '뽑는 중...' : `선택 완료 (${selected.length}/${qty})`}
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 뽑기 결과 — 상자 없이 화면 전체를 어둡게 덮고 카드만 띄운다 */}
+      {drawOpen && results && (
+        <div
+          className={`kuji-stage${topFlash ? ' is-flash' : ''}${boltFlash ? ' is-bolt' : ''}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="쿠지 뽑기 결과"
+        >
+          <KujiAvatarScene
+            avatar={myAvatar}
+            count={results.length}
+            phase={scenePhase}
+            onDrawDone={() => { setCardsReady(true); setScenePhase('idle') }}
+            onStrikeDone={onStrikeDone}
+          />
+
+          <div className="kuji-stage-title">
+            {!cardsReady
+              ? '제비를 뽑는 중...'
+              : showLastOne
+                ? <><ConfettiIcon size={26} weight="fill" color="var(--gold)" /> 라스트원상까지 획득!</>
+                : revealFinished
+                  ? <><ConfettiIcon size={26} weight="fill" color="var(--gold)" /> 뽑기 결과</>
+                  : '결과를 확인해보세요'}
+          </div>
+          <div className="kuji-stage-sub">
+            {!cardsReady
+              ? `${results.length}장을 뽑고 있어요`
+              : showLastOne
+                ? '이 판의 마지막 제비를 뽑으셨어요. 라스트원상도 보관함에 함께 담겨요.'
+                : revealFinished
+                  ? '당첨된 상품은 보관함에서 확인하고 택배로 받으실 수 있어요.'
+                  : `${results.length}장 중 ${revealed.length}장 열었어요`}
+          </div>
+
+          <div className="kuji-stage-cards">
+            {cardsReady && (
+              <KujiReveal
+                items={results}
+                revealed={revealed}
+                skipped={skipped}
+                onReveal={revealOne}
+                lastOne={lastOne}
+                showLastOne={showLastOne}
+              />
+            )}
+          </div>
+
+          <div className="kuji-stage-actions">
+            {!cardsReady ? null : !allRevealed ? (
+              <button type="button" className="kuji-stage-btn is-ghost" onClick={revealAll}>
+                모두 열기
+              </button>
+            ) : revealFinished ? (
+              <button type="button" className="kuji-stage-btn" onClick={closeDraw}>
+                확인
+              </button>
+            ) : null}
           </div>
         </div>
       )}
