@@ -18,7 +18,8 @@ import { getValidSession, clearAuth } from '@/lib/auth'
 import { getMyProfile, ApiError, type MyProfileResponse } from '@/lib/api'
 import { useRaffleEntryPhases } from '@/hooks/useRaffleEntryPhases'
 import { isOngoingPhase } from '@/lib/raffle'
-import PixelAvatar from '@/components/PixelAvatar'
+import AvatarRoom from '@/components/AvatarRoom'
+import { DEFAULT_ROOM_BACKGROUND, getRoomBackground, ROOM_UPDATED_EVENT, type RoomBackgroundId } from '@/lib/avatar/rooms'
 import { normalizeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 import { AVATAR_UPDATED_EVENT } from '@/lib/avatar/events'
 
@@ -73,6 +74,15 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
     return () => { cancelled = true }
   }, [router])
 
+  // 캐릭터 방 배경 — 캐릭터 꾸미기에서 바꾸면 바로 반영
+  const [roomBg, setRoomBg] = useState<RoomBackgroundId>(DEFAULT_ROOM_BACKGROUND)
+  useEffect(() => {
+    setRoomBg(getRoomBackground())
+    const onRoom = (e: Event) => setRoomBg((e as CustomEvent<RoomBackgroundId>).detail)
+    window.addEventListener(ROOM_UPDATED_EVENT, onRoom)
+    return () => window.removeEventListener(ROOM_UPDATED_EVENT, onRoom)
+  }, [])
+
   // 캐릭터 꾸미기에서 저장하면 프로필 카드도 바로 바꾼다
   useEffect(() => {
     const onUpdate = (e: Event) => {
@@ -89,16 +99,11 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
     <div className="mypage-layout">
       <div className="sidebar">
         <div className="profile-card">
-          <Link href="/mypage/avatar" className="profile-avatar profile-avatar-pixel" aria-label="캐릭터 꾸미기">
+          <Link href="/mypage/avatar" className="profile-room" aria-label="캐릭터 꾸미기">
             {profile && (
-              <PixelAvatar
-                config={avatarConfig}
-                size={80}
-                alt={`${profile.nickname}의 캐릭터`}
-                persist
-              />
+              <AvatarRoom config={avatarConfig} background={roomBg} label={`${profile.nickname}의 캐릭터`} />
             )}
-            <span className="profile-avatar-edit"><PencilSimpleIcon size={12} weight="bold" /></span>
+            <span className="profile-room-edit"><PencilSimpleIcon size={12} weight="bold" /> 꾸미기</span>
           </Link>
           <div className="profile-name">{profile?.nickname ?? '불러오는 중...'}</div>
           <div className="profile-email">{profile?.email ?? ''}</div>

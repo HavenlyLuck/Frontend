@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { ArrowCounterClockwiseIcon, CheckIcon, LightningIcon, PaintBrushIcon } from '@phosphor-icons/react'
 import PixelAvatar from '@/components/PixelAvatar'
 import LightningDrawScene from '@/components/LightningDrawScene'
+import AvatarRoom from '@/components/AvatarRoom'
+import { DEFAULT_ROOM_BACKGROUND, getRoomBackground, ROOM_BACKGROUNDS, setRoomBackground, type RoomBackgroundId } from '@/lib/avatar/rooms'
 import { SAMPLE_MY_ENTRY, sampleEntrants } from '@/lib/lightningDraw/sample'
 import { getValidSession } from '@/lib/auth'
 import { getMyAvatarItems, getMyProfile, updateMyAvatar, ApiError } from '@/lib/api'
@@ -50,6 +52,7 @@ const TABS: Tab[] = [
 
 // 기본 모드의 "아이템" 탭 — 쌀포인트 상점에서 산 무기·모자·망토를 끼고 벗는다
 const ITEMS_TAB_ID = 'items'
+const BG_TAB_ID = 'background'
 const ITEM_SLOT_LABELS: Record<ItemSlot, string> = { weapon: '무기', hat: '모자', cape: '망토' }
 
 // 기본 모드: 직접 꾸민 캐릭터 + 아이템 / 스킨 모드: 산 전체 스킨으로 통째로 바꾼다
@@ -76,6 +79,8 @@ export default function AvatarPage() {
   const [saved, setSaved] = useState<AvatarConfig | null>(null)
   const [hasSaved, setHasSaved] = useState(true)
   const [draft, setDraft] = useState<AvatarConfig>(DEFAULT_AVATAR)
+  const [roomBg, setRoomBg] = useState<RoomBackgroundId>(DEFAULT_ROOM_BACKGROUND)
+  useEffect(() => { setRoomBg(getRoomBackground()) }, [])
   const [tabId, setTabId] = useState(TABS[0].id)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
@@ -206,8 +211,8 @@ export default function AvatarPage() {
 
       <div className="avatar-editor">
         <div className="avatar-preview-card">
-          <div className="avatar-preview">
-            <PixelAvatar config={draft} size={192} alt="내 캐릭터 미리보기" />
+          <div className="avatar-preview" style={{ width: 220 }}>
+            <AvatarRoom config={draft} background={roomBg} label="내 캐릭터 미리보기" />
           </div>
           <button
             type="button"
@@ -300,7 +305,7 @@ export default function AvatarPage() {
           </div>
 
           <div className="avatar-tabs" role="tablist">
-            {[...TABS, { id: ITEMS_TAB_ID, label: '아이템' }].map(t => (
+            {[...TABS, { id: ITEMS_TAB_ID, label: '아이템' }, { id: BG_TAB_ID, label: '배경' }].map(t => (
               <button
                 key={t.id}
                 type="button"
@@ -345,6 +350,32 @@ export default function AvatarPage() {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 캐릭터 방 배경 — 고르는 즉시 마이페이지 프로필·상점 미리보기에도 반영 */}
+          {tabId === BG_TAB_ID && (
+            <div className="avatar-option-group">
+              <div className="avatar-option-label">배경</div>
+              <div className="avatar-style-grid">
+                {ROOM_BACKGROUNDS.map(b => {
+                  const selected = roomBg === b.id
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      className={`avatar-style-option${selected ? ' selected' : ''}`}
+                      aria-pressed={selected}
+                      onClick={() => { setRoomBg(b.id); setRoomBackground(b.id) }}
+                    >
+                      <span className="avatar-bg-thumb">
+                        <AvatarRoom config={draft} background={b.id} label={`${b.name} 배경`} />
+                      </span>
+                      <span>{b.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )}
 
