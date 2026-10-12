@@ -11,7 +11,7 @@
   --text-tertiary: #868a9e; /* 2026-10-03: lightened from #6e7180 — old value was 3.27:1 on --surface, below WCAG AA 4.5:1 for normal text */
 
   /* 2026-10-03: darkened from #e0384c so white button text clears WCAG AA (4.34 → 4.65:1).
-     Hardcoded copies of this red also live in app/icon.svg, lib/roulette/physics.ts, components/RaffleDrawCanvas.tsx,
+     Hardcoded copies of this red also live in app/icon.svg, lib/lightningDraw/scene.ts, components/LightningDrawScene.tsx,
      and one glow in app/admin/page.tsx — update those by hand if this ever changes again. */
   --accent: #d93347;
   --accent-hover: #c92c40;
@@ -2148,6 +2148,381 @@ nav {
     position: static;
   }
 }
+/* 쌀 응모권 보유 표시 (응모 목록 상단) */
+.ssal-ticket-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--gold);
+  background: var(--gold-tint);
+  border: 1px solid var(--gold-tint-border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: help;
+}
+.ssal-ticket-chip b {
+  font-weight: 800;
+}
+
+/* 컨텐츠 모아보기 */
+.contents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.contents-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.contents-card.is-live:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold-tint-border);
+  box-shadow: 0 8px 28px rgba(212, 175, 106, 0.18);
+}
+.contents-card.is-soon {
+  opacity: 0.6;
+}
+.contents-card-art {
+  position: relative;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  background: radial-gradient(ellipse at 50% 70%, rgba(212, 175, 106, 0.18), transparent 70%), var(--bg-subtle);
+}
+.contents-card-art img {
+  border-radius: var(--radius-md);
+}
+.contents-card-crown {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-8deg);
+  color: var(--gold);
+  filter: drop-shadow(0 0 8px rgba(243, 201, 79, 0.6));
+}
+.contents-card-body {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.contents-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-strong);
+}
+.contents-badge.is-live {
+  background: var(--accent-tint);
+  color: var(--accent-fg);
+  border-color: var(--accent-tint-border);
+}
+.contents-card-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
+}
+.contents-card-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+.contents-card-meta {
+  font-size: 12px;
+  color: var(--gold);
+  margin-top: 2px;
+}
+
+/* 아바타 자랑 대회 */
+.contest-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  margin-bottom: 12px;
+}
+.contest-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.contest-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text);
+}
+.contest-hero-period {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+.contest-hero-left {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold);
+  background: var(--gold-tint);
+  border: 1px solid var(--gold-tint-border);
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+.contest-podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px 12px 0;
+  margin-bottom: 20px;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(ellipse at 50% 80%, rgba(212, 175, 106, 0.16), transparent 70%), var(--surface);
+  border: 1px solid var(--border);
+}
+.contest-podium-spot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.contest-podium-spot img {
+  border-radius: var(--radius-md);
+}
+.contest-podium-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contest-podium-votes {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--accent-fg);
+}
+.contest-podium-block {
+  width: 120px;
+  margin-top: 6px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  background: var(--bg-subtle);
+  border-top: 3px solid;
+  border-radius: 8px 8px 0 0;
+}
+.contest-podium-spot.rank-1 .contest-podium-block { height: 70px; }
+.contest-podium-spot.rank-2 .contest-podium-block { height: 48px; }
+.contest-podium-spot.rank-3 .contest-podium-block { height: 34px; }
+.contest-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.contest-prizes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.contest-prize {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.contest-prize-rank {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+.contest-prize-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.contest-rules {
+  margin: 0;
+  padding: 14px 16px 14px 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+.contest-me {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 26px;
+  border: 1px solid var(--gold-tint-border);
+  border-radius: var(--radius-lg);
+  background: var(--gold-tint);
+  font-size: 14px;
+  color: var(--text);
+}
+.contest-me img {
+  border-radius: 8px;
+}
+.contest-me-vote {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 700;
+}
+.contest-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.contest-btn.is-ghost {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+.contest-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.contest-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.contest-list-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.contest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+.contest-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 30px 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.contest-card.is-mine {
+  border-color: var(--accent-tint-border);
+  box-shadow: 0 0 0 1px var(--accent-tint-border);
+}
+.contest-card img {
+  border-radius: var(--radius-md);
+}
+.contest-card-rank {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-tertiary);
+}
+.contest-card-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contest-card-me {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+}
+.contest-card-votes {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--accent-fg);
+}
+.contest-vote-btn {
+  width: 100%;
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 0;
+  border-radius: 10px;
+  border: 1px solid var(--accent-tint-border);
+  background: var(--accent-tint);
+  color: var(--accent-fg);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.contest-vote-btn:disabled {
+  border-color: var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-tertiary);
+  cursor: default;
+}
+@media (max-width: 640px) {
+  .contest-info { grid-template-columns: 1fr; }
+  .contest-podium { gap: 8px; }
+  .contest-podium-block { width: 92px; }
+}
+
 /* 공지사항 */
 .status-badge.notice-pin {
   display: inline-flex;

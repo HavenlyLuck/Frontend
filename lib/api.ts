@@ -115,6 +115,9 @@ export function verifyAdmin(token: string) {
 export interface PointsResponse {
   woon_point: number
   ssal_point: number
+  // 쌀 응모권 — 대회·이벤트 보상으로만 받는 무료 응모권(낙첨돼도 쌀포인트 환급 없음, 돈으로는 못 삼)
+  // TODO(backend): 아직 운영 서버에 없음 — 생기기 전까지는 0장으로 표시
+  ssal_ticket?: number
 }
 
 export function getMyPoints(token: string) {
@@ -194,7 +197,6 @@ export interface RaffleProductResponse {
   drawn_at: string | null
   winner_entry_number: number | null
   winner_user_id: number | null
-  draw_video_url: string | null
   remaining_seconds: number
   is_open: boolean
   remaining_slots: number
@@ -213,17 +215,6 @@ export function getRaffleProduct(raffleProductId: number) {
 
 export function getPendingDrawProducts(token: string) {
   return request<RaffleProductResponse[]>('/raffles/pending-draw', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-}
-
-export interface RaffleEntrantResponse {
-  entry_number: number
-  ticket_count: number
-}
-
-export function getRaffleEntrants(token: string, raffleProductId: number) {
-  return request<RaffleEntrantResponse[]>(`/raffles/${raffleProductId}/entrants`, {
     headers: { Authorization: `Bearer ${token}` },
   })
 }
@@ -290,7 +281,6 @@ export interface MyRaffleEntryResponse {
   ends_at: string
   sold_out_at: string | null
   winner_entry_number: number | null
-  draw_video_url: string | null
 }
 
 export function getMyRaffleEntries(token: string) {

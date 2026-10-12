@@ -3,16 +3,15 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  EyeIcon,
-  ChatCircleIcon,
   GiftIcon,
-  HeartIcon,
   StorefrontIcon,
   TicketIcon,
 } from "@phosphor-icons/react";
 import { getStoreProducts, type RaffleProductResponse, type StoreProductResponse } from "@/lib/api";
 import CardImage from "@/components/CardImage";
 import StoreProductCard from "@/components/StoreProductCard";
+import KujiCard from "@/components/KujiCard";
+import { KUJI_LIST, type KujiListItem } from "@/lib/kujiList";
 import { getListedRaffles, isListedRaffleVisible, isSoldOutRaffle } from "@/lib/raffle";
 
 // 마감임박 섹션과 히어로 캐러셀은 아직 "준비중" 상태로 표시 (응모상품 섹션만 백엔드 연동됨)
@@ -62,140 +61,19 @@ function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; r
   );
 }
 
-const KUJI_ITEMS = [
-  {
-    href: "/kuji/naoya",
-    img: "/images/naoya.jpg",
-    alt: "나오야 젠인 쿠지",
-    badge: "쿠지 진행 중",
-    title: "주술회전 나오야 젠인 쿠지",
-    price: "10,000 운포인트",
-    pct: 42,
-    count: 21,
-    max: 50,
-    views: 51,
-    wishes: 9,
-    chats: 2,
-  },
-  {
-    href: "/kuji/onepiece",
-    img: "/images/demo-5.jpg",
-    alt: "원피스 쿠지",
-    badge: "쿠지 진행 중",
-    title: "원피스 A상 루피 쿠지",
-    price: "10,000 운포인트",
-    pct: 68,
-    count: 34,
-    max: 50,
-    views: 77,
-    wishes: 18,
-    chats: 6,
-  },
-  {
-    href: "/kuji/kimetsu",
-    img: "/images/demo-6.jpg",
-    alt: "귀멸의 칼날 쿠지",
-    badge: "쿠지 진행 중",
-    title: "귀멸의 칼날 최애의 쿠지",
-    price: "10,000 운포인트",
-    pct: 25,
-    count: 12,
-    max: 50,
-    views: 33,
-    wishes: 5,
-    chats: 1,
-  },
-  {
-    href: "/kuji/dragonball",
-    img: "/images/demo-7.jpg",
-    alt: "드래곤볼 쿠지",
-    badge: "쿠지 진행 중",
-    title: "드래곤볼 갓 오브 데스티니 쿠지",
-    price: "10,000 운포인트",
-    pct: 55,
-    count: 27,
-    max: 50,
-    views: 62,
-    wishes: 14,
-    chats: 4,
-  },
-  {
-    href: "/kuji/conan",
-    img: "/images/demo-8.jpg",
-    alt: "명탐정 코난 쿠지",
-    badge: "쿠지 진행 중",
-    title: "명탐정 코난 랜덤 쿠지",
-    price: "10,000 운포인트",
-    pct: 18,
-    count: 9,
-    max: 50,
-    views: 24,
-    wishes: 3,
-    chats: 1,
-  },
-  {
-    href: "/kuji/sanrio",
-    img: "/images/demo-9.jpg",
-    alt: "산리오 쿠지",
-    badge: "쿠지 진행 중",
-    title: "산리오 캐릭터즈 쿠지",
-    price: "10,000 운포인트",
-    pct: 61,
-    count: 30,
-    max: 50,
-    views: 58,
-    wishes: 16,
-    chats: 5,
-  },
-];
-
 function pickRandom<T>(pool: T[], n: number): T[] {
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, n);
 }
 
-function KujiHomeCard({ item }: { item: (typeof KUJI_ITEMS)[number] }) {
-  return (
-    <Link className="product-card-home" href={item.href}>
-      <div className="card-img">
-        <CardImage src={item.img} alt={item.alt} />
-      </div>
-      <div className="card-body">
-        <div className="card-raffle-badge">
-          <GiftIcon size={11} weight="fill" />
-          {item.badge}
-        </div>
-        <div className="card-title">{item.title}</div>
-        <div className="card-price">{item.price}</div>
-        <div className="card-progress-row">
-          <div className="card-progress-bar">
-            <div className="card-progress-fill" style={{ width: `${item.pct}%` }} />
-          </div>
-          <span className="card-progress-pct">{item.pct}%</span>
-        </div>
-        <div className="card-progress-label">
-          <span>
-            <span className="cnt">{item.count}명</span> 참여
-          </span>
-          <span>최대 {item.max}명</span>
-        </div>
-        <div className="card-stats">
-          <span><EyeIcon size={12} /> {item.views}</span>
-          <span><HeartIcon size={12} /> {item.wishes}</span>
-          <span><ChatCircleIcon size={12} /> {item.chats}</span>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
 export default function HomePage() {
-  const [kujiItems, setKujiItems] = useState(KUJI_ITEMS.slice(0, 4));
+  // 홈 쿠지 — 테스트 쿠지는 빼고 최대 4개
+  const [kujiItems, setKujiItems] = useState<KujiListItem[]>([]);
   const [shopProducts, setShopProducts] = useState<StoreProductResponse[]>([]);
   const [shopLoaded, setShopLoaded] = useState(false);
 
   useEffect(() => {
-    setKujiItems(pickRandom(KUJI_ITEMS, 4));
+    setKujiItems(pickRandom(KUJI_LIST.filter((k) => !k.test), 4));
     // 상점: 백엔드에 등록된 실제 상품 중 재고 있는 것 우선으로 4개
     getStoreProducts()
       .then((list) => {
@@ -294,11 +172,18 @@ export default function HomePage() {
           <Link className="see-all" href="/kuji">전체보기 →</Link>
         </div>
 
-        <div className="product-grid-home">
-          {kujiItems.map((item, i) => (
-            <KujiHomeCard key={i} item={item} />
-          ))}
-        </div>
+        {kujiItems.length === 0 ? (
+          <div className="soon-strip">
+            <span className="soon-dot" />
+            지금 열린 쿠지가 없어요. 새 쿠지가 열리면 여기에 표시돼요.
+          </div>
+        ) : (
+          <div className="product-grid-home">
+            {kujiItems.map(item => (
+              <KujiCard key={item.href} item={item} />
+            ))}
+          </div>
+        )}
 
         {/* 상점 */}
         <div className="section-header">
