@@ -14,8 +14,10 @@ export interface Product {
   maxTickets?: number
   ticketPrice?: string
   description?: string
-  kujiItems?: KujiItem[]
-  lowerCount?: number
+  kujiItems?: KujiItem[] // 상위상
+  lowerItems?: KujiItem[] // 하위상 (상품명·사진·개수·원가)
+  lowerCount?: number // 하위상 총 장수
+  lastOne?: { name: string; img: string; cost: string } // 라스트원상 (마지막 장을 뽑은 사람에게 추가로, 장수에는 안 들어감)
   deadlineLabel?: string
 }
 
