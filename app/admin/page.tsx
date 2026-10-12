@@ -241,6 +241,8 @@ export default function AdminPage() {
     setDeadlineDays(1)
     setStoreCategory(null)
     setKujiItems([{ name: '', img: '', count: '1', cost: '' }])
+    setLowerItems([{ name: '', img: '', count: '1', cost: '' }])
+    setLastOneItem({ name: '', img: '', cost: '' })
     setRaffleSubmitError(null)
   }
 
@@ -277,14 +279,110 @@ export default function AdminPage() {
       description: sp.description ?? undefined,
     }
   }
+  // 쿠지 구성 — 상위상·하위상 모두 상품명·사진·개수·원가를 한 줄씩
   const [kujiItems, setKujiItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1', cost: '' }])
-  const kujiItemCount = kujiItems.filter(it => it.name.trim()).reduce((sum, it) => sum + (Number(it.count) || 1), 0)
-  const kujiLowerCount = Number(newP.stock) || 0
+  const [lowerItems, setLowerItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1', cost: '' }])
+  const toNum = (s: string) => Number(s.replace(/[^0-9]/g, '')) || 0
+  const filledItems = (list: KujiItem[]) => list.filter(it => it.name.trim())
+  const sumCount = (list: KujiItem[]) => filledItems(list).reduce((sum, it) => sum + (Number(it.count) || 1), 0)
+  const sumCost = (list: KujiItem[]) => filledItems(list).reduce((sum, it) => sum + (Number(it.count) || 1) * toNum(it.cost), 0)
+  const kujiItemCount = sumCount(kujiItems)
+  const kujiLowerCount = sumCount(lowerItems)
   const kujiTotalPapers = kujiItemCount + kujiLowerCount
-  const addKujiItem = () => setKujiItems(prev => [...prev, { name: '', img: '', count: '1', cost: '' }])
-  const removeKujiItem = (idx: number) => setKujiItems(prev => prev.filter((_, i) => i !== idx))
-  const updateKujiItem = (idx: number, patch: Partial<KujiItem>) =>
-    setKujiItems(prev => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
+  // 원가 책정용 — 총 원가, 예상 매출(총 장수 × 1장 가격), 마진
+  // 라스트원상 — 제비가 아니라 마지막 장을 뽑은 사람에게 추가로 주는 상이라 장수에는 안 들어가고 원가에만 더한다
+  const [lastOneItem, setLastOneItem] = useState({ name: '', img: '', cost: '' })
+  const lastOneCost = lastOneItem.name.trim() ? toNum(lastOneItem.cost) : 0
+  const kujiTicketPrice = toNum(newP.ticketPrice) || 1000
+  const kujiTotalCost = sumCost(kujiItems) + sumCost(lowerItems) + lastOneCost
+  const kujiRevenue = kujiTotalPapers * kujiTicketPrice
+  const kujiMargin = kujiRevenue - kujiTotalCost
+  const kujiMarginRate = kujiRevenue > 0 ? Math.round((kujiMargin / kujiRevenue) * 1000) / 10 : 0
+
+  // 상위상·하위상 입력 줄 — 등급은 순서대로 A, B, … (하위상은 상위상 다음 글자부터)
+  function renderKujiRows({ label, list, setList, gradeStart, placeholder }: {
+    label: string
+    list: KujiItem[]
+    setList: React.Dispatch<React.SetStateAction<KujiItem[]>>
+    gradeStart: number
+    placeholder: string
+  }) {
+    const update = (idx: number, patch: Partial<KujiItem>) =>
+      setList(prev => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</div>
+          <button
+            type="button"
+            aria-label={`${label.split(' ')[0]} 추가`}
+            onClick={() => setList(prev => [...prev, { name: '', img: '', count: '1', cost: '' }])}
+            style={{ border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', borderRadius: 8, width: 24, height: 24, fontSize: 15, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
+          >+</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {list.map((item, idx) => (
+            <div key={idx} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
+              <span style={{ flexShrink: 0, minWidth: 34, textAlign: 'center', fontSize: 12, fontWeight: 800, color: 'var(--gold)', background: 'var(--gold-tint)', border: '1px solid var(--gold-tint-border)', borderRadius: 6, padding: '4px 6px' }}>
+                {String.fromCharCode(65 + gradeStart + idx)}상
+              </span>
+              {item.img ? (
+                <img src={item.img} alt="미리보기" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-subtle)', flexShrink: 0 }} />
+              )}
+              <input
+                style={{ ...lightInput, flex: 1, minWidth: 140 }}
+                placeholder={placeholder}
+                value={item.name}
+                onChange={e => update(idx, { name: e.target.value })}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                <input
+                  style={{ ...lightInput, width: 56, textAlign: 'center', padding: '8px 6px' }}
+                  type="number"
+                  min="1"
+                  placeholder="1"
+                  aria-label="개수"
+                  value={item.count}
+                  onChange={e => update(idx, { count: e.target.value })}
+                />
+                <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>개</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                <input
+                  style={{ ...lightInput, width: 84, textAlign: 'center', padding: '8px 6px' }}
+                  placeholder="개당 원가"
+                  aria-label="개당 원가(원)"
+                  value={item.cost}
+                  onChange={e => update(idx, { cost: e.target.value })}
+                />
+                <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>원</span>
+              </div>
+              <label style={{ ...lightInput, width: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: item.img ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 12, padding: '8px 10px' }}>
+                <PaperclipIcon size={12} /> 사진
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const reader = new FileReader()
+                    reader.onload = () => update(idx, { img: typeof reader.result === 'string' ? reader.result : '' })
+                    reader.readAsDataURL(file)
+                  }}
+                />
+              </label>
+              {list.length > 1 && (
+                <button type="button" onClick={() => setList(prev => prev.filter((_, i) => i !== idx))} style={{ border: 'none', background: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>삭제</button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   const chartData = revenueTab === '일별' ? getDailyWindow(revDate) : getMonthlyWindow(revMonth.slice(0, 4))
   const maxAmt = Math.max(...chartData.map(d => d.amount), 1)
@@ -597,9 +695,11 @@ export default function AdminPage() {
                   <input style={lightInput} placeholder="예: 30,000원" value={newP.cost} onChange={e => setNewP(p => ({ ...p, cost: e.target.value }))} />
                 </div>
               )}
-              {productTab !== '쿠지' && (
+              {(
                 <div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>상품 이미지 (선택)</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>
+                    {productTab === '쿠지' ? '쿠지 대표 이미지 * (목록·배너에 쓰여요, 상위상 사진과 별개)' : '상품 이미지 (선택)'}
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     {newP.img && (
                       <img src={newP.img} alt="미리보기" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', border: '1px solid var(--border-strong)', flexShrink: 0 }} />
@@ -626,65 +726,63 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+              {productTab === '쿠지' && renderKujiRows({
+                label: '상위상 (상품명·사진·개수·원가) *',
+                list: kujiItems,
+                setList: setKujiItems,
+                gradeStart: 0,
+                placeholder: '예: 나오야 젠인 피규어',
+              })}
+              {productTab === '쿠지' && renderKujiRows({
+                label: '하위상 (상품명·사진·개수·원가) *',
+                list: lowerItems,
+                setList: setLowerItems,
+                gradeStart: kujiItems.length,
+                placeholder: '예: 캔뱃지, 클리어파일',
+              })}
               {productTab === '쿠지' && (
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>상품명 (상위상, 이미지 포함) *</div>
-                    <button type="button" onClick={addKujiItem} style={{ border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', borderRadius: 8, width: 24, height: 24, fontSize: 15, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}>+</button>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 8 }}>
+                    라스트원상 (선택 · 마지막 1장을 뽑은 분께 추가로, 장수에는 안 들어가요)
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {kujiItems.map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
-                        {item.img ? (
-                          <img src={item.img} alt="미리보기" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-                        ) : (
-                          <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-subtle)', flexShrink: 0 }} />
-                        )}
-                        <input
-                          style={{ ...lightInput, flex: 1 }}
-                          placeholder={`상품명 ${idx + 1} (예: 나오야 젠인 피규어)`}
-                          value={item.name}
-                          onChange={e => updateKujiItem(idx, { name: e.target.value })}
-                        />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                          <input
-                            style={{ ...lightInput, width: 56, textAlign: 'center', padding: '8px 6px' }}
-                            type="number"
-                            min="1"
-                            placeholder="1"
-                            value={item.count}
-                            onChange={e => updateKujiItem(idx, { count: e.target.value })}
-                          />
-                          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>개</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                          <input
-                            style={{ ...lightInput, width: 84, textAlign: 'center', padding: '8px 6px' }}
-                            placeholder="제품 원가"
-                            value={item.cost}
-                            onChange={e => updateKujiItem(idx, { cost: e.target.value })}
-                          />
-                        </div>
-                        <label style={{ ...lightInput, width: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: item.img ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 12, padding: '8px 10px' }}>
-                          <PaperclipIcon size={12} /> 이미지
-                          <input
-                            type="file"
-                            accept="image/*"
-                            style={{ display: 'none' }}
-                            onChange={e => {
-                              const file = e.target.files?.[0]
-                              if (!file) return
-                              const reader = new FileReader()
-                              reader.onload = () => updateKujiItem(idx, { img: typeof reader.result === 'string' ? reader.result : '' })
-                              reader.readAsDataURL(file)
-                            }}
-                          />
-                        </label>
-                        {kujiItems.length > 1 && (
-                          <button type="button" onClick={() => removeKujiItem(idx)} style={{ border: 'none', background: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>삭제</button>
-                        )}
-                      </div>
-                    ))}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, border: '1px solid #8b5cf6', borderRadius: 10, padding: 10 }}>
+                    <span className="kuji-last-badge" style={{ position: 'static', transform: 'none', flexShrink: 0 }}>LAST ONE</span>
+                    {lastOneItem.img ? (
+                      <img src={lastOneItem.img} alt="미리보기" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-subtle)', flexShrink: 0 }} />
+                    )}
+                    <input
+                      style={{ ...lightInput, flex: 1, minWidth: 140 }}
+                      placeholder="예: 나오야 젠인 라스트원 스페셜 컬러 피규어"
+                      value={lastOneItem.name}
+                      onChange={e => setLastOneItem(v => ({ ...v, name: e.target.value }))}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      <input
+                        style={{ ...lightInput, width: 84, textAlign: 'center', padding: '8px 6px' }}
+                        placeholder="원가"
+                        aria-label="라스트원상 원가(원)"
+                        value={lastOneItem.cost}
+                        onChange={e => setLastOneItem(v => ({ ...v, cost: e.target.value }))}
+                      />
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>원</span>
+                    </div>
+                    <label style={{ ...lightInput, width: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: lastOneItem.img ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 12, padding: '8px 10px' }}>
+                      <PaperclipIcon size={12} /> 사진
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const reader = new FileReader()
+                          reader.onload = () => setLastOneItem(v => ({ ...v, img: typeof reader.result === 'string' ? reader.result : '' }))
+                          reader.readAsDataURL(file)
+                        }}
+                      />
+                    </label>
                   </div>
                 </div>
               )}
@@ -698,9 +796,6 @@ export default function AdminPage() {
                     onChange={e => setNewP(p => ({ ...p, description: e.target.value }))}
                   />
                 </div>
-              )}
-              {productTab === '쿠지' && (
-                <div><div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>하위상 갯수 *</div><input style={lightInput} placeholder="예: 40" type="number" min="0" value={newP.stock} onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))} /></div>
               )}
               {productTab !== '응모' && productTab !== '쿠지' && (
                 <div><div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>수량 *</div><input style={lightInput} placeholder="올릴 수량 입력 (예: 10)" type="number" min="1" value={newP.stock} onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))} /></div>
@@ -734,14 +829,31 @@ export default function AdminPage() {
                 <div style={{ color: 'var(--danger)', fontSize: 12 }}>{raffleSubmitError}</div>
               )}
               {productTab === '쿠지' && (
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>총 쿠지 종이 수 (자동 계산: 상품 수 + 하위상 갯수)</div>
-                    <div style={{ ...lightInput, background: 'var(--bg-subtle)', color: kujiTotalPapers ? 'var(--text)' : 'var(--text-tertiary)' }}>
-                      {kujiTotalPapers ? `${kujiTotalPapers.toLocaleString()}장 (상품 ${kujiItemCount}개 + 하위상 ${kujiLowerCount}개)` : '상품명과 하위상 갯수를 입력하면 계산돼요'}
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>1장 가격</div>
+                  <input style={lightInput} placeholder="기본값: 1,000 운포인트" value={newP.ticketPrice} onChange={e => setNewP(p => ({ ...p, ticketPrice: e.target.value }))} />
+                </div>
+              )}
+              {productTab === '쿠지' && (
+                // 원가 책정용 자동 계산 — 구성·원가·가격을 바꾸면 바로 다시 계산된다
+                <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', background: 'var(--bg-subtle)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+                  {[
+                    { label: '총 장수', value: kujiTotalPapers ? `${kujiTotalPapers.toLocaleString()}장` : '-', sub: `상위 ${kujiItemCount} · 하위 ${kujiLowerCount}` },
+                    { label: '총 원가', value: kujiTotalCost ? `${kujiTotalCost.toLocaleString()}원` : '-', sub: lastOneCost ? '개수 × 원가 합 + 라스트원상' : '개수 × 원가 합' },
+                    { label: '예상 매출', value: kujiRevenue ? `${kujiRevenue.toLocaleString()}P` : '-', sub: `${kujiTicketPrice.toLocaleString()}P × ${kujiTotalPapers}장` },
+                    {
+                      label: '예상 마진',
+                      value: kujiRevenue ? `${kujiMargin.toLocaleString()}` : '-',
+                      sub: kujiRevenue ? `마진율 ${kujiMarginRate}%` : '',
+                      color: kujiRevenue ? (kujiMargin < 0 ? 'var(--danger)' : 'var(--success)') : undefined,
+                    },
+                  ].map(s => (
+                    <div key={s.label}>
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>{s.label}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: s.color ?? 'var(--text)' }}>{s.value}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{s.sub}</div>
                     </div>
-                  </div>
-                  <div style={{ flex: 1 }}><div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>응모권 가격</div><input style={lightInput} placeholder="기본값: 1,000 운포인트" value={newP.ticketPrice} onChange={e => setNewP(p => ({ ...p, ticketPrice: e.target.value }))} /></div>
+                  ))}
                 </div>
               )}
             </div>
@@ -816,8 +928,16 @@ export default function AdminPage() {
                 }
                 if (!newP.title.trim()) return
                 if (productTab !== '쿠지' && !newP.price.trim()) return
-                if (productTab === '쿠지' && kujiItemCount === 0) return
-                const kujiThumb = kujiItems.find(it => it.name.trim() && it.img)?.img || ''
+                if (productTab === '쿠지' && (kujiItemCount === 0 || kujiLowerCount === 0)) {
+                  alert('상위상과 하위상을 각각 하나 이상 입력해주세요.')
+                  return
+                }
+                if (productTab === '쿠지' && !newP.img) {
+                  alert('쿠지 대표 이미지를 올려주세요.')
+                  return
+                }
+                // 쿠지 목록·배너에는 상위상 사진이 아니라 따로 올린 대표 이미지를 쓴다
+                const kujiThumb = newP.img
                 const newProduct = {
                   id: nextId, type: productTab,
                   title: newP.title,
@@ -827,7 +947,7 @@ export default function AdminPage() {
                   active: true,
                   stock: Number(newP.stock) || 1,
                   ...(productTab === '쿠지'
-                    ? { maxTickets: kujiTotalPapers || 50, ticketPrice: newP.ticketPrice || '1,000 운포인트', kujiItems: kujiItems.filter(it => it.name.trim()), lowerCount: kujiLowerCount }
+                    ? { maxTickets: kujiTotalPapers || 50, ticketPrice: newP.ticketPrice || '1,000 운포인트', kujiItems: filledItems(kujiItems), lowerItems: filledItems(lowerItems), lowerCount: kujiLowerCount, lastOne: lastOneItem.name.trim() ? lastOneItem : undefined }
                     : { description: newP.description }),
                 } as Product
                 addProduct(newProduct)
