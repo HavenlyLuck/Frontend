@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowCounterClockwiseIcon, GrainsIcon, LightningIcon } from '@phosphor-icons/react'
-import PixelAvatar from '@/components/PixelAvatar'
+import AvatarRoom from '@/components/AvatarRoom'
 import PixelItem from '@/components/PixelItem'
+import { DEFAULT_ROOM_BACKGROUND, getRoomBackground, type RoomBackgroundId } from '@/lib/avatar/rooms'
 import LightningDrawScene from '@/components/LightningDrawScene'
 import { getValidSession } from '@/lib/auth'
 import { notifyPointsUpdated } from '@/hooks/useMyPoints'
@@ -24,8 +25,10 @@ export default function AvatarShop() {
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [owned, setOwned] = useState<Set<string>>(new Set())
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [roomBg, setRoomBg] = useState<RoomBackgroundId>(DEFAULT_ROOM_BACKGROUND)
 
   useEffect(() => {
+    setRoomBg(getRoomBackground())
     let cancelled = false
     getAvatarItems()
       .then((items) => { if (!cancelled) setPrices(Object.fromEntries(items.map(i => [i.item_id, i.price]))) })
@@ -102,7 +105,10 @@ export default function AvatarShop() {
   return (
     <div className="avatar-shop">
       <div className="avatar-shop-preview">
-        <PixelAvatar config={wearing} size={192} alt="입어본 내 캐릭터" />
+        {/* 마이페이지 프로필과 같은 캐릭터 방(내가 고른 배경) 안에서 입어본 모습 */}
+        <div className="profile-room avatar-shop-room">
+          <AvatarRoom config={wearing} background={roomBg} label="입어본 내 캐릭터" />
+        </div>
         <div className="avatar-shop-preview-label">
           {loggedIn === false ? '기본 캐릭터로 입어보는 중' : '내 캐릭터'}
         </div>

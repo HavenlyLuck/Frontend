@@ -1,5 +1,5 @@
 /*
- * 번개 추첨 연출의 장면 데이터 — 공원 배경, 아바타 배치, 먹구름 경로, 번개 모양.
+ * 번개 추첨 연출의 장면 데이터 — 피규어 진열장 배경, 칸별 캐릭터 배치, 먹구름(스포트라이트) 동선, 번개 모양.
  * 같은 seed(응모 상품 ID)면 누가 봐도 같은 장면이 나오도록 전부 시드 난수로 만든다.
  * 연출은 이미 정해진 당첨 결과를 보여주기만 한다 — 여기서 당첨자를 고르지 않는다.
  */
@@ -8,8 +8,8 @@ import { avatarColors, avatarKey, buildAvatarGrid, buildOverlayGrids, OUTLINED_W
 
 export const WORLD_W = 208
 export const WORLD_H = 156
-// 먹구름이 아바타 머리 위 얼마나 높이 떠 있는지 (월드 픽셀)
-export const CLOUD_ALT = 40
+// 먹구름이 떠 있는 천장 높이 (월드 y, 구름 가운데) — 진열장 위
+export const CLOUD_Y = 13
 
 type Rng = () => number
 
@@ -254,23 +254,20 @@ export function buildCloudSprites(): { dark: HTMLCanvasElement; lit: HTMLCanvasE
   }
 }
 
-// ── 공원 + 배치 ──
-
-const Ground = { Grass: 0, Path: 1, Water: 2, Tree: 3, Bench: 4 } as const
+// ── 피규어 진열장 + 배치 ──
+//
+// 어두운 매장 벽 앞의 큰 유리 진열장. 응모자 수에 맞춰 칸 수를 정하고, 각 칸의 금테 받침대 위에 캐릭터가 피규어처럼 선다.
+// 진열장 위 천장 쪽에 먹구름이 떠서, 스포트라이트로 선반을 훑다가 번개를 내리꽂는다.
 
 export interface Scene {
-  base: HTMLCanvasElement
+  base: HTMLCanvasElement // 매장 벽 + 진열장 + 선반 + 받침대 (피규어 뒤)
+  front: HTMLCanvasElement // 진열장 앞유리 반사광 (피규어 위에 겹친다)
   cast: CastMember[]
   me: CastMember | null // 보는 사람의 캐릭터 (응모자가 아니거나 자리가 모자라 못 섰으면 null)
   winner: CastMember
-  cloudStops: CastMember[] // 먹구름이 들르는 순서 (마지막이 번개 직전에 멈추는 사람)
+  cloudStops: CastMember[] // 먹구름(스포트라이트)이 들르는 순서 (마지막이 번개 직전에 멈추는 사람)
   fakeTarget: CastMember | null // 구름은 이 사람 위에 있는데 번개는 당첨자에게 꺾여 가는 반전 (없으면 null)
   bolt: { x: number; y: number }[][] // [본줄기, 곁가지...]
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.slice(1), 16)
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
 export interface SceneEntrant {
@@ -279,8 +276,16 @@ export interface SceneEntrant {
   ticketCount?: number // 산 응모권 장수 — 2장 이상이면 머리 위에 ×N
 }
 
+// 진열장 안쪽 영역 (월드 좌표)
+const CAB_X0 = 12
+const CAB_X1 = WORLD_W - 12
+const CAB_Y0 = 32
+const CAB_Y1 = WORLD_H - 8
+const MAX_COLS = 11
+const MAX_ROWS = 4
+
 /*
- * 장면은 seed(상품 ID)와 응모자 목록·당첨 번호만으로 정해진다 — 보는 사람이 누구든 같은 자리에 같은 사람이 서고,
+ * 장면은 seed(상품 ID)와 응모자 목록·당첨 번호만으로 정해진다 — 보는 사람이 누구든 같은 칸에 같은 사람이 서고,
  * 구름도 같은 길로 가서 같은 곳에 번개가 떨어진다. myEntryNumber는 배치가 끝난 뒤 "나"를 찾는 데만 쓴다.
  */
 export function buildScene(
@@ -294,154 +299,94 @@ export function buildScene(
   const rng = mulberry32(seed * 7919 + 17)
   const W = WORLD_W
   const H = WORLD_H
-  const img = new ImageData(W, H)
-  const ground = new Uint8Array(W * H)
-  const set = (x: number, y: number, hex: string) => {
-    if (x < 0 || y < 0 || x >= W || y >= H) return
-    const [r, g, b] = hexToRgb(hex)
-    const i = (y * W + x) * 4
-    img.data[i] = r
-    img.data[i + 1] = g
-    img.data[i + 2] = b
-    img.data[i + 3] = 255
+
+  // 칸 배치 — 사람 수에 맞춰 가로로 긴 격자 (최대 11칸 × 4단)
+  const n = Math.max(1, opts.entrants.length)
+  const rows = Math.min(MAX_ROWS, Math.max(1, Math.ceil(Math.sqrt(n / 2.75))))
+  const cols = Math.min(MAX_COLS, Math.max(3, Math.ceil(n / rows)))
+  const innerW = CAB_X1 - CAB_X0
+  const innerH = CAB_Y1 - CAB_Y0
+  const slotW = Math.min(26, Math.floor(innerW / cols))
+  const rowH = Math.min(36, Math.floor(innerH / rows))
+  const gridX0 = Math.round(CAB_X0 + (innerW - slotW * cols) / 2)
+  const gridY0 = Math.round(CAB_Y0 + (innerH - rowH * rows) / 2)
+  const spots: { x: number; y: number }[] = []
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) spots.push({ x: gridX0 + c * slotW + Math.floor(slotW / 2), y: gridY0 + (r + 1) * rowH - 6 })
   }
 
-  // 잔디: 4x4 타일마다 살짝 다른 초록 + 풀포기
-  const grassTones = ['#4e8a3b', '#54913f', '#4a8438']
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const tone = grassTones[Math.floor(hash01(((x >> 2) * 73856093) ^ ((y >> 2) * 19349663) ^ seed) * 3)]
-      const r = rng()
-      set(x, y, r < 0.03 ? '#3d7330' : r < 0.04 ? '#6aa84f' : tone)
-    }
-  }
-
-  // 산책로: 가운데 타원 고리 + 아래·왼쪽으로 빠지는 길
-  const pcx = 104
-  const pcy = 82
-  const prx = 70
-  const pry = 44
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const d = Math.sqrt(((x - pcx) / prx) ** 2 + ((y - pcy) / pry) ** 2)
-      const ringDist = Math.abs(d - 1) * 56
-      const onSpur = (x >= 100 && x <= 108 && y > pcy + pry) || (y >= 78 && y <= 86 && x < pcx - prx)
-      const spurEdge = (x >= 99 && x <= 109 && y > pcy + pry) || (y >= 77 && y <= 87 && x < pcx - prx)
-      if (ringDist < 3.6 || onSpur) {
-        set(x, y, rng() < 0.05 ? '#b5935c' : '#c8a46a')
-        ground[y * W + x] = Ground.Path
-      } else if (ringDist < 4.6 || spurEdge) {
-        set(x, y, '#a88650')
-        ground[y * W + x] = Ground.Path
-      }
-    }
-  }
-
-  // 연못 (왼쪽 위)
-  const wcx = 30
-  const wcy = 24
-  const wrx = 22
-  const wry = 13
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const d = Math.sqrt(((x - wcx) / wrx) ** 2 + ((y - wcy) / wry) ** 2)
-      if (d < 0.86) set(x, y, '#3b7cb5')
-      else if (d < 1) set(x, y, '#2c5d8a')
-      else if (d < 1.16) set(x, y, '#d8c08a')
-      else continue
-      ground[y * W + x] = Ground.Water
-    }
-  }
-  for (let i = 0; i < 5; i++) {
-    const hx = wcx - 12 + Math.floor(rng() * 22)
-    const hy = wcy - 6 + Math.floor(rng() * 11)
-    for (let k = 0; k < 3; k++) set(hx + k, hy, '#9fd0f0')
-  }
-
-  // 벤치 (산책로 안쪽)
-  const benches: [number, number][] = [[pcx - 30, pcy - pry + 8], [pcx + 38, pcy + 20], [pcx - 44, pcy + 22]]
-  for (const [bx, by] of benches) {
-    for (let x = 0; x < 9; x++) {
-      set(bx + x, by, '#8a5a34')
-      set(bx + x, by + 1, '#6e4528')
-      ground[by * W + bx + x] = Ground.Bench
-      ground[(by + 1) * W + bx + x] = Ground.Bench
-    }
-    set(bx, by + 2, '#3e2a1a')
-    set(bx + 8, by + 2, '#3e2a1a')
-  }
-
-  // 꽃
-  const flowers = ['#f7f1e3', '#f6c945', '#ef8fb0', '#b9a0f0']
-  for (let i = 0; i < 140; i++) {
-    const x = Math.floor(rng() * W)
-    const y = Math.floor(rng() * H)
-    if (ground[y * W + x] === Ground.Grass) set(x, y, pick(rng, flowers))
-  }
-
-  // 나무: 가장자리를 따라 둘러서, 아바타가 나무에 가려질 일이 없게
-  const trees: [number, number, number][] = []
-  for (let x = 8; x < W; x += 15 + Math.floor(rng() * 6)) {
-    trees.push([x + Math.floor(rng() * 4), 3 + Math.floor(rng() * 4), 6 + Math.floor(rng() * 3)])
-    trees.push([x + Math.floor(rng() * 4), H - 3 - Math.floor(rng() * 4), 6 + Math.floor(rng() * 3)])
-  }
-  for (let y = 24; y < H - 16; y += 16 + Math.floor(rng() * 6)) {
-    trees.push([2 + Math.floor(rng() * 4), y, 6 + Math.floor(rng() * 3)])
-    trees.push([W - 3 - Math.floor(rng() * 4), y, 6 + Math.floor(rng() * 3)])
-  }
-  const isPondArea = (x: number, y: number) => ((x - wcx) / (wrx + 8)) ** 2 + ((y - wcy) / (wry + 8)) ** 2 < 1
-  const keptTrees = trees.filter(([x, y]) => !isPondArea(x, y))
-  for (const [tx, ty, r] of keptTrees) {
-    for (let y = -r - 2; y <= r + 4; y++) {
-      for (let x = -r - 2; x <= r + 4; x++) {
-        const sd = (x - 2) ** 2 + (y - 3) ** 2
-        if (sd <= r * r && x * x + y * y > (r + 1) ** 2) set(tx + x, ty + y, '#3a6a2d')
-      }
-    }
-    for (let y = -r - 1; y <= r + 1; y++) {
-      for (let x = -r - 1; x <= r + 1; x++) {
-        const d2 = x * x + y * y
-        const px = tx + x
-        const py = ty + y
-        if (d2 <= r * r) {
-          const s = x + y
-          set(px, py, s < -r * 0.5 ? '#4f9a3f' : s > r * 0.6 ? '#245a22' : '#2f7329')
-        } else if (d2 <= (r + 1) ** 2) {
-          set(px, py, '#1a3a17')
-        } else continue
-        if (px >= 0 && py >= 0 && px < W && py < H) ground[py * W + px] = Ground.Tree
-      }
-    }
-  }
-
+  // ── 배경 그리기 ──
   const base = document.createElement('canvas')
   base.width = W
   base.height = H
-  base.getContext('2d')!.putImageData(img, 0, 0)
+  const b = base.getContext('2d')!
+  const fill = (color: string, x: number, y: number, w = 1, h = 1) => { b.fillStyle = color; b.fillRect(x, y, w, h) }
 
-  // 아바타 배치: 물·나무·벤치를 피하고, 서로 너무 붙지 않게
-  const canStand = (fx: number, fy: number, placed: { x: number; y: number }[]) => {
-    if (fx < 12 || fx > W - 12 || fy < 18 || fy > H - 8) return false
-    for (let y = fy - AVATAR_H - 1; y <= fy + 1; y++) {
-      for (let x = fx - 5; x <= fx + 5; x++) {
-        const g = ground[y * W + x]
-        if (g === Ground.Water || g === Ground.Tree || g === Ground.Bench) return false
-      }
-    }
-    return placed.every(p => (p.x - fx) ** 2 + (p.y - fy) ** 2 >= 13 * 13)
+  // 매장 벽 — 아래로 갈수록 살짝 밝아지는 어두운 벽 + 은은한 세로 무늬
+  const wall = ['#0c0b11', '#0f0e15', '#121119', '#15141d']
+  for (let y = 0; y < H; y++) fill(wall[Math.min(wall.length - 1, Math.floor(y / 40))], 0, y, W, 1)
+  for (let x = 0; x < W; x += 6) { b.globalAlpha = 0.25; fill('#1a1822', x, 0, 1, H); b.globalAlpha = 1 }
+  // 바닥
+  fill('#08070b', 0, H - 6, W, 6)
+
+  // 진열장 몸체 — 검은 틀 + 금테
+  const fx0 = CAB_X0 - 4
+  const fy0 = CAB_Y0 - 6
+  const fw = CAB_X1 - CAB_X0 + 8
+  const fh = CAB_Y1 - CAB_Y0 + 9
+  fill('#26232f', fx0, fy0, fw, fh)
+  fill('#3a3644', fx0, fy0, fw, 1)
+  fill('#c29d58', fx0 + 1, fy0 + 1, fw - 2, 1)
+  // 뒤판
+  const back = ['#17151f', '#1b1924', '#1f1d29']
+  for (let y = CAB_Y0 - 3; y < CAB_Y1; y++) fill(back[Math.min(back.length - 1, Math.floor((y - CAB_Y0) / 40))], CAB_X0 - 1, y, innerW + 2, 1)
+  // 진열장 안쪽 위 조명 띠
+  fill('#fff3d6', CAB_X0 + 6, CAB_Y0 - 3, innerW - 12, 1)
+  b.globalAlpha = 0.18
+  fill('#ffe9b8', CAB_X0 + 2, CAB_Y0 - 2, innerW - 4, 3)
+  b.globalAlpha = 1
+
+  // 선반 + 칸마다 금테 받침대
+  for (let r = 0; r < rows; r++) {
+    const shelfY = gridY0 + (r + 1) * rowH - 4
+    fill('#3a3644', CAB_X0, shelfY, innerW, 1)
+    fill('#2c2936', CAB_X0, shelfY + 1, innerW, 2)
+    b.globalAlpha = 0.5
+    fill('#5a5568', CAB_X0, shelfY, innerW, 1)
+    b.globalAlpha = 1
+    // 선반 아래 그림자
+    b.globalAlpha = 0.35
+    fill('#000000', CAB_X0, shelfY + 3, innerW, 2)
+    b.globalAlpha = 1
   }
-  const spots: { x: number; y: number }[] = []
-  for (let tries = 0; tries < 6000 && spots.length < opts.entrants.length; tries++) {
-    const x = 12 + Math.floor(rng() * (W - 24))
-    const y = 18 + Math.floor(rng() * (H - 26))
-    if (canStand(x, y, spots)) spots.push({ x, y })
+  // 진열장 옆 기둥 그림자
+  b.globalAlpha = 0.4
+  fill('#000000', CAB_X0 - 1, CAB_Y0 - 3, 2, innerH + 3)
+  fill('#000000', CAB_X1 - 1, CAB_Y0 - 3, 2, innerH + 3)
+  b.globalAlpha = 1
+
+  // ── 앞유리 반사광 (피규어 위에 겹친다) ──
+  const front = document.createElement('canvas')
+  front.width = W
+  front.height = H
+  const f = front.getContext('2d')!
+  f.fillStyle = '#ffffff'
+  // 유리 반사 — 위쪽 모서리에 짧고 굵게 (길고 가늘면 긁힌 자국처럼 보인다)
+  const glint = (x0: number, len: number, width: number, alpha: number) => {
+    f.globalAlpha = alpha
+    for (let i = 0; i < len; i++) f.fillRect(x0 + Math.floor(i * 0.5), CAB_Y0 - 2 + i, width, 1)
   }
+  glint(CAB_X0 + 6, 14, 3, 0.06)
+  glint(CAB_X0 + 12, 8, 2, 0.05)
+  glint(CAB_X1 - 22, 10, 2, 0.04)
+  f.globalAlpha = 1
+  // 앞 틀 (유리 테두리)
+  f.fillStyle = '#26232f'
+  f.fillRect(fx0, CAB_Y1, fw, 3)
+  f.fillStyle = '#c29d58'
+  f.fillRect(fx0 + 1, CAB_Y1, fw - 2, 1)
 
-  // 먹구름은 머리 위 CLOUD_ALT 높이에 뜨므로, 구름이 들르는 사람은 위쪽에 여유가 있어야 화면 밖으로 안 잘린다
-  const openSky = (p: { y: number }) => p.y >= CLOUD_ALT + 16
-  const orAll = <T,>(list: T[], fallback: T[]) => (list.length > 0 ? list : fallback)
-
-  // 응모자 배치: 당첨자를 먼저 하늘이 트인 자리에 세우고, 나머지는 시드로 섞어 남은 자리에 채운다.
+  // ── 응모자 배치: 당첨자를 먼저 한 칸에, 나머지는 시드로 섞어 남은 칸에 ──
   // 응모 번호 순으로 정렬한 뒤 섞으므로, 목록을 받은 순서와 상관없이 누구에게나 같은 배치가 나온다.
   const entrants = [...opts.entrants].sort((a, b) => a.entryNumber - b.entryNumber)
   const winnerEntrant = entrants.find(e => e.entryNumber === opts.winnerEntryNumber)
@@ -452,7 +397,7 @@ export function buildScene(
     ;[others[i], others[j]] = [others[j], others[i]]
   }
   const freeSpots = [...spots]
-  const winnerSpot = pick(rng, orAll(freeSpots.filter(openSky), freeSpots))
+  const winnerSpot = pick(rng, freeSpots)
   freeSpots.splice(freeSpots.indexOf(winnerSpot), 1)
 
   const toMember = (spot: { x: number; y: number }, e: SceneEntrant): CastMember => ({
@@ -469,30 +414,36 @@ export function buildScene(
   })
   const winner = toMember(winnerSpot, winnerEntrant)
   winner.isWinner = true
-  // 자리가 모자라면(응모자가 아주 많을 때) 뒤로 섞인 사람은 서지 못한다. 당첨자는 항상 선다.
+  // 칸이 모자라면(응모자가 아주 많을 때) 뒤로 섞인 사람은 서지 못한다. 당첨자는 항상 선다.
   const cast: CastMember[] = [winner, ...freeSpots.slice(0, others.length).map((spot, i) => toMember(spot, others[i]))]
 
   const me = opts.myEntryNumber == null ? null : cast.find(m => m.entryNumber === opts.myEntryNumber) ?? null
   if (me) me.isMe = true
 
-  // 반전: 가끔은 구름이 엉뚱한 사람(근처) 위에서 충전하다가 번개를 옆으로 꺾어 진짜 당첨자에게 쏜다.
-  const distTo = (a: CastMember, b: CastMember) => Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
-  const fakeCandidates = cast.filter(m => m !== winner && openSky(m) && distTo(m, winner) >= 20 && distTo(m, winner) <= 70)
+  // 피규어가 선 칸에만 금테 받침대 (빈 칸은 선반만)
+  for (const m of cast) {
+    fill('#e3b341', m.x - 5, m.y + 1, 11, 1)
+    fill('#1d1b24', m.x - 5, m.y + 2, 11, 1)
+  }
+
+  // 반전: 가끔은 구름이 근처 다른 피규어 위에서 충전하다가 번개를 옆으로 꺾어 진짜 당첨자에게 쏜다.
+  const distTo = (a: CastMember, c: CastMember) => Math.sqrt((a.x - c.x) ** 2 + (a.y - c.y) ** 2)
+  const fakeCandidates = cast.filter(m => m !== winner && distTo(m, winner) >= 14 && distTo(m, winner) <= 60)
   let fakeTarget: CastMember | null = null
   if (fakeCandidates.length > 0 && rng() < 0.4) fakeTarget = pick(rng, fakeCandidates)
   const hoverTarget = fakeTarget ?? winner
 
-  // 먹구름 동선: 먼 사람 → 다른 사람 머리 위를 지나 → 마지막으로 멈추는 사람
-  const decoyPool = orAll(cast.filter(openSky), cast).filter(m => m !== winner && m !== hoverTarget)
-  const far = [...decoyPool].sort((a, b) => distTo(b, hoverTarget) - distTo(a, hoverTarget))
+  // 스포트라이트 동선: 먼 피규어 → 다른 피규어 → 마지막으로 멈추는 피규어
+  const decoyPool = cast.filter(m => m !== winner && m !== hoverTarget)
+  const far = [...decoyPool].sort((a, c) => distTo(c, hoverTarget) - distTo(a, hoverTarget))
   const cloudStops: CastMember[] = []
   if (far.length > 0) cloudStops.push(pick(rng, far.slice(0, Math.max(1, Math.ceil(far.length / 2)))))
   const second = decoyPool.filter(m => !cloudStops.includes(m))
   if (second.length > 0) cloudStops.push(pick(rng, second))
   cloudStops.push(hoverTarget)
 
-  // 번개: 구름 밑에서 당첨자 머리까지 지그재그 + 곁가지 (반전이면 비스듬히 꺾여 내려간다)
-  const top = { x: hoverTarget.x, y: hoverTarget.y - CLOUD_ALT + 6 }
+  // 번개: 천장의 구름 밑에서 유리를 뚫고 당첨 피규어 머리까지 지그재그 + 곁가지 (반전이면 비스듬히 꺾여 내려간다)
+  const top = { x: hoverTarget.x, y: CLOUD_Y + 10 }
   const end = { x: winner.x, y: winner.y - AVATAR_H - 1 }
   const len = Math.sqrt((end.x - top.x) ** 2 + (end.y - top.y) ** 2)
   const steps = Math.max(6, Math.round(len / 7))
@@ -510,7 +461,7 @@ export function buildScene(
   const dir = rng() < 0.5 ? -1 : 1
   const branch = [fork, { x: fork.x + dir * 4, y: fork.y + 4 }, { x: fork.x + dir * 6, y: fork.y + 9 }]
 
-  return { base, cast, me, winner, cloudStops, fakeTarget, bolt: [main, branch] }
+  return { base, front, cast, me, winner, cloudStops, fakeTarget, bolt: [main, branch] }
 }
 
 // ── 픽셀 도형 도우미 ──

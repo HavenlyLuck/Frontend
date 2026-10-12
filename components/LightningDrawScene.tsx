@@ -2,17 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  AVATAR_H, CLOUD_ALT, WORLD_H, WORLD_W,
+  AVATAR_H, CLOUD_Y, WORLD_H, WORLD_W,
   buildCloudSprites, buildScene, drawAvatar, fillPixelEllipse, hash01, plotLine, strokePixelCircle,
   type CastMember, type Scene, type SceneEntrant,
 } from '@/lib/lightningDraw/scene'
 
 /*
- * 번개 추첨 연출 — 같은 상품이면 모든 응모자가 같은 장면(자리·구름 동선·번개)을 본다.
- * 내 아바타에서 시작해 하늘로 줌아웃 → 먹구름이 사람들 위를 맴돌다
- * 당첨자에게 번개(가끔은 구름 밑 사람을 비껴가 옆 사람에게 꺾여 내리는 반전). 결과(winnerEntryNumber)는 서버가 이미 정한 값이고 이 화면은 보여주기만 한다.
+ * 번개 추첨 연출 — 같은 상품이면 모든 응모자가 같은 장면(칸·스포트라이트 동선·번개)을 본다.
+ * 피규어 진열장에 응모자 캐릭터가 칸칸이 서 있다. 내 피규어에서 시작해 진열장 전체로 줌아웃 → 조명이 꺼지고
+ * 천장의 먹구름 아래 스포트라이트가 선반을 훑다가 당첨 피규어에게 번개(가끔은 다른 칸 위에서 멈췄다가 옆으로 꺾이는 반전). 결과(winnerEntryNumber)는 서버가 이미 정한 값이고 이 화면은 보여주기만 한다.
  *
- * entrants(실제 응모자와 마이페이지 캐릭터)를 주면 공원이 그 사람들로 채워진다.
+ * entrants(실제 응모자와 마이페이지 캐릭터)를 주면 진열장이 그 사람들로 채워진다.
  * 주지 않으면(데모) 시드로 만든 임시 아바타들이 선다.
  */
 
@@ -27,10 +27,10 @@ interface Props {
 
 // 타임라인 (ms)
 const HOLD_CLOSE = 900 // 내 아바타 클로즈업으로 잠깐 멈춤
-const ZOOM_END = 3200 // 하늘 시점으로 줌아웃 완료
-const STORM_START = 2600 // 하늘이 어두워지기 시작
+const ZOOM_END = 3200 // 진열장 전체로 줌아웃 완료
+const STORM_START = 2600 // 매장 조명이 꺼지기 시작
 const CLOUD_START = 3000
-const LEG_MS = 1200 // 먹구름이 한 사람 위로 이동 + 멈칫
+const LEG_MS = 1200 // 스포트라이트가 한 피규어로 이동 + 멈칫
 const LEG_MOVE_MS = 850
 const CHARGE_MS = 700 // 당첨자 위에서 번쩍번쩍 충전
 const AFTER_MS = 2300 // 번개 후 당첨자 클로즈업까지
@@ -99,7 +99,7 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
     overlay.height = WORLD_H
     const octx = overlay.getContext('2d')!
 
-    // 장면은 모두 같고, 시작할 때 카메라가 비추는 곳만 각자 자기 캐릭터다 (내가 못 섰으면 공원 전체에서 시작)
+    // 장면은 모두 같고, 시작할 때 카메라가 비추는 곳만 각자 자기 피규어다 (내가 못 섰으면 진열장 전체에서 시작)
     const fullCam: Cam = { cx: WORLD_W / 2, cy: WORLD_H / 2, zoom: 1 }
     const closeCam: Cam = me ? { cx: me.x, cy: me.y - 6, zoom: CLOSE_ZOOM } : fullCam
     const winnerCam: Cam = { cx: winner.x, cy: winner.y - 8, zoom: WINNER_ZOOM }
@@ -112,7 +112,7 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
       return lerpCam(fullCam, winnerCam, easeInOut(clamp01((t - zs) / 1200)))
     }
 
-    // 구름이 떠 있는 "땅 위 지점" — 실제 구름은 그 위 CLOUD_ALT만큼 높이 그린다
+    // 스포트라이트가 비추는 피규어 위치 — 구름은 그 x 위쪽 천장(CLOUD_Y)에 그린다
     const cloudAt = (t: number): { x: number; y: number; alpha: number } | null => {
       if (t < CLOUD_START) return null
       const stops = scene.cloudStops
@@ -132,7 +132,7 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
       const leave = tl.strike + 900
       if (t > leave) {
         const k = clamp01((t - leave) / 900)
-        pos = { x: pos.x + k * 40, y: pos.y - k * 10 }
+        pos = { x: pos.x + k * 40, y: pos.y }
         alpha = 1 - k
       }
       // 충전 중엔 부르르 떨린다
@@ -151,68 +151,73 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
       fctx.drawImage(scene.base, 0, 0)
 
       const cloud = cloudAt(t)
-      if (cloud) {
-        fctx.globalAlpha = 0.3 * cloud.alpha
-        fctx.fillStyle = '#0b1408'
-        fillPixelEllipse(fctx, cloud.x, cloud.y + 1, 17, 5)
-        fctx.globalAlpha = 1
-      }
 
-      // 땅에 남는 번개 자국
-      if (ds >= 0) {
-        fctx.globalAlpha = 0.45 * (1 - clamp01((ds - 1200) / 1500))
-        fctx.fillStyle = '#2a1d0c'
-        fillPixelEllipse(fctx, winner.x, winner.y + 1, 7, 2)
-        fctx.globalAlpha = 1
-      }
-
-      // 아바타 — 아래쪽(앞)에 선 사람이 위에 그려지도록
-      const sorted = [...scene.cast].sort((a, b) => a.y - b.y)
-      for (const m of sorted) {
+      // 피규어 — 진짜 피규어처럼 가만히 서 있다(눈 깜빡임·아이템 불꽃만). 번개가 떨어지면 당첨 피규어가 받침대 위로 떠오른다.
+      for (const m of scene.cast) {
         const local = t + m.phase
-        let lift = local % 1000 < 500 ? 0 : 1
+        let lift = 0
         let zap: 0 | 1 | null = null
         let outline: string | undefined
         if (m === winner && ds >= 0) {
           if (ds < 650) zap = (Math.floor(ds / 70) % 2) as 0 | 1
-          lift = hop(ds, 650, 400, 5) + hop(ds, 1100, 300, 2)
+          lift = Math.round(3 * easeInOut(clamp01((ds - 650) / 500)))
           outline = ds > 650 ? '#f3c94f' : undefined
         } else if (m === scene.fakeTarget && ds >= 0) {
-          lift = hop(ds, 60, 320, 4) // 구름 밑에 있다가 번개가 비껴가서 화들짝
-        } else if (ds >= 0 && (m.x - winner.x) ** 2 + (m.y - winner.y) ** 2 < 32 * 32) {
-          lift = hop(ds, 80, 260, 3) // 근처 사람들은 깜짝 놀라 펄쩍
+          lift = hop(ds, 60, 320, 3) // 스포트라이트를 받고 있다가 번개가 비껴가서 화들짝
+        } else if (ds >= 0 && (m.x - winner.x) ** 2 + (m.y - winner.y) ** 2 < 24 * 24) {
+          lift = hop(ds, 80, 260, 2) // 옆 칸 피규어들이 들썩
         }
         drawAvatar(fctx, m, { lift, blink: (local * 3) % 3400 < 130, zap, outline, flicker: Math.floor(local / 140) % 2 === 1 })
       }
-
-      // 비
-      const rain = t < STORM_START + 500 ? 0 : clamp01((t - STORM_START - 500) / 600) * (1 - clamp01((ds - 1000) / 800))
-      if (rain > 0) {
-        fctx.fillStyle = 'rgba(170, 196, 232, 0.55)'
-        const drops = Math.round(54 * rain)
-        for (let i = 0; i < drops; i++) {
-          const x = Math.floor((((hash01(i * 7 + 1) * WORLD_W - t * 0.035) % WORLD_W) + WORLD_W) % WORLD_W)
-          const y = Math.floor((hash01(i * 13 + 5) * (WORLD_H + 12) + t * (0.14 + hash01(i) * 0.05)) % (WORLD_H + 12)) - 6
-          fctx.fillRect(x, y, 1, 3)
-        }
+      // 당첨 피규어 받침대에 남는 금빛
+      if (ds > 650) {
+        fctx.globalAlpha = 0.6 * clamp01((ds - 650) / 400)
+        fctx.fillStyle = '#ffe27a'
+        fctx.fillRect(winner.x - 6, winner.y + 1, 13, 1)
+        fctx.globalAlpha = 1
       }
 
-      // 폭풍 어둠 → 번개 후엔 당첨자만 비추는 스포트라이트로 좁혀진다
-      const storm = clamp01((t - STORM_START) / 900) * 0.4
+      // 진열장 앞유리 반사광
+      fctx.drawImage(scene.front, 0, 0)
+
+      // 매장 조명이 꺼지고, 스포트라이트가 구름을 따라 선반을 훑는다 → 번개 후엔 당첨 피규어로 좁혀진다
+      const storm = clamp01((t - STORM_START) / 900) * 0.62
       octx.clearRect(0, 0, WORLD_W, WORLD_H)
       if (ds < 600) {
-        octx.fillStyle = `rgba(8, 12, 32, ${storm})`
+        octx.fillStyle = `rgba(4, 4, 10, ${storm})`
         octx.fillRect(0, 0, WORLD_W, WORLD_H)
+        if (cloud && storm > 0) {
+          octx.globalCompositeOperation = 'destination-out'
+          octx.globalAlpha = cloud.alpha
+          octx.fillStyle = '#000'
+          fillPixelEllipse(octx, cloud.x, cloud.y - 7, 11, 13)
+          octx.globalAlpha = 1
+          octx.globalCompositeOperation = 'source-over'
+        }
       } else {
         const k = easeInOut(clamp01((ds - 600) / 700))
-        octx.fillStyle = `rgba(8, 12, 32, ${lerp(0.4, 0.55, k)})`
+        octx.fillStyle = `rgba(4, 4, 10, ${lerp(0.62, 0.7, k)})`
         octx.fillRect(0, 0, WORLD_W, WORLD_H)
         octx.globalCompositeOperation = 'destination-out'
         octx.fillStyle = '#000'
-        fillPixelEllipse(octx, winner.x, winner.y - 5, lerp(90, 17, k), lerp(70, 14, k))
+        fillPixelEllipse(octx, winner.x, winner.y - 6, lerp(60, 13, k), lerp(50, 14, k))
         octx.globalCompositeOperation = 'source-over'
       }
       if (storm > 0 || ds >= 600) fctx.drawImage(overlay, 0, 0)
+
+      // 구름에서 비추는 스포트라이트 빛줄기
+      if (cloud && ds < 0 && storm > 0.2) {
+        fctx.globalAlpha = 0.1 * cloud.alpha
+        fctx.fillStyle = '#ffe9b8'
+        const topY = CLOUD_Y + 8
+        const botY = cloud.y
+        for (let y = topY; y < botY; y++) {
+          const k = (y - topY) / Math.max(1, botY - topY)
+          const half = 3 + k * 8
+          fctx.fillRect(Math.round(cloud.x - half), y, Math.round(half * 2), 1)
+        }
+        fctx.globalAlpha = 1
+      }
 
       // 충격파 고리 + 불꽃
       if (ds >= 0 && ds < 520) {
@@ -253,7 +258,7 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
         const sprite = charging || flashing ? clouds.lit : clouds.dark
         const bob = Math.round(Math.sin(t / 320))
         fctx.globalAlpha = cloud.alpha
-        fctx.drawImage(sprite, Math.round(cloud.x - sprite.width / 2), Math.round(cloud.y - CLOUD_ALT - sprite.height / 2 + bob))
+        fctx.drawImage(sprite, Math.round(cloud.x - sprite.width / 2), Math.round(CLOUD_Y - sprite.height / 2 + bob))
         fctx.globalAlpha = 1
       }
 
@@ -329,7 +334,7 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
       const ox = Math.round(Math.sin(t * 1.7) * shake)
       const oy = Math.round(Math.cos(t * 2.3) * shake)
       ctx.imageSmoothingEnabled = false
-      ctx.fillStyle = '#0d120c'
+      ctx.fillStyle = '#0b0a10'
       ctx.fillRect(0, 0, w, h)
       ctx.drawImage(
         frame,
