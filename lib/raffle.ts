@@ -49,7 +49,6 @@ export interface GroupedRaffleEntry {
   entryNumber: number
   entryNumbers: number[]
   winnerEntryNumber: number | null
-  drawVideoUrl: string | null
 }
 
 // 같은 상품에 여러 번 응모한 경우, 상품 하나당 한 줄로 합쳐서 총 응모권 수를 보여주기 위한 집계
@@ -77,7 +76,6 @@ export function groupEntriesByProduct(entries: MyRaffleEntryResponse[]): Grouped
         entryNumber: entry.entry_number,
         entryNumbers: [entry.entry_number],
         winnerEntryNumber: entry.winner_entry_number,
-        drawVideoUrl: entry.draw_video_url,
       })
     }
   }

@@ -4,22 +4,15 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  CalendarIcon,
-  ChatCircleIcon,
   ClockIcon,
   ConfettiIcon,
-  EyeIcon,
   FlameIcon,
   HeartIcon,
-  PaletteIcon,
   TicketIcon,
   WarningIcon,
-  XIcon,
 } from "@phosphor-icons/react";
 import {
-  ApiError,
   createRaffleEntry,
-  getMyRaffleEntriesForProduct,
   getRaffleProducts,
   type RaffleProductResponse,
   type RaffleEntryCreateResponse,
@@ -27,9 +20,7 @@ import {
 import { isWished, toggleWishlist } from "@/lib/wishlist";
 import { getValidSession, isLoggedIn } from "@/lib/auth";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
-import { getMarbleColor } from "@/lib/roulette/marbleColor";
-
-const MAX_COLOR_LEGEND_ENTRIES = 50;
+import { createTestRaffleEntry, getTestRaffle, isTestRaffle } from "@/lib/raffleTest";
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return "마감";
@@ -63,16 +54,21 @@ export default function RaffleProductPage({
   const [ticketCount, setTicketCount] = useState(1);
   const [isLiked, setIsLiked] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [colorInfoOpen, setColorInfoOpen] = useState(false);
   const [purchaseResult, setPurchaseResult] =
     useState<RaffleEntryCreateResponse | null>(null);
   const [tearing, setTearing] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [myEntryNumber, setMyEntryNumber] = useState<number | null>(null);
 
   useEffect(() => {
+    // 화면 확인용 테스트 응모는 서버 대신 프론트 임시 데이터로
+    if (isTestRaffle(raffleId)) {
+      const test = getTestRaffle();
+      setProduct(test);
+      setRemaining(test.remaining_seconds);
+      return;
+    }
     getRaffleProducts()
       .then((list) => {
         const found =
@@ -95,22 +91,6 @@ export default function RaffleProductPage({
     return () => clearInterval(timer);
   }, [product]);
 
-  useEffect(() => {
-    if (!product || !isLoggedIn()) return;
-    getValidSession()
-      .then((session) => {
-        if (!session) return;
-        return getMyRaffleEntriesForProduct(
-          session.token,
-          product.raffle_product_id,
-        );
-      })
-      .then((entries) => {
-        if (entries && entries.length > 0)
-          setMyEntryNumber(entries[0].entry_number);
-      })
-      .catch(() => {});
-  }, [product]);
 
   if (product === undefined) {
     return (
@@ -187,11 +167,13 @@ export default function RaffleProductPage({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const entry = await createRaffleEntry(
-        session.token,
-        product.raffle_product_id,
-        ticketCount,
-      );
+      const entry = isTestRaffle(product.raffle_product_id)
+        ? await createTestRaffleEntry(ticketCount)
+        : await createRaffleEntry(
+            session.token,
+            product.raffle_product_id,
+            ticketCount,
+          );
       const newSoldSlots = product.sold_slots + entry.ticket_count;
       const justSoldOut = newSoldSlots >= product.total_slots;
       setProduct((prev) =>
@@ -205,7 +187,6 @@ export default function RaffleProductPage({
       await new Promise((resolve) => setTimeout(resolve, 800));
       notifyPointsUpdated();
       setPurchaseResult(entry);
-      setMyEntryNumber(entry.entry_number);
       if (justSoldOut) {
         alert(
           "응모권이 모두 소진되었습니다! 당첨자 추첨 기능은 아직 준비 중이라, 별도 절차 없이 응모가 그대로 진행됩니다.",
@@ -213,7 +194,7 @@ export default function RaffleProductPage({
       }
     } catch (e) {
       setSubmitError(
-        e instanceof ApiError ? e.message : "응모 처리 중 오류가 발생했습니다.",
+        e instanceof Error ? e.message : "응모 처리 중 오류가 발생했습니다.",
       );
     } finally {
       setSubmitting(false);
@@ -244,25 +225,6 @@ export default function RaffleProductPage({
                 </div>
               )}
             </div>
-            <button
-              onClick={() => setColorInfoOpen(true)}
-              style={{
-                marginTop: 10,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: 12,
-                color: "var(--text-secondary)",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                padding: "7px 12px",
-                background: "var(--bg-subtle)",
-                cursor: "pointer",
-              }}
-            >
-              <PaletteIcon size={14} weight="fill" color="var(--accent)" />{" "}
-              당첨번호 구슬 색
-            </button>
           </div>
 
           <div className="info-panel">
@@ -343,7 +305,7 @@ export default function RaffleProductPage({
               </div>
             </div>
 
-            {product.status === "completed" && product.draw_video_url && (
+            {product.status === "completed" && product.winner_entry_number != null && (
               <div
                 style={{
                   marginBottom: 12,
@@ -357,32 +319,14 @@ export default function RaffleProductPage({
             )}
 
             <div className="cta-row">
-              {product.status === "completed" && product.draw_video_url ? (
-                <a
-                  href={product.draw_video_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-raffle"
-                  style={{
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
-                  }}
-                >
-                  <ConfettiIcon size={17} weight="fill" /> 당첨 확인하기
-                </a>
-              ) : (
-                <button
-                  className="btn-raffle"
-                  onClick={openModal}
-                  disabled={soldOut || expired}
-                >
-                  <TicketIcon size={17} weight="fill" />{" "}
-                  {soldOut ? "매진" : expired ? "마감" : "응모하기"}
-                </button>
-              )}
+              <button
+                className="btn-raffle"
+                onClick={openModal}
+                disabled={soldOut || expired}
+              >
+                <TicketIcon size={17} weight="fill" />{" "}
+                {soldOut ? "매진" : expired ? "마감" : "응모하기"}
+              </button>
               <button
                 className={`btn-wish ${isLiked ? "liked" : ""}`}
                 onClick={() =>
@@ -536,138 +480,6 @@ export default function RaffleProductPage({
         )}
       </div>
 
-      {/* 당첨번호 구슬 색 안내 */}
-      {colorInfoOpen && (
-        <div
-          className="modal-overlay open"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setColorInfoOpen(false);
-          }}
-        >
-          <div
-            className="modal"
-            style={{ maxHeight: "80vh", overflowY: "auto" }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 4,
-              }}
-            >
-              <div className="modal-icon" style={{ margin: 0 }}>
-                <PaletteIcon size={28} weight="fill" color="var(--accent)" />
-              </div>
-              <button
-                onClick={() => setColorInfoOpen(false)}
-                style={{
-                  border: "none",
-                  background: "none",
-                  color: "var(--text-tertiary)",
-                  cursor: "pointer",
-                  display: "flex",
-                }}
-              >
-                <XIcon size={18} />
-              </button>
-            </div>
-            <div className="modal-title">추첨 구슬 색 안내</div>
-            <div className="modal-sub">
-              추첨 애니메이션에서 내 응모 번호가 어떤 색 구슬인지 미리
-              확인해보세요.
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(64px, 1fr))",
-                gap: 10,
-                margin: "16px 0",
-              }}
-            >
-              {(() => {
-                const base = Array.from(
-                  {
-                    length: Math.min(
-                      product.total_slots,
-                      MAX_COLOR_LEGEND_ENTRIES,
-                    ),
-                  },
-                  (_, i) => i + 1,
-                );
-                if (myEntryNumber !== null && !base.includes(myEntryNumber))
-                  base.push(myEntryNumber);
-                return base;
-              })().map((n) => {
-                const isMine = n === myEntryNumber;
-                return (
-                  <div
-                    key={n}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 4,
-                      padding: "6px 4px",
-                      borderRadius: 10,
-                      border: isMine
-                        ? "2px solid var(--accent)"
-                        : "2px solid transparent",
-                      background: isMine ? "var(--bg-subtle)" : "transparent",
-                      boxShadow: isMine ? "0 0 10px var(--accent)" : "none",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        background: getMarbleColor(n),
-                        boxShadow: `0 0 8px ${getMarbleColor(n)}`,
-                        border: "1px solid rgba(255,255,255,0.25)",
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: isMine ? "var(--gold)" : "var(--text-secondary)",
-                        fontWeight: isMine ? 700 : 400,
-                      }}
-                    >
-                      {n}번{isMine ? " (MY)" : ""}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {product.total_slots > MAX_COLOR_LEGEND_ENTRIES && (
-              <div className="modal-notice">
-                <WarningIcon
-                  size={13}
-                  weight="fill"
-                  style={{ flexShrink: 0, marginTop: "2px" }}
-                />
-                <span>
-                  응모 번호가 {MAX_COLOR_LEGEND_ENTRIES}번을 넘어가면 색이
-                  앞번호와 겹칠 수 있어요.
-                </span>
-              </div>
-            )}
-
-            <div className="modal-btn-row">
-              <button
-                className="btn-confirm"
-                style={{ width: "100%" }}
-                onClick={() => setColorInfoOpen(false)}
-              >
-                확인
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

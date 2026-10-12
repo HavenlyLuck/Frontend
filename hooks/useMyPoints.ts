@@ -15,14 +15,18 @@ export function notifyPointsUpdated() {
 export function useMyPoints() {
   const [eungPoint, setEungPoint] = useState(0)
   const [ssalPoint, setSsalPoint] = useState(0)
+  const [ssalTicket, setSsalTicket] = useState(0)
+  const [loggedIn, setLoggedIn] = useState(false)
 
   const refetch = useCallback(async () => {
     const session = await getValidSession()
+    setLoggedIn(!!session)
     if (!session) return
     try {
       const res = await getMyPoints(session.token)
       setEungPoint(res.woon_point)
       setSsalPoint(res.ssal_point)
+      setSsalTicket(res.ssal_ticket ?? 0)
     } catch {
       // 무시
     }
@@ -34,5 +38,5 @@ export function useMyPoints() {
     return () => window.removeEventListener(POINTS_UPDATED_EVENT, refetch)
   }, [refetch])
 
-  return { eungPoint, ssalPoint, refetch }
+  return { eungPoint, ssalPoint, ssalTicket, loggedIn, refetch }
 }
