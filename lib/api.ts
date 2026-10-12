@@ -1,6 +1,9 @@
 import type { AvatarConfig } from './avatar/compose'
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// 지정이 없으면(로컬 개발) 지금 접속한 주소의 8000번 백엔드로 보낸다.
+// 그래서 같은 와이파이의 다른 기기가 http://<맥북 IP>:3000 으로 열어도 IP를 따로 적지 않아도 된다.
+export const API_URL = process.env.NEXT_PUBLIC_API_URL
+  || (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : 'http://localhost:8000')
 
 export class ApiError extends Error {
   status: number
@@ -10,7 +13,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {

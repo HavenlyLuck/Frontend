@@ -64,15 +64,23 @@ export default function NoticePage() {
 
   const togglePin = async (n: Notice) => {
     if (!adminToken) return
-    await updateNotice(adminToken, n.notice_id, { pinned: !n.pinned })
-    reload()
+    try {
+      await updateNotice(adminToken, n.notice_id, { pinned: !n.pinned })
+      reload()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '변경하지 못했어요.')
+    }
   }
 
   const remove = async (n: Notice) => {
     if (!adminToken || !confirm(`'${n.title}' 공지를 삭제할까요?`)) return
-    await deleteNotice(adminToken, n.notice_id)
-    if (openId === n.notice_id) setOpenId(null)
-    reload()
+    try {
+      await deleteNotice(adminToken, n.notice_id)
+      if (openId === n.notice_id) setOpenId(null)
+      reload()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '삭제하지 못했어요.')
+    }
   }
 
   return (
