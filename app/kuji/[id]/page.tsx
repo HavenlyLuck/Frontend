@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import { notFound, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import {
   CheckIcon,
   ConfettiIcon,
@@ -11,13 +11,14 @@ import {
   LockIcon,
   TicketIcon,
 } from '@phosphor-icons/react'
-import { getKujiProduct, type KujiLastOne, type KujiTier } from '@/lib/kujiData'
+import { fetchKujiProduct, type KujiLastOne, type KujiProduct, type KujiTier } from '@/lib/kujiData'
 import { confirmKujiDraw, fetchKujiBoard, type KujiBoard } from '@/lib/kujiBoard'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
 import { getValidSession, isLoggedIn } from '@/lib/auth'
 import KujiReveal from '@/components/KujiReveal'
 import KujiAvatarScene from '@/components/KujiAvatarScene'
-import { getMyProfile } from '@/lib/api'
+import { ApiError, getMyProfile } from '@/lib/api'
+import { notifyPointsUpdated } from '@/hooks/useMyPoints'
 import { DEFAULT_AVATAR, normalizeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 
 type DrawResult = { ticketId: number; grade: string; tier: KujiTier }[]
@@ -29,9 +30,6 @@ const POLL_CLOSED_MS = 15_000
 const TAKEN_FLASH_MS = 1_400
 
 export default function KujiProductPage({ params }: { params: { id: string } }) {
-  const product = getKujiProduct(params.id)
-  if (!product) notFound()
-
   const router = useRouter()
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -40,6 +38,30 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
     }
   }, [router])
 
+  const [product, setProduct] = useState<KujiProduct | null | undefined>(undefined)
+  useEffect(() => {
+    let cancelled = false
+    fetchKujiProduct(Number(params.id)).then(p => { if (!cancelled) setProduct(p) })
+    return () => { cancelled = true }
+  }, [params.id])
+
+  if (product === undefined || product === null) {
+    return (
+      <div className="home-container">
+        <div className="coming-soon-box large">
+          <div className="emoji"><GiftIcon size={32} weight="light" /></div>
+          <div className="title">{product === undefined ? '불러오는 중이에요' : '쿠지를 찾을 수 없어요'}</div>
+          {product === null && <div className="desc">종료되었거나 존재하지 않는 쿠지예요</div>}
+        </div>
+      </div>
+    )
+  }
+
+  return <KujiProductView product={product} />
+}
+
+function KujiProductView({ product }: { product: KujiProduct }) {
+  const router = useRouter()
   const wishId = `kuji-${product.id}`
 
   const [qty, setQty] = useState(1)
@@ -56,11 +78,9 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
   const selectedRef = useRef(selected)
   selectedRef.current = selected
 
-  // 제비판 상태는 서버(지금은 lib/kujiBoard 흉내) 기준. 첫 조회 전엔 데모 데이터로 그리고, version 0이라 첫 조회는 항상 전체를 받는다.
-  const [board, setBoard] = useState<KujiBoard>(() => ({
-    version: 0,
-    drawn: product.tickets.filter(t => t.status === 'drawn').map(t => ({ id: t.id, grade: t.grade })),
-  }))
+  // 제비판 상태는 서버 기준. version 0이라 첫 조회는 항상 전체를 받는다.
+  const [board, setBoard] = useState<KujiBoard>({ version: 0, drawn: [] })
+  const ticketIds = useMemo(() => Array.from({ length: product.totalTickets }, (_, i) => i + 1), [product.totalTickets])
   const boardRef = useRef(board)
   const drawnGrade = useMemo(() => new Map(board.drawn.map(d => [d.id, d.grade])), [board])
 
@@ -106,6 +126,8 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
   }, [product.id, drawOpen])
 
   const remaining = product.totalTickets - board.drawn.length
+  // 다 뽑혔거나 관리자가 판매를 끝낸 쿠지
+  const closed = remaining === 0 || !product.open
   const tierRemaining = (grade: string) =>
     (product.tiers.find(t => t.grade === grade)?.count ?? 0) - board.drawn.filter(d => d.grade === grade).length
   const topTiers = product.tiers.filter(t => t.isTop)
@@ -207,9 +229,15 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
 
   const confirmDraw = async () => {
     if (confirming) return
+    const session = await getValidSession()
+    if (!session) {
+      alert('로그인 후 이용해주세요.')
+      router.replace('/login')
+      return
+    }
     setConfirming(true)
     try {
-      const res = await confirmKujiDraw(product.id, selected)
+      const res = await confirmKujiDraw(session.token, product.id, selected)
       if (!res.ok) {
         // 확정 직전에 다른 사람이 먼저 가져간 제비 — 그 제비만 선택 해제하고
         // 나머지 선택은 그대로 둔 채 다시 고르게 한다 (부분 뽑기는 하지 않음)
@@ -220,12 +248,13 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
       }
       applyBoard(res.board, res.drawn.map(d => d.ticketId))
       setConflictIds([])
-      // TODO(backend): 서버가 뽑기 확정과 같은 트랜잭션에서 포인트 차감·보관함 적재를 한다
+      notifyPointsUpdated()
       setResults(res.drawn.map(d => ({ ...d, tier: product.tiers.find(t => t.grade === d.grade)! })))
       setLastOne(res.lastOne)
       setSelected([])
-    } catch {
-      alert('뽑기 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.')
+    } catch (err) {
+      // 포인트 부족, 판매 종료 등은 서버가 알려준 이유를 그대로 보여준다
+      alert(err instanceof ApiError ? err.message : '뽑기 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setConfirming(false)
     }
@@ -245,13 +274,15 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.75), rgba(0,0,0,0.1))' }} />
           <div style={{ position: 'absolute', left: 20, bottom: 16, color: '#fff' }}>
             <span style={{ fontSize: 12, fontWeight: 700, background: 'rgba(22, 24, 29, 0.72)', padding: '4px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <GiftIcon size={12} weight="fill" color="var(--gold)" /> 쿠지 진행 중
+              <GiftIcon size={12} weight="fill" color="var(--gold)" /> {closed ? '쿠지 종료' : '쿠지 진행 중'}
             </span>
             <div style={{ fontSize: 22, fontWeight: 800, marginTop: 8 }}>{product.title}</div>
           </div>
         </div>
 
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{product.description}</p>
+        {product.description && (
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{product.description}</p>
+        )}
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', marginBottom: 28 }}>
           <div style={{ flex: 1, minWidth: 200 }}>
@@ -329,9 +360,9 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>뽑을 개수</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, border: '1px solid var(--border-strong)', borderRadius: 10, padding: '8px 16px', width: 'fit-content' }}>
-                <button onClick={() => changeQty(-1)} disabled={remaining === 0} style={{ width: 28, height: 28, border: 'none', background: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-secondary)' }}>−</button>
+                <button onClick={() => changeQty(-1)} disabled={closed} style={{ width: 28, height: 28, border: 'none', background: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-secondary)' }}>−</button>
                 <span style={{ fontSize: 15, fontWeight: 700, minWidth: 20, textAlign: 'center', color: 'var(--text)' }}>{qty}</span>
-                <button onClick={() => changeQty(1)} disabled={remaining === 0} style={{ width: 28, height: 28, border: 'none', background: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-secondary)' }}>+</button>
+                <button onClick={() => changeQty(1)} disabled={closed} style={{ width: 28, height: 28, border: 'none', background: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--text-secondary)' }}>+</button>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -353,16 +384,16 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
                 </button>
                 <button
                   onClick={openDraw}
-                  disabled={remaining === 0}
+                  disabled={closed}
                   style={{
                     padding: '14px 28px', borderRadius: 12, border: 'none',
-                    background: remaining === 0 ? 'var(--border)' : 'var(--accent)',
-                    color: remaining === 0 ? 'var(--text-tertiary)' : '#ffffff',
-                    fontSize: 15, fontWeight: 700, cursor: remaining === 0 ? 'default' : 'pointer',
+                    background: closed ? 'var(--border)' : 'var(--accent)',
+                    color: closed ? 'var(--text-tertiary)' : '#ffffff',
+                    fontSize: 15, fontWeight: 700, cursor: closed ? 'default' : 'pointer',
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                   }}
                 >
-                  {remaining === 0 ? '품절되었습니다' : <><TicketIcon size={16} weight="fill" /> 뽑기 시작</>}
+                  {closed ? '품절되었습니다' : <><TicketIcon size={16} weight="fill" /> 뽑기 시작</>}
                 </button>
               </div>
             </div>
@@ -394,15 +425,15 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
             <div className="kuji-draw-modal-body" style={{ padding: 20, overflowY: 'auto' }}>
               {(
                 <div className="kuji-ticket-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 6 }}>
-                  {product.tickets.map(ticket => {
-                    const isSelected = selected.includes(ticket.id)
-                    const drawnAs = drawnGrade.get(ticket.id)
+                  {ticketIds.map(ticketId => {
+                    const isSelected = selected.includes(ticketId)
+                    const drawnAs = drawnGrade.get(ticketId)
                     const isDrawn = drawnAs != null
                     return (
                       <button
-                        key={ticket.id}
-                        className={justTaken.includes(ticket.id) ? 'kuji-ticket-taken' : undefined}
-                        onClick={() => toggleTicket(ticket.id)}
+                        key={ticketId}
+                        className={justTaken.includes(ticketId) ? 'kuji-ticket-taken' : undefined}
+                        onClick={() => toggleTicket(ticketId)}
                         disabled={isDrawn}
                         style={{
                           aspectRatio: '3 / 4',
@@ -426,7 +457,7 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
                         ) : (
                           <>
                             {isSelected ? <CheckIcon size={14} weight="bold" /> : <GiftIcon size={14} weight="fill" />}
-                            <span style={{ opacity: 0.85 }}>#{ticket.id}</span>
+                            <span style={{ opacity: 0.85 }}>#{ticketId}</span>
                           </>
                         )}
                       </button>

@@ -355,9 +355,11 @@ export function purchaseStoreProduct(token: string, storeProductId: number, quan
 
 export interface StorageItemResponse {
   storage_item_id: number
-  source: 'raffle' | 'store'
+  source: 'raffle' | 'store' | 'kuji'
   raffle_product_id: number | null
   store_product_id: number | null
+  kuji_set_id: number | null
+  kuji_prize_id: number | null
   product_name: string
   image_url: string | null
   quantity: number
@@ -459,6 +461,141 @@ export async function createStoreProduct(token: string, payload: CreateStoreProd
   }
 
   return data as StoreProductResponse
+}
+
+export interface KujiPrizeResponse {
+  kuji_prize_id: number
+  tier: 'upper' | 'lower'
+  grade: string
+  name: string
+  image_url: string | null
+  quantity: number
+  remaining_quantity: number
+}
+
+export interface KujiSetResponse {
+  kuji_set_id: number
+  title: string
+  description: string | null
+  image_url: string | null
+  ticket_price: number
+  total_tickets: number
+  remaining_tickets: number
+  status: 'open' | 'sold_out' | 'closed'
+  prizes: KujiPrizeResponse[]
+  last_one_name: string | null
+  last_one_image_url: string | null
+  created_at: string
+}
+
+// 관리자용 — 원가·예상 매출 포함
+export interface KujiSetAdminResponse extends KujiSetResponse {
+  prizes: (KujiPrizeResponse & { cost: number })[]
+  last_one_cost: number | null
+  total_cost: number
+  expected_revenue: number
+}
+
+export interface CreateKujiPrize {
+  tier: 'upper' | 'lower'
+  name: string
+  quantity: number
+  cost: number
+  image?: Blob
+}
+
+export interface CreateKujiSetPayload {
+  title: string
+  description?: string
+  ticket_price: number
+  image: Blob
+  prizes: CreateKujiPrize[]
+  last_one?: { name: string; cost: number; image?: Blob }
+}
+
+export interface KujiBoardResponse {
+  kuji_set_id: number
+  version: number
+  total_tickets: number
+  remaining_tickets: number
+  drawn: { ticket_number: number; grade: string }[]
+}
+
+export interface KujiDrawResponse {
+  ok: boolean
+  drawn: { ticket_number: number; kuji_prize_id: number; grade: string; tier: 'upper' | 'lower'; name: string; image_url: string | null }[]
+  last_one: { name: string; image_url: string | null } | null
+  points_spent: number
+  conflict_ticket_numbers: number[]
+  board: KujiBoardResponse
+}
+
+export function getKujiSets(status?: KujiSetResponse['status']) {
+  return request<KujiSetResponse[]>(`/kuji${status ? `?status=${status}` : ''}`)
+}
+
+export function getKujiSet(kujiSetId: number) {
+  return request<KujiSetResponse>(`/kuji/${kujiSetId}`)
+}
+
+// since가 서버의 최신 버전과 같으면 바뀐 게 없어서 null
+export function getKujiBoard(kujiSetId: number, since?: number) {
+  return request<KujiBoardResponse | null>(`/kuji/${kujiSetId}/board${since != null ? `?since=${since}` : ''}`)
+}
+
+export function drawKuji(token: string, kujiSetId: number, ticketNumbers: number[]) {
+  return request<KujiDrawResponse>(`/kuji/${kujiSetId}/draw`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ ticket_numbers: ticketNumbers }),
+  })
+}
+
+export function getKujiSetsAdmin(token: string) {
+  return request<KujiSetAdminResponse[]>('/kuji/admin', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 쿠지 한 판 등록 — 상품 사진은 prize_images로 모아 보내고 각 상품의 image_index로 가리킨다
+export async function createKujiSet(token: string, payload: CreateKujiSetPayload) {
+  const formData = new FormData()
+  formData.append('title', payload.title)
+  if (payload.description) formData.append('description', payload.description)
+  formData.append('ticket_price', String(payload.ticket_price))
+  formData.append('image', payload.image)
+  let imageCount = 0
+  const prizes = payload.prizes.map(({ image, ...prize }) => {
+    if (!image) return prize
+    formData.append('prize_images', image)
+    return { ...prize, image_index: imageCount++ }
+  })
+  formData.append('prizes', JSON.stringify(prizes))
+  if (payload.last_one) {
+    formData.append('last_one_name', payload.last_one.name)
+    formData.append('last_one_cost', String(payload.last_one.cost))
+    if (payload.last_one.image) formData.append('last_one_image', payload.last_one.image)
+  }
+
+  const res = await fetch(`${API_URL}/kuji`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+
+  const data = await res.json().catch(() => null)
+
+  if (!res.ok) {
+    const detail = data?.detail
+    const message = typeof detail === 'string'
+      ? detail
+      : Array.isArray(detail)
+        ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join(', ')
+        : '요청 처리 중 오류가 발생했습니다.'
+    throw new ApiError(res.status, message)
+  }
+
+  return data as KujiSetAdminResponse
 }
 
 export async function createRaffleProduct(token: string, payload: CreateRaffleProductPayload) {

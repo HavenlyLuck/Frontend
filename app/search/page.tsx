@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { GiftIcon, MagnifyingGlassIcon, StorefrontIcon, TicketIcon } from '@phosphor-icons/react'
 import { getStoreProducts, type RaffleProductResponse, type StoreProductResponse } from '@/lib/api'
 import { getListedRaffles, isListedRaffleVisible } from '@/lib/raffle'
-import { KUJI_LIST } from '@/lib/kujiList'
+import { fetchKujiList, type KujiListItem } from '@/lib/kujiList'
 import RaffleCard from '@/components/RaffleCard'
 import KujiCard from '@/components/KujiCard'
 import StoreProductCard from '@/components/StoreProductCard'
@@ -25,6 +25,7 @@ function SearchResults() {
   const query = (useSearchParams().get('q') ?? '').trim()
   const [raffles, setRaffles] = useState<RaffleWithDeadline[]>([])
   const [store, setStore] = useState<StoreProductResponse[]>([])
+  const [kuji, setKuji] = useState<KujiListItem[]>([])
   const [loaded, setLoaded] = useState(false)
   const [, forceTick] = useState(0)
 
@@ -33,11 +34,13 @@ function SearchResults() {
     Promise.all([
       getListedRaffles().catch(() => [] as RaffleProductResponse[]),
       getStoreProducts().catch(() => [] as StoreProductResponse[]),
-    ]).then(([r, s]) => {
+      fetchKujiList().catch(() => [] as KujiListItem[]),
+    ]).then(([r, s, k]) => {
       if (cancelled) return
       const now = Date.now()
       setRaffles(r.map(p => ({ ...p, deadlineAt: now + p.remaining_seconds * 1000 })))
       setStore(s)
+      setKuji(k)
       setLoaded(true)
     })
     return () => { cancelled = true }
@@ -54,7 +57,7 @@ function SearchResults() {
 
   const raffleHits = raffles.filter(p =>
     matches(p.product_name) && isListedRaffleVisible(p, Math.floor((p.deadlineAt - Date.now()) / 1000)))
-  const kujiHits = KUJI_LIST.filter(k => matches(k.title))
+  const kujiHits = kuji.filter(k => matches(k.title))
   const storeHits = store.filter(p => matches(p.product_name))
   const total = raffleHits.length + kujiHits.length + storeHits.length
 

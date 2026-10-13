@@ -20,7 +20,6 @@ import {
 import { isWished, toggleWishlist } from "@/lib/wishlist";
 import { getValidSession, isLoggedIn } from "@/lib/auth";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
-import { createTestRaffleEntry, getTestRaffle, isTestRaffle } from "@/lib/raffleTest";
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return "마감";
@@ -62,13 +61,6 @@ export default function RaffleProductPage({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    // 화면 확인용 테스트 응모는 서버 대신 프론트 임시 데이터로
-    if (isTestRaffle(raffleId)) {
-      const test = getTestRaffle();
-      setProduct(test);
-      setRemaining(test.remaining_seconds);
-      return;
-    }
     getRaffleProducts()
       .then((list) => {
         const found =
@@ -167,13 +159,11 @@ export default function RaffleProductPage({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const entry = isTestRaffle(product.raffle_product_id)
-        ? await createTestRaffleEntry(ticketCount)
-        : await createRaffleEntry(
-            session.token,
-            product.raffle_product_id,
-            ticketCount,
-          );
+      const entry = await createRaffleEntry(
+        session.token,
+        product.raffle_product_id,
+        ticketCount,
+      );
       const newSoldSlots = product.sold_slots + entry.ticket_count;
       const justSoldOut = newSoldSlots >= product.total_slots;
       setProduct((prev) =>

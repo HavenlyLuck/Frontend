@@ -11,7 +11,7 @@ import { getStoreProducts, type RaffleProductResponse, type StoreProductResponse
 import CardImage from "@/components/CardImage";
 import StoreProductCard from "@/components/StoreProductCard";
 import KujiCard from "@/components/KujiCard";
-import { KUJI_LIST, type KujiListItem } from "@/lib/kujiList";
+import { fetchKujiList, type KujiListItem } from "@/lib/kujiList";
 import { getListedRaffles, isListedRaffleVisible, isSoldOutRaffle } from "@/lib/raffle";
 
 // 마감임박 섹션과 히어로 캐러셀은 아직 "준비중" 상태로 표시 (응모상품 섹션만 백엔드 연동됨)
@@ -67,13 +67,16 @@ function pickRandom<T>(pool: T[], n: number): T[] {
 }
 
 export default function HomePage() {
-  // 홈 쿠지 — 테스트 쿠지는 빼고 최대 4개
+  // 홈 쿠지 — 최대 4개
   const [kujiItems, setKujiItems] = useState<KujiListItem[]>([]);
   const [shopProducts, setShopProducts] = useState<StoreProductResponse[]>([]);
   const [shopLoaded, setShopLoaded] = useState(false);
 
   useEffect(() => {
-    setKujiItems(pickRandom(KUJI_LIST.filter((k) => !k.test), 4));
+    // 홈에는 판매 중인 쿠지만
+    fetchKujiList()
+      .then((list) => setKujiItems(pickRandom(list.filter((k) => !k.soldOut), 4)))
+      .catch(() => {});
     // 상점: 백엔드에 등록된 실제 상품 중 재고 있는 것 우선으로 4개
     getStoreProducts()
       .then((list) => {

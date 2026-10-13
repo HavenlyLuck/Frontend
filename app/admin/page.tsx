@@ -9,6 +9,7 @@ import {
   ChartLineUpIcon,
   CoinsIcon,
   DiceFiveIcon,
+  DotsSixVerticalIcon,
   GearIcon,
   GiftIcon,
   GrainsIcon,
@@ -18,13 +19,15 @@ import {
   TicketIcon,
   UsersIcon,
 } from '@phosphor-icons/react'
-import { verifyAdmin, ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse, getStoreProducts, createStoreProduct, STORE_CATEGORIES, type StoreCategory, type StoreProductResponse } from '@/lib/api'
+import { verifyAdmin, ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse, getStoreProducts, createStoreProduct, getKujiSetsAdmin, createKujiSet, type KujiSetAdminResponse, STORE_CATEGORIES, type StoreCategory, type StoreProductResponse } from '@/lib/api'
 import { getValidSession, clearAuth } from '@/lib/auth'
 import { TODAY, DAILY_REV, MONTHLY_REV, DAILY_SALES } from '@/lib/adminStats'
 import {
-  PRODUCTS, PRODUCT_TABS, addProduct, removeProduct, toggleProductActive,
+  PRODUCTS, PRODUCT_TABS, removeProduct, toggleProductActive,
   type ProductType, type KujiItem, type Product,
 } from '@/lib/adminProducts'
+
+type KujiTier = 'upper' | 'lower'
 
 const TYPE_COLOR: Record<string, string> = { '응모': 'var(--accent)', '쿠지': 'var(--gold)', '상점': 'var(--type-store)' }
 const TAB_ICON: Record<ProductType, React.ReactNode> = {
@@ -209,11 +212,26 @@ export default function AdminPage() {
       .catch((err) => setStoreListError(err instanceof ApiError ? err.message : '상점 상품 목록을 불러오지 못했습니다.'))
   }
 
+  const [kujiSets, setKujiSets] = useState<KujiSetAdminResponse[]>([])
+  const [kujiListError, setKujiListError] = useState<string | null>(null)
+
+  function reloadKujiSets() {
+    if (!adminToken) return
+    getKujiSetsAdmin(adminToken)
+      .then(setKujiSets)
+      .catch((err) => setKujiListError(err instanceof ApiError ? err.message : '쿠지 목록을 불러오지 못했습니다.'))
+  }
+
   useEffect(() => {
     if (!authChecked) return
     reloadRaffleProducts()
     reloadStoreProducts()
   }, [authChecked])
+
+  useEffect(() => {
+    if (authChecked && adminToken) reloadKujiSets()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authChecked, adminToken])
 
   const [revenueTab, setRevenueTab] = useState<'일별' | '월별'>('일별')
   const [revDate, setRevDate] = useState(TODAY)
@@ -226,8 +244,7 @@ export default function AdminPage() {
   const [productPage, setProductPage] = useState(1)
   const [products, setProducts] = useState<Product[]>(() => [...PRODUCTS])
   const [showAddForm, setShowAddForm] = useState(false)
-  const [nextId, setNextId] = useState(100)
-  const [newP, setNewP] = useState({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '' })
+  const [newP, setNewP] = useState({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000 운포인트', description: '' })
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [deadlineDays, setDeadlineDays] = useState(1)
   const [storeCategory, setStoreCategory] = useState<StoreCategory | null>(null)
@@ -236,7 +253,7 @@ export default function AdminPage() {
   const autoMaxTickets = Math.floor((Number(newP.price.replace(/[^0-9]/g, '')) || 0) / 1000)
 
   function resetNewProductForm() {
-    setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '1,000 운포인트', description: '' })
+    setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000 운포인트', description: '' })
     setNewImageFile(null)
     setDeadlineDays(1)
     setStoreCategory(null)
@@ -279,6 +296,26 @@ export default function AdminPage() {
       description: sp.description ?? undefined,
     }
   }
+  function kujiToProduct(ks: KujiSetAdminResponse): Product {
+    const toItem = (p: KujiSetAdminResponse['prizes'][number]) => ({ name: p.name, img: p.image_url ?? '', count: String(p.quantity), cost: String(p.cost) })
+    const lower = ks.prizes.filter(p => p.tier === 'lower')
+    return {
+      id: ks.kuji_set_id,
+      type: '쿠지',
+      title: ks.title,
+      price: `${ks.ticket_price.toLocaleString()} 운포인트`,
+      img: ks.image_url ?? '',
+      active: ks.status === 'open',
+      stock: ks.remaining_tickets,
+      maxTickets: ks.total_tickets,
+      ticketPrice: `${ks.ticket_price.toLocaleString()} 운포인트`,
+      kujiItems: ks.prizes.filter(p => p.tier === 'upper').map(toItem),
+      lowerItems: lower.map(toItem),
+      lowerCount: lower.reduce((sum, p) => sum + p.quantity, 0),
+      lastOne: ks.last_one_name ? { name: ks.last_one_name, img: ks.last_one_image_url ?? '', cost: String(ks.last_one_cost ?? 0) } : undefined,
+    }
+  }
+
   // 쿠지 구성 — 상위상·하위상 모두 상품명·사진·개수·원가를 한 줄씩
   const [kujiItems, setKujiItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1', cost: '' }])
   const [lowerItems, setLowerItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1', cost: '' }])
@@ -292,15 +329,44 @@ export default function AdminPage() {
   // 원가 책정용 — 총 원가, 예상 매출(총 장수 × 1장 가격), 마진
   // 라스트원상 — 제비가 아니라 마지막 장을 뽑은 사람에게 추가로 주는 상이라 장수에는 안 들어가고 원가에만 더한다
   const [lastOneItem, setLastOneItem] = useState({ name: '', img: '', cost: '' })
-  const lastOneCost = lastOneItem.name.trim() ? toNum(lastOneItem.cost) : 0
-  const kujiTicketPrice = toNum(newP.ticketPrice) || 1000
+  const lastOneCost = toNum(lastOneItem.cost)
+  const kujiTicketPrice = toNum(newP.ticketPrice) || 10000
   const kujiTotalCost = sumCost(kujiItems) + sumCost(lowerItems) + lastOneCost
   const kujiRevenue = kujiTotalPapers * kujiTicketPrice
   const kujiMargin = kujiRevenue - kujiTotalCost
   const kujiMarginRate = kujiRevenue > 0 ? Math.round((kujiMargin / kujiRevenue) * 1000) / 10 : 0
 
+  // 상위상 ↔ 하위상 끌어서 옮기기 — 줄 왼쪽 손잡이를 잡고 다른 줄 위(그 자리 앞) 또는 목록 빈 곳(맨 뒤)에 놓는다
+  const [draggingKuji, setDraggingKuji] = useState<{ tier: KujiTier; idx: number } | null>(null)
+  const [kujiDropTarget, setKujiDropTarget] = useState<{ tier: KujiTier; idx: number } | null>(null)
+  const isBlankKujiRow = (it: KujiItem) => !it.name.trim() && !it.img && !it.cost.trim()
+
+  function moveKujiItem(from: KujiTier, fromIdx: number, to: KujiTier, toIdx: number) {
+    const lists = { upper: kujiItems, lower: lowerItems }
+    const setters = { upper: setKujiItems, lower: setLowerItems }
+    const src = [...lists[from]]
+    const [item] = src.splice(fromIdx, 1)
+    if (!item) return
+    if (from === to) {
+      src.splice(fromIdx < toIdx ? toIdx - 1 : toIdx, 0, item)
+      setters[from](src)
+      return
+    }
+    // 받는 쪽이 빈 줄 하나뿐이면 그 줄을 대신한다
+    const dst = lists[to].length === 1 && isBlankKujiRow(lists[to][0]) ? [] : [...lists[to]]
+    dst.splice(Math.min(toIdx, dst.length), 0, item)
+    setters[from](src.length ? src : [{ name: '', img: '', count: '1', cost: '' }])
+    setters[to](dst)
+  }
+
+  function endKujiDrag() {
+    setDraggingKuji(null)
+    setKujiDropTarget(null)
+  }
+
   // 상위상·하위상 입력 줄 — 등급은 순서대로 A, B, … (하위상은 상위상 다음 글자부터)
-  function renderKujiRows({ label, list, setList, gradeStart, placeholder }: {
+  function renderKujiRows({ tier, label, list, setList, gradeStart, placeholder }: {
+    tier: KujiTier
     label: string
     list: KujiItem[]
     setList: React.Dispatch<React.SetStateAction<KujiItem[]>>
@@ -309,6 +375,20 @@ export default function AdminPage() {
   }) {
     const update = (idx: number, patch: Partial<KujiItem>) =>
       setList(prev => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
+    const dropOn = (idx: number) => (e: React.DragEvent) => {
+      if (!draggingKuji) return
+      e.preventDefault()
+      e.stopPropagation()
+      moveKujiItem(draggingKuji.tier, draggingKuji.idx, tier, idx)
+      endKujiDrag()
+    }
+    const hoverOn = (idx: number) => (e: React.DragEvent) => {
+      if (!draggingKuji) return
+      e.preventDefault()
+      e.stopPropagation()
+      if (kujiDropTarget?.tier !== tier || kujiDropTarget.idx !== idx) setKujiDropTarget({ tier, idx })
+    }
+    const listDropActive = kujiDropTarget?.tier === tier && kujiDropTarget.idx === list.length
     return (
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -320,9 +400,49 @@ export default function AdminPage() {
             style={{ border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', borderRadius: 8, width: 24, height: 24, fontSize: 15, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
           >+</button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {list.map((item, idx) => (
-            <div key={idx} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
+        <div
+          onDragOver={hoverOn(list.length)}
+          onDrop={dropOn(list.length)}
+          style={{
+            display: 'flex', flexDirection: 'column', gap: 10, borderRadius: 12,
+            padding: draggingKuji ? 6 : 0,
+            outline: draggingKuji ? `2px dashed ${listDropActive ? 'var(--accent)' : 'var(--border-strong)'}` : 'none',
+            background: listDropActive ? 'var(--accent-tint)' : 'transparent',
+            transition: 'padding 0.12s',
+          }}
+        >
+          {list.map((item, idx) => {
+            const isDragging = draggingKuji?.tier === tier && draggingKuji.idx === idx
+            const isDropBefore = kujiDropTarget?.tier === tier && kujiDropTarget.idx === idx && !isDragging
+            return (
+            <div
+              key={idx}
+              data-kuji-row
+              onDragOver={hoverOn(idx)}
+              onDrop={dropOn(idx)}
+              style={{
+                display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: 10,
+                background: 'var(--surface)',
+                opacity: isDragging ? 0.4 : 1,
+                boxShadow: isDropBefore ? '0 -3px 0 0 var(--accent)' : 'none',
+              }}
+            >
+              <span
+                draggable
+                title="끌어서 상위상·하위상으로 옮기기"
+                aria-label="끌어서 옮기기"
+                onDragStart={e => {
+                  e.dataTransfer.effectAllowed = 'move'
+                  e.dataTransfer.setData('text/plain', `${tier}:${idx}`)
+                  const row = e.currentTarget.closest('[data-kuji-row]')
+                  if (row instanceof HTMLElement) e.dataTransfer.setDragImage(row, 20, 20)
+                  setDraggingKuji({ tier, idx })
+                }}
+                onDragEnd={endKujiDrag}
+                style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', cursor: 'grab', color: 'var(--text-tertiary)', padding: '4px 0', touchAction: 'none' }}
+              >
+                <DotsSixVerticalIcon size={18} weight="bold" />
+              </span>
               <span style={{ flexShrink: 0, minWidth: 34, textAlign: 'center', fontSize: 12, fontWeight: 800, color: 'var(--gold)', background: 'var(--gold-tint)', border: '1px solid var(--gold-tint-border)', borderRadius: 6, padding: '4px 6px' }}>
                 {String.fromCharCode(65 + gradeStart + idx)}상
               </span>
@@ -378,7 +498,8 @@ export default function AdminPage() {
                 <button type="button" onClick={() => setList(prev => prev.filter((_, i) => i !== idx))} style={{ border: 'none', background: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>삭제</button>
               )}
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     )
@@ -398,7 +519,9 @@ export default function AdminPage() {
       ? storeProducts
           .filter(sp => sp.point_type === (productTab === '상점(운포인트)' ? 'woon' : 'ssal'))
           .map(sp => ({ product: storeToProduct(sp), selling: sp.stock > 0 }))
-      : products.filter(p => p.type === productTab).map(p => ({ product: p, selling: p.active && p.stock > 0 }))
+      : productTab === '쿠지'
+        ? kujiSets.map(ks => ({ product: kujiToProduct(ks), selling: ks.status === 'open' && ks.remaining_tickets > 0 }))
+        : products.filter(p => p.type === productTab).map(p => ({ product: p, selling: p.active && p.stock > 0 }))
   const sellingCount = tabItems.filter(x => x.selling).length
   const doneCount = tabItems.length - sellingCount
   const saleFiltered = tabItems.filter(x => x.selling === (saleFilter === 'selling')).map(x => x.product)
@@ -585,6 +708,9 @@ export default function AdminPage() {
           <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{raffleListError}</div>
         )}
 
+        {productTab === '쿠지' && kujiListError && (
+          <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{kujiListError}</div>
+        )}
         {(productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)') && storeListError && (
           <div style={{ color: '#e14d72', fontSize: 13, marginBottom: 12 }}>{storeListError}</div>
         )}
@@ -623,7 +749,7 @@ export default function AdminPage() {
                 </div>
                 <div style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, flexShrink: 0, background: p.active ? 'var(--accent-tint)' : 'var(--bg-subtle)', color: p.active ? 'var(--accent)' : 'var(--text-tertiary)', border: `1px solid ${p.active ? 'var(--accent-tint-border)' : 'var(--border)'}` }}>{p.active ? '활성' : '비활성'}</div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  {p.type === '응모' || p.type === '상점(운포인트)' || p.type === '상점(쌀포인트)' ? (
+                  {p.type === '응모' || p.type === '쿠지' || p.type === '상점(운포인트)' || p.type === '상점(쌀포인트)' ? (
                     <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>상태 변경 API 미구현</span>
                   ) : (
                     <>
@@ -727,6 +853,7 @@ export default function AdminPage() {
                 </div>
               )}
               {productTab === '쿠지' && renderKujiRows({
+                tier: 'upper',
                 label: '상위상 (상품명·사진·개수·원가) *',
                 list: kujiItems,
                 setList: setKujiItems,
@@ -734,6 +861,7 @@ export default function AdminPage() {
                 placeholder: '예: 나오야 젠인 피규어',
               })}
               {productTab === '쿠지' && renderKujiRows({
+                tier: 'lower',
                 label: '하위상 (상품명·사진·개수·원가) *',
                 list: lowerItems,
                 setList: setLowerItems,
@@ -743,7 +871,7 @@ export default function AdminPage() {
               {productTab === '쿠지' && (
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 8 }}>
-                    라스트원상 (선택 · 마지막 1장을 뽑은 분께 추가로, 장수에는 안 들어가요)
+                    라스트원상 (선택 · 마지막 1장을 뽑은 분께 추가로, 장수에는 안 들어가고 원가에는 들어가요)
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, border: '1px solid #8b5cf6', borderRadius: 10, padding: 10 }}>
                     <span className="kuji-last-badge" style={{ position: 'static', transform: 'none', flexShrink: 0 }}>LAST ONE</span>
@@ -825,13 +953,13 @@ export default function AdminPage() {
                   <div style={{ color: 'var(--text-tertiary)', fontSize: 11, marginTop: 5 }}>등록 시점부터 선택한 기간 뒤 자동 마감돼요</div>
                 </div>
               )}
-              {(productTab === '응모' || productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)') && raffleSubmitError && (
+              {raffleSubmitError && (
                 <div style={{ color: 'var(--danger)', fontSize: 12 }}>{raffleSubmitError}</div>
               )}
               {productTab === '쿠지' && (
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>1장 가격</div>
-                  <input style={lightInput} placeholder="기본값: 1,000 운포인트" value={newP.ticketPrice} onChange={e => setNewP(p => ({ ...p, ticketPrice: e.target.value }))} />
+                  <input style={lightInput} placeholder="기본값: 10,000 운포인트" value={newP.ticketPrice} onChange={e => setNewP(p => ({ ...p, ticketPrice: e.target.value }))} />
                 </div>
               )}
               {productTab === '쿠지' && (
@@ -839,7 +967,7 @@ export default function AdminPage() {
                 <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', background: 'var(--bg-subtle)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
                   {[
                     { label: '총 장수', value: kujiTotalPapers ? `${kujiTotalPapers.toLocaleString()}장` : '-', sub: `상위 ${kujiItemCount} · 하위 ${kujiLowerCount}` },
-                    { label: '총 원가', value: kujiTotalCost ? `${kujiTotalCost.toLocaleString()}원` : '-', sub: lastOneCost ? '개수 × 원가 합 + 라스트원상' : '개수 × 원가 합' },
+                    { label: '총 원가', value: kujiTotalCost ? `${kujiTotalCost.toLocaleString()}원` : '-', sub: lastOneCost ? `개수 × 원가 합 + 라스트원 ${lastOneCost.toLocaleString()}원` : '개수 × 원가 합' },
                     { label: '예상 매출', value: kujiRevenue ? `${kujiRevenue.toLocaleString()}P` : '-', sub: `${kujiTicketPrice.toLocaleString()}P × ${kujiTotalPapers}장` },
                     {
                       label: '예상 마진',
@@ -926,35 +1054,54 @@ export default function AdminPage() {
                   }
                   return
                 }
-                if (!newP.title.trim()) return
-                if (productTab !== '쿠지' && !newP.price.trim()) return
-                if (productTab === '쿠지' && (kujiItemCount === 0 || kujiLowerCount === 0)) {
-                  alert('상위상과 하위상을 각각 하나 이상 입력해주세요.')
+                if (productTab !== '쿠지') return
+                if (!adminToken) return
+                if (!newP.title.trim()) {
+                  setRaffleSubmitError('쿠지 이름을 입력해주세요.')
                   return
                 }
-                if (productTab === '쿠지' && !newP.img) {
-                  alert('쿠지 대표 이미지를 올려주세요.')
+                if (kujiItemCount === 0 || kujiLowerCount === 0) {
+                  setRaffleSubmitError('상위상과 하위상을 각각 하나 이상 입력해주세요.')
                   return
                 }
-                // 쿠지 목록·배너에는 상위상 사진이 아니라 따로 올린 대표 이미지를 쓴다
-                const kujiThumb = newP.img
-                const newProduct = {
-                  id: nextId, type: productTab,
-                  title: newP.title,
-                  price: productTab === '쿠지' ? (newP.ticketPrice || '1,000 운포인트') : newP.price,
-                  cost: productTab === '쿠지' ? undefined : newP.cost,
-                  img: productTab === '쿠지' ? kujiThumb : newP.img,
-                  active: true,
-                  stock: Number(newP.stock) || 1,
-                  ...(productTab === '쿠지'
-                    ? { maxTickets: kujiTotalPapers || 50, ticketPrice: newP.ticketPrice || '1,000 운포인트', kujiItems: filledItems(kujiItems), lowerItems: filledItems(lowerItems), lowerCount: kujiLowerCount, lastOne: lastOneItem.name.trim() ? lastOneItem : undefined }
-                    : { description: newP.description }),
-                } as Product
-                addProduct(newProduct)
-                setProducts(prev => [...prev, newProduct])
-                setNextId(n => n + 1)
-                resetNewProductForm()
-                setShowAddForm(false)
+                if (!lastOneItem.name.trim() && (lastOneItem.cost.trim() || lastOneItem.img)) {
+                  setRaffleSubmitError('라스트원상 이름을 입력해주세요.')
+                  return
+                }
+                if (!newImageFile) {
+                  setRaffleSubmitError('쿠지 대표 이미지를 올려주세요.')
+                  return
+                }
+                // 상품 사진은 미리보기용 data URL로 들고 있어서 파일로 되돌려 보낸다
+                const toBlob = async (dataUrl: string) => (dataUrl ? await (await fetch(dataUrl)).blob() : undefined)
+                try {
+                  setRaffleSubmitting(true)
+                  setRaffleSubmitError(null)
+                  const toPrizes = (list: KujiItem[], tier: 'upper' | 'lower') =>
+                    Promise.all(filledItems(list).map(async it => ({
+                      tier,
+                      name: it.name.trim(),
+                      quantity: Number(it.count) || 1,
+                      cost: toNum(it.cost),
+                      image: await toBlob(it.img),
+                    })))
+                  const created = await createKujiSet(adminToken, {
+                    title: newP.title.trim(),
+                    ticket_price: kujiTicketPrice,
+                    image: newImageFile,
+                    prizes: [...await toPrizes(kujiItems, 'upper'), ...await toPrizes(lowerItems, 'lower')],
+                    last_one: lastOneItem.name.trim()
+                      ? { name: lastOneItem.name.trim(), cost: lastOneCost, image: await toBlob(lastOneItem.img) }
+                      : undefined,
+                  })
+                  setKujiSets(prev => [created, ...prev])
+                  resetNewProductForm()
+                  setShowAddForm(false)
+                } catch (err) {
+                  setRaffleSubmitError(err instanceof ApiError ? err.message : '등록 중 오류가 발생했습니다.')
+                } finally {
+                  setRaffleSubmitting(false)
+                }
               }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: raffleSubmitting ? 'default' : 'pointer', opacity: raffleSubmitting ? 0.6 : 1 }}>{raffleSubmitting ? '등록 중...' : '추가하기'}</button>
               <button onClick={() => { setShowAddForm(false); resetNewProductForm() }} style={{ padding: '11px 24px', borderRadius: 10, border: '1px solid var(--border-strong)', background: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: 14, cursor: 'pointer' }}>취소</button>
             </div>

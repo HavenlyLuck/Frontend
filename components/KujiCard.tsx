@@ -7,7 +7,7 @@ import { isLoggedIn } from '@/lib/auth'
 import CardImage from '@/components/CardImage'
 import type { KujiListItem } from '@/lib/kujiList'
 
-// 쿠지 카드 (쿠지 목록 · 검색 결과) — 로그인 안 했으면 상세로 들어가지 않고 로그인으로 보낸다
+// 쿠지 카드 (홈 · 쿠지 목록 · 검색 결과) — 로그인 안 했으면 상세로 들어가지 않고 로그인으로 보낸다
 export default function KujiCard({ item }: { item: KujiListItem }) {
   const router = useRouter()
 
@@ -19,8 +19,8 @@ export default function KujiCard({ item }: { item: KujiListItem }) {
     }
   }
 
-  return (
-    <Link className="product-card-home" href={item.href} onClick={requireLogin}>
+  const content = (
+    <>
       <div className="card-img">
         <CardImage src={item.img} alt={item.alt} />
       </div>
@@ -38,6 +38,12 @@ export default function KujiCard({ item }: { item: KujiListItem }) {
           <span>총 {item.max}장 중 <span className="cnt">{item.count}장</span> 소진</span>
         </div>
       </div>
-    </Link>
+    </>
+  )
+  // 매진되면 응모 카드처럼 상세로 못 들어가게 링크를 없앤다
+  return item.soldOut ? (
+    <div className="product-card-home is-soldout" aria-disabled="true">{content}</div>
+  ) : (
+    <Link className="product-card-home" href={item.href} onClick={requireLogin}>{content}</Link>
   )
 }
