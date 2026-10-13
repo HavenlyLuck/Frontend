@@ -5,7 +5,6 @@ import { TicketIcon } from '@phosphor-icons/react'
 import type { RaffleProductResponse } from '@/lib/api'
 import RaffleCard from '@/components/RaffleCard'
 import { useMyPoints } from '@/hooks/useMyPoints'
-import { getTestRaffle } from '@/lib/raffleTest'
 import { getListedRaffles, isListedRaffleVisible } from '@/lib/raffle'
 
 interface RaffleWithDeadline extends RaffleProductResponse {
@@ -23,8 +22,7 @@ export default function EungmoPage() {
       .catch(() => [] as RaffleProductResponse[])
       .then(list => {
         const now = Date.now()
-        // 화면 확인용 테스트 응모는 목록 맨 끝에 (홈에는 안 나온다)
-        setProducts([...list, getTestRaffle()].map(p => ({ ...p, deadlineAt: now + p.remaining_seconds * 1000 })))
+        setProducts(list.map(p => ({ ...p, deadlineAt: now + p.remaining_seconds * 1000 })))
       })
       .finally(() => setLoaded(true))
   }, [])

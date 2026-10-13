@@ -198,7 +198,7 @@ export default function StoragePage() {
                 <div className="entry-title">{title}</div>
                 <div className="entry-meta">
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                    {item.source === 'raffle' ? <ConfettiIcon size={12} color="var(--gold)" /> : <ShoppingBagIcon size={12} />} {item.source === 'raffle' ? '당첨' : '구매'}
+                    {item.source === 'store' ? <ShoppingBagIcon size={12} /> : <ConfettiIcon size={12} color="var(--gold)" />} {item.source === 'store' ? '구매' : item.source === 'kuji' ? '쿠지 당첨' : '당첨'}
                   </span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {item.created_at.slice(0, 10)}</span>
                   {value && <span>{value}</span>}

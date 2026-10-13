@@ -1,14 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GiftIcon } from '@phosphor-icons/react'
 import KujiCard from '@/components/KujiCard'
-import { KUJI_LIST } from '@/lib/kujiList'
+import { fetchKujiList, type KujiListItem } from '@/lib/kujiList'
 
 const SORTS = ['최신순', '마감임박순', '참여율 높은순', '참여율 낮은순']
 
 export default function KujiPage() {
   const [sort, setSort] = useState('최신순')
+  const [items, setItems] = useState<KujiListItem[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    fetchKujiList()
+      .then(setItems)
+      .catch(() => {})
+      .finally(() => setLoaded(true))
+  }, [])
 
   return (
     <div>
@@ -41,11 +50,19 @@ export default function KujiPage() {
           ))}
         </div>
 
-        <div className="product-grid-home">
-          {KUJI_LIST.map(item => (
-            <KujiCard key={item.href} item={item} />
-          ))}
-        </div>
+        {!loaded ? null : items.length === 0 ? (
+          <div className="coming-soon-box large">
+            <div className="emoji"><GiftIcon size={32} weight="light" /></div>
+            <div className="title">상품 준비중</div>
+            <div className="desc">쿠지 상품을 준비하고 있어요. 조금만 기다려주세요!</div>
+          </div>
+        ) : (
+          <div className="product-grid-home">
+            {items.map(item => (
+              <KujiCard key={item.href} item={item} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
