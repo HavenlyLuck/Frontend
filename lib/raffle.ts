@@ -15,7 +15,7 @@ export function isSoldOutRaffle(p: RaffleProductResponse): boolean {
 /*
  * 홈/응모 목록에 보여줄 응모 상품: 진행 중(매진 후 추첨 대기 포함) + 추첨이 끝난 지 하루가 안 된 상품.
  * 진행 중인 상품이 먼저, 매진 상품은 뒤로.
- * (추첨은 매진 5분 뒤 자동이라 drawn_at 기준으로 세도 매진 시각과 거의 같다)
+ * (추첨은 매진 1분 뒤 자동이라 drawn_at 기준으로 세도 매진 시각과 거의 같다)
  */
 export async function getListedRaffles(): Promise<RaffleProductResponse[]> {
   const [open, completed] = await Promise.all([
@@ -122,9 +122,9 @@ export function isOngoingPhase(phase: EntryPhase): boolean {
 }
 
 // 매진 후 추첨까지 걸리는 시간 (백엔드 RAFFLE_DRAW_DELAY_SECONDS와 같아야 한다)
-export const DRAW_DELAY_MS = 5 * 60 * 1000
+export const DRAW_DELAY_MS = 1 * 60 * 1000
 
-// 자동 추첨 예정 시각(ms) — 서버가 기록한 매진 시각 + 5분. 아직 매진 시각을 모르면 null
+// 자동 추첨 예정 시각(ms) — 서버가 기록한 매진 시각 + 1분. 아직 매진 시각을 모르면 null
 export function getDrawAt(soldOutAt: string | null | undefined): number | null {
   return soldOutAt ? parseServerTime(soldOutAt) + DRAW_DELAY_MS : null
 }

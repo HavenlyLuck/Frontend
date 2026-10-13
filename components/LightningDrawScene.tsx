@@ -70,6 +70,8 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
   const [finished, setFinished] = useState(false)
 
   const meIsWinner = myEntryNumbers.includes(winnerEntryNumber)
+  // 닉네임이 없으면(데모, 예전 서버) 응모 번호로 대신한다
+  const winnerNickname = entrants?.find(e => e.entryNumber === winnerEntryNumber)?.nickname
   const myEntryNumber = myEntryNumbers[0]
 
   useEffect(() => {
@@ -89,6 +91,8 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
     const clouds = buildCloudSprites()
     const tl = timeline(scene)
     const { me, winner } = scene
+    // 내가 당첨돼도 닉네임으로 보여준다 — 닉네임이 없으면(데모, 미리보기) '나' 또는 응모 번호
+    const winnerName = winner.nickname ? `당첨! ${winner.nickname}` : me === winner ? '당첨! 나' : `당첨 #${winnerEntryNumber}`
 
     const frame = document.createElement('canvas')
     frame.width = WORLD_W
@@ -355,7 +359,7 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
         }
       }
       if (me && !(me === winner && winnerLabelOn)) drawLabel(`나${tickets(me)}`, me, cam, scale, ox, oy, 'me', dpr)
-      if (winnerLabelOn) drawLabel(me === winner ? '당첨! 나' : `당첨 #${winnerEntryNumber}`, winner, cam, scale, ox, oy, 'gold', dpr)
+      if (winnerLabelOn) drawLabel(winnerName, winner, cam, scale, ox, oy, 'gold', dpr)
 
       // 번개 섬광
       let flash = 0
@@ -384,7 +388,7 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
         ref={canvasRef}
         className="draw-scene-canvas"
         role="img"
-        aria-label={meIsWinner ? '번개 추첨 연출: 내 아바타에 번개가 떨어졌어요' : `번개 추첨 연출: ${winnerEntryNumber}번 응모자에게 번개가 떨어졌어요`}
+        aria-label={meIsWinner ? '번개 추첨 연출: 내 아바타에 번개가 떨어졌어요' : `번개 추첨 연출: ${winnerNickname ? `${winnerNickname}님` : `${winnerEntryNumber}번 응모자`}에게 번개가 떨어졌어요`}
       />
       {!finished && (
         <button type="button" className="draw-scene-skip" onClick={() => { skipRef.current = true }}>

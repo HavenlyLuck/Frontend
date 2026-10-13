@@ -200,7 +200,7 @@ export interface RaffleProductResponse {
   remaining_seconds: number
   is_open: boolean
   remaining_slots: number
-  // 응모권이 매진된 시각(UTC) — 이 시각 + 5분에 서버가 자동 추첨한다
+  // 응모권이 매진된 시각(UTC) — 이 시각 + 1분에 서버가 자동 추첨한다
   sold_out_at: string | null
 }
 
@@ -224,6 +224,7 @@ export interface RaffleCastMember {
   entry_number: number
   ticket_count: number
   avatar_config: AvatarConfig | null
+  nickname: string | null
 }
 
 export interface RaffleDrawCastResponse {

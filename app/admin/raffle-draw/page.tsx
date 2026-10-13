@@ -15,7 +15,7 @@ const card: React.CSSProperties = { background: 'var(--surface)', border: '1px s
 
 const POLL_MS = 15_000
 
-// 매진된 응모는 서버가 매진 5분 뒤 자동으로 추첨한다. 이 화면은 추첨 대기 중인 상품을 지켜보기만 한다.
+// 매진된 응모는 서버가 매진 1분 뒤 자동으로 추첨한다. 이 화면은 추첨 대기 중인 상품을 지켜보기만 한다.
 export default function AdminRaffleDrawPage() {
   const router = useRouter()
   const [authChecked, setAuthChecked] = useState(false)
@@ -75,7 +75,7 @@ export default function AdminRaffleDrawPage() {
         </Link>
       </div>
       <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 24, lineHeight: 1.6 }}>
-        응모권이 매진되면 5분 뒤 서버가 자동으로 추첨해요(응모권 수만큼 당첨 확률).
+        응모권이 매진되면 1분 뒤 서버가 자동으로 추첨해요(응모권 수만큼 당첨 확률).
         응모자는 마이페이지에서 결과를 열면 자기 캐릭터들이 선 번개 추첨 연출을 보게 됩니다.
       </div>
 

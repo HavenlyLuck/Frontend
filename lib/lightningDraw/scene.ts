@@ -59,6 +59,7 @@ export interface CastMember {
   entryNumber?: number
   avatar?: AvatarConfig | null
   ticketCount?: number
+  nickname?: string | null
   isMe: boolean
   isWinner: boolean
   phase: number // 숨쉬기/눈깜빡임 타이밍을 사람마다 어긋나게
@@ -274,6 +275,7 @@ export interface SceneEntrant {
   entryNumber: number
   avatar: AvatarConfig | null
   ticketCount?: number // 산 응모권 장수 — 2장 이상이면 머리 위에 ×N
+  nickname?: string | null // 당첨되면 이름표에 띄운다
 }
 
 // 진열장 안쪽 영역 (월드 좌표)
@@ -408,6 +410,7 @@ export function buildScene(
     entryNumber: e.entryNumber,
     avatar: e.avatar,
     ticketCount: e.ticketCount,
+    nickname: e.nickname,
     isMe: false,
     isWinner: false,
     phase: Math.floor(hash01(seed + e.entryNumber * 31) * 4000),

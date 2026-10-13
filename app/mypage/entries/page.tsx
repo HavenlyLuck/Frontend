@@ -49,7 +49,7 @@ export default function RaffleEntriesPage() {
   const [resultItem, setResultItem] = useState<PhasedRaffleEntry | null>(null);
   // 번개 연출이 끝나야 결과 문구가 이어서 나온다
   const [revealed, setRevealed] = useState(false);
-  // 결과 연출에 세울 실제 응모자들 — 대기 5분 동안 미리 받아 두었으면 바로, 아니면 받는 즉시 시작
+  // 결과 연출에 세울 실제 응모자들 — 대기 1분 동안 미리 받아 두었으면 바로, 아니면 받는 즉시 시작
   const [cast, setCast] = useState<RaffleCastMember[] | null>(null);
   const [castFailed, setCastFailed] = useState(false);
   const isWin = resultItem != null && isWinningEntry(resultItem);
@@ -72,6 +72,7 @@ export default function RaffleEntriesPage() {
         entryNumber: c.entry_number,
         avatar: c.avatar_config?.v === 2 ? normalizeAvatar(c.avatar_config) : null,
         ticketCount: c.ticket_count,
+        nickname: c.nickname,
       })),
     [cast],
   );
