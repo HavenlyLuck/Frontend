@@ -29,7 +29,7 @@ export default function RaffleAlertWatcher() {
         id,
         kind: 'raffle-soldout',
         title: `${item.product_name} 응모가 마감되었습니다!`,
-        body: '5분 뒤 추첨이 시작됩니다!',
+        body: '1분 뒤 추첨이 시작됩니다!',
         href: '/mypage/entries',
       })
       if (added) setAlerts(prev => [...prev, { id, productName: item.product_name }])
@@ -64,7 +64,7 @@ export default function RaffleAlertWatcher() {
           <div className="raffle-alert-icon"><TicketIcon size={20} weight="fill" /></div>
           <div className="raffle-alert-text">
             <div className="raffle-alert-title"><b>{alert.productName}</b> 응모가 마감되었습니다!</div>
-            <div className="raffle-alert-body">5분 뒤 추첨이 시작됩니다!</div>
+            <div className="raffle-alert-body">1분 뒤 추첨이 시작됩니다!</div>
             <Link className="raffle-alert-link" href="/mypage/entries" onClick={() => dismiss(alert.id)}>응모 내역 보기 →</Link>
           </div>
           <button className="raffle-alert-close" aria-label="알림 닫기" onClick={() => dismiss(alert.id)}>

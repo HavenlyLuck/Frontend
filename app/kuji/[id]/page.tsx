@@ -260,6 +260,38 @@ function KujiProductView({ product }: { product: KujiProduct }) {
     }
   }
 
+  // 상위상·하위상 카드 — 사진, 등급, 남은 개수 (다 나가면 SOLD OUT)
+  const renderTierTile = (tier: KujiTier) => {
+    const left = tierRemaining(tier.grade)
+    const soldOut = left === 0
+    return (
+      <div key={tier.grade} style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: 'var(--surface)', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ position: 'relative', aspectRatio: '1 / 1', background: 'var(--bg-subtle)' }}>
+          {tier.image ? (
+            <img src={tier.image} alt={tier.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: soldOut ? 'blur(2px) brightness(0.5)' : undefined }} />
+          ) : (
+            // 사진 없이 등록한 상품
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
+              <GiftIcon size={36} weight="fill" />
+            </div>
+          )}
+          {soldOut && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: 13, letterSpacing: 2, padding: '5px 12px', borderRadius: 6, border: '2px solid #ffffff66', background: 'rgba(0,0,0,0.55)' }}>SOLD OUT</span>
+            </div>
+          )}
+          <span style={{ position: 'absolute', top: 8, left: 8, background: 'var(--bg)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 6 }}>{tier.grade}상</span>
+        </div>
+        <div style={{ padding: '10px 12px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{tier.title}</div>
+          <div style={{ fontSize: 12, color: soldOut ? 'var(--text-tertiary)' : 'var(--text-secondary)' }}>
+            {soldOut ? '모두 소진되었습니다' : `${left} / ${tier.count}개 남음`}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="container">
@@ -269,7 +301,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
           <span>{product.title}</span>
         </div>
 
-        <div style={{ borderRadius: 16, overflow: 'hidden', marginBottom: 20, position: 'relative', height: 220 }}>
+        <div style={{ borderRadius: 16, overflow: 'hidden', marginBottom: 20, position: 'relative', height: 'clamp(240px, 34vw, 420px)' }}>
           <img src={product.banner} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.75), rgba(0,0,0,0.1))' }} />
           <div style={{ position: 'absolute', left: 20, bottom: 16, color: '#fff' }}>
@@ -301,29 +333,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
 
         <div className="section-title" style={{ marginBottom: 14 }}>상위상</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14, marginBottom: 28 }}>
-          {topTiers.map(tier => {
-            const left = tierRemaining(tier.grade)
-            const soldOut = left === 0
-            return (
-              <div key={tier.grade} style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: 'var(--surface)', boxShadow: 'var(--shadow-sm)' }}>
-                <div style={{ position: 'relative', aspectRatio: '1 / 1', background: 'var(--bg-subtle)' }}>
-                  <img src={tier.image ?? undefined} alt={tier.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: soldOut ? 'blur(2px) brightness(0.5)' : undefined }} />
-                  {soldOut && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ color: '#fff', fontWeight: 800, fontSize: 13, letterSpacing: 2, padding: '5px 12px', borderRadius: 6, border: '2px solid #ffffff66', background: 'rgba(0,0,0,0.55)' }}>SOLD OUT</span>
-                    </div>
-                  )}
-                  <span style={{ position: 'absolute', top: 8, left: 8, background: 'var(--bg)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 6 }}>{tier.grade}상</span>
-                </div>
-                <div style={{ padding: '10px 12px' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{tier.title}</div>
-                  <div style={{ fontSize: 12, color: soldOut ? 'var(--text-tertiary)' : 'var(--text-secondary)' }}>
-                    {soldOut ? '모두 소진되었습니다' : `${left} / ${tier.count}개 남음`}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+          {topTiers.map(renderTierTile)}
           {product.lastOne && (
             <div className="kuji-lastone-tile">
               <div style={{ position: 'relative', aspectRatio: '1 / 1', background: 'var(--bg-subtle)' }}>
@@ -345,14 +355,8 @@ function KujiProductView({ product }: { product: KujiProduct }) {
         </div>
 
         <div className="section-title" style={{ marginBottom: 14 }}>하위상</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
-          {lowerTiers.map(tier => (
-            <div key={tier.grade} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 20, padding: '8px 14px', fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-subtle)' }}>
-              <span style={{ fontWeight: 700, color: 'var(--text)' }}>{tier.grade}상</span>
-              <span>{tier.title}</span>
-              <span style={{ color: 'var(--text-tertiary)' }}>· {tier.count}개</span>
-            </div>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12, marginBottom: 32 }}>
+          {lowerTiers.map(renderTierTile)}
         </div>
 
         <div style={{ position: 'sticky', bottom: 16, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px', boxShadow: 'var(--shadow-lg)' }}>

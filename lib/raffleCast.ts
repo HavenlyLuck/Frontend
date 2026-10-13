@@ -2,7 +2,7 @@ import { getRaffleDrawCast, type RaffleCastMember } from './api'
 import { getValidSession } from './auth'
 
 // 번개 추첨 화면에 세울 응모자 목록. 매진되면 더는 바뀌지 않으므로,
-// 추첨을 기다리는 5분 동안 미리 받아 두고 결과를 열 때 그대로 쓴다.
+// 추첨을 기다리는 1분 동안 미리 받아 두고 결과를 열 때 그대로 쓴다.
 const cache = new Map<number, Promise<RaffleCastMember[]>>()
 
 export function prefetchDrawCast(raffleProductId: number): Promise<RaffleCastMember[]> {
