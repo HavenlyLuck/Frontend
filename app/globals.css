@@ -911,6 +911,8 @@ nav {
 .product-card-home.is-soldout .card-img img { filter: blur(6px) brightness(0.45) saturate(0.6); transform: scale(1.08); }
 .product-card-home.is-soldout .card-img .card-img-backdrop { filter: blur(20px) brightness(0.3) saturate(0.6); transform: scale(1.2); }
 .product-card-home.is-soldout .card-body { opacity: 0.5; }
+/* 매진된 쿠지 — 블러는 그대로, 무슨 상품이었는지 볼 수 있게 상세로는 들어간다 */
+a.product-card-home.is-soldout { cursor: pointer; }
 .card-soldout-stamp {
   position: absolute;
   inset: 0;

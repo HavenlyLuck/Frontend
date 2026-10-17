@@ -6,6 +6,7 @@ import type { RaffleProductResponse } from '@/lib/api'
 import RaffleCard from '@/components/RaffleCard'
 import { useMyPoints } from '@/hooks/useMyPoints'
 import { getListedRaffles, isListedRaffleVisible } from '@/lib/raffle'
+import { getTestRaffle } from '@/lib/raffleTest'
 
 interface RaffleWithDeadline extends RaffleProductResponse {
   deadlineAt: number
@@ -22,7 +23,8 @@ export default function EungmoPage() {
       .catch(() => [] as RaffleProductResponse[])
       .then(list => {
         const now = Date.now()
-        setProducts(list.map(p => ({ ...p, deadlineAt: now + p.remaining_seconds * 1000 })))
+        // 화면 테스트용 응모를 맨 뒤에 붙인다 (응모 목록에만 보임)
+        setProducts([...list, getTestRaffle()].map(p => ({ ...p, deadlineAt: now + p.remaining_seconds * 1000 })))
       })
       .finally(() => setLoaded(true))
   }, [])

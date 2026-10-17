@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { GiftIcon } from '@phosphor-icons/react'
 import KujiCard from '@/components/KujiCard'
-import { fetchKujiList, type KujiListItem } from '@/lib/kujiList'
+import { fetchKujiList, toKujiListItem, type KujiListItem } from '@/lib/kujiList'
+import { getTestKujiSet } from '@/lib/kujiTest'
 
 const SORTS = ['최신순', '마감임박순', '참여율 높은순', '참여율 낮은순']
 
@@ -13,9 +14,10 @@ export default function KujiPage() {
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
+    // 화면 테스트용 쿠지를 맨 뒤에 붙인다 (쿠지 목록에만 보임)
     fetchKujiList()
-      .then(setItems)
-      .catch(() => {})
+      .catch(() => [] as KujiListItem[])
+      .then(list => setItems([...list, toKujiListItem(getTestKujiSet())]))
       .finally(() => setLoaded(true))
   }, [])
 

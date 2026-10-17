@@ -34,7 +34,7 @@ const modalCard: React.CSSProperties = {
 const EMPTY_ADDR_FORM = { label: '', recipient: '', phone: '', zipCode: '', address1: '', address2: '' }
 
 const POINT_LABEL = { woon: '운포인트', ssal: '쌀포인트' } as const
-const STATUS_LABEL = { ready: '보관 중', requested: '배송 신청됨', shipped: '배송 완료' } as const
+const STATUS_LABEL = { ready: '보관 중', requested: '배송 신청됨', shipped: '발송 완료' } as const
 
 function itemTitle(item: StorageItemResponse) {
   return item.quantity > 1 ? `${item.product_name} x${item.quantity}` : item.product_name
@@ -202,6 +202,11 @@ export default function StoragePage() {
                   </span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {item.created_at.slice(0, 10)}</span>
                   {value && <span>{value}</span>}
+                  {item.tracking_number && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      <TruckIcon size={12} /> {item.carrier} {item.tracking_number}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="entry-status">

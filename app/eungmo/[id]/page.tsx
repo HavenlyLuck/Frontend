@@ -20,6 +20,7 @@ import {
 import { isWished, toggleWishlist } from "@/lib/wishlist";
 import { getValidSession, isLoggedIn } from "@/lib/auth";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
+import { createTestRaffleEntry, getTestRaffle, isTestRaffle } from "@/lib/raffleTest";
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return "마감";
@@ -61,6 +62,14 @@ export default function RaffleProductPage({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
+    // 화면 테스트용 응모는 서버에 없으니 메모리에서 바로 꺼낸다
+    if (isTestRaffle(raffleId)) {
+      const test = getTestRaffle();
+      setProduct(test);
+      setRemaining(test.remaining_seconds);
+      setIsLiked(isWished(`raffle-${test.raffle_product_id}`));
+      return;
+    }
     getRaffleProducts()
       .then((list) => {
         const found =
@@ -159,11 +168,13 @@ export default function RaffleProductPage({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const entry = await createRaffleEntry(
-        session.token,
-        product.raffle_product_id,
-        ticketCount,
-      );
+      const entry = isTestRaffle(product.raffle_product_id)
+        ? await createTestRaffleEntry(ticketCount)
+        : await createRaffleEntry(
+            session.token,
+            product.raffle_product_id,
+            ticketCount,
+          );
       const newSoldSlots = product.sold_slots + entry.ticket_count;
       const justSoldOut = newSoldSlots >= product.total_slots;
       setProduct((prev) =>
@@ -220,9 +231,16 @@ export default function RaffleProductPage({
           <div className="info-panel">
             <div className="status-row">
               <span className="badge raffle">
-                <TicketIcon size={12} weight="fill" /> 응모 진행 중
+                <TicketIcon size={12} weight="fill" />{" "}
+                {product.status === "completed"
+                  ? "추첨 완료"
+                  : soldOut
+                    ? "추첨 대기"
+                    : expired
+                      ? "응모 마감"
+                      : "응모 진행 중"}
               </span>
-              {urgent && (
+              {urgent && !soldOut && (
                 <span className="badge urgent">
                   <FlameIcon size={12} weight="fill" /> 마감 임박
                 </span>
