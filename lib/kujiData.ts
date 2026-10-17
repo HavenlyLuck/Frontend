@@ -1,4 +1,5 @@
 import { getKujiSet, type KujiSetResponse } from './api'
+import { getTestKujiSet, isTestKuji } from './kujiTest'
 
 export interface KujiTier {
   grade: string
@@ -44,6 +45,7 @@ export function toKujiProduct(ks: KujiSetResponse): KujiProduct {
 
 // 없는 쿠지면 null
 export async function fetchKujiProduct(id: number): Promise<KujiProduct | null> {
+  if (isTestKuji(id)) return toKujiProduct(getTestKujiSet())
   if (!Number.isInteger(id) || id <= 0) return null
   try {
     return toKujiProduct(await getKujiSet(id))

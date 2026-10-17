@@ -19,10 +19,12 @@ export default function KujiCard({ item }: { item: KujiListItem }) {
     }
   }
 
-  const content = (
-    <>
+  // 매진돼도 무슨 상품이었는지 볼 수 있게 상세로는 들어간다 (상세에서 뽑기 버튼만 막힘)
+  return (
+    <Link className={`product-card-home${item.soldOut ? ' is-soldout' : ''}`} href={item.href} onClick={requireLogin}>
       <div className="card-img">
         <CardImage src={item.img} alt={item.alt} />
+        {item.soldOut && <div className="card-soldout-stamp"><span>SOLD OUT</span></div>}
       </div>
       <div className="card-body">
         <div className="card-raffle-badge"><GiftIcon size={11} weight="fill" /> {item.badge}</div>
@@ -38,12 +40,6 @@ export default function KujiCard({ item }: { item: KujiListItem }) {
           <span>총 {item.max}장 중 <span className="cnt">{item.count}장</span> 소진</span>
         </div>
       </div>
-    </>
-  )
-  // 매진되면 응모 카드처럼 상세로 못 들어가게 링크를 없앤다
-  return item.soldOut ? (
-    <div className="product-card-home is-soldout" aria-disabled="true">{content}</div>
-  ) : (
-    <Link className="product-card-home" href={item.href} onClick={requireLogin}>{content}</Link>
+    </Link>
   )
 }

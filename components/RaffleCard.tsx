@@ -23,7 +23,7 @@ export default function RaffleCard({ product: p, secondsLeft }: { product: Raffl
       <div className="card-img">
         {p.image_url && <CardImage src={p.image_url} alt={p.product_name} />}
         {soldOut
-          ? <div className="card-soldout-stamp"><span>매진</span></div>
+          ? <div className="card-soldout-stamp"><span>SOLD OUT</span></div>
           : <div className="card-time-badge">⏱ {formatCountdown(secondsLeft)}</div>}
       </div>
       <div className="card-body">
@@ -45,10 +45,8 @@ export default function RaffleCard({ product: p, secondsLeft }: { product: Raffl
       </div>
     </>
   )
-  // 매진되면 상세 페이지로 못 들어가게 링크 자체를 없앤다
-  return soldOut ? (
-    <div className="product-card-home is-soldout" aria-disabled="true">{content}</div>
-  ) : (
-    <Link className="product-card-home" href={`/eungmo/${p.raffle_product_id}`}>{content}</Link>
+  // 매진돼도 무슨 상품이었는지 볼 수 있게 상세로는 들어간다 (상세에서 응모 버튼만 막힘)
+  return (
+    <Link className={`product-card-home${soldOut ? ' is-soldout' : ''}`} href={`/eungmo/${p.raffle_product_id}`}>{content}</Link>
   )
 }

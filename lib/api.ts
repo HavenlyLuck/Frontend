@@ -213,12 +213,6 @@ export function getRaffleProduct(raffleProductId: number) {
   return request<RaffleProductResponse>(`/raffles/${raffleProductId}`)
 }
 
-export function getPendingDrawProducts(token: string) {
-  return request<RaffleProductResponse[]>('/raffles/pending-draw', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-}
-
 // 번개 추첨 화면에 세울 응모자 — 응모 번호와 캐릭터 착장(저장 안 한 사람은 null)
 export interface RaffleCastMember {
   entry_number: number
@@ -371,6 +365,10 @@ export interface StorageItemResponse {
   address_id: number | null
   requested_at: string | null
   created_at: string
+  // TODO(backend): 발송 처리 때 저장 — 아직 서버가 안 내려주면 undefined
+  carrier?: string | null
+  tracking_number?: string | null
+  shipped_at?: string | null
 }
 
 export function getMyStorage(token: string) {
@@ -384,6 +382,29 @@ export function requestShipping(token: string, storageItemIds: number[], address
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ storage_item_ids: storageItemIds, address_id: addressId }),
+  })
+}
+
+// 관리자 배송 관리 — 배송 신청된 보관함 상품 + 누가 · 어디로
+// TODO(backend): GET /storage/admin?status=, POST /storage/admin/ship 아직 없음 (lib/adminShipping.ts가 그때까지 가짜 데이터를 쓴다)
+export interface AdminShippingItemResponse extends StorageItemResponse {
+  user_id: number
+  nickname: string
+  address: Pick<AddressResponse, 'recipient' | 'phone' | 'zip_code' | 'address1' | 'address2'> | null
+}
+
+export function getAdminShippingItems(token: string, status: 'requested' | 'shipped') {
+  return request<AdminShippingItemResponse[]>(`/storage/admin?status=${status}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 같은 박스로 보낸 상품들에 택배사 · 송장번호를 넣고 발송 완료로 바꾼다
+export function markItemsShipped(token: string, storageItemIds: number[], carrier: string, trackingNumber: string) {
+  return request<AdminShippingItemResponse[]>('/storage/admin/ship', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ storage_item_ids: storageItemIds, carrier, tracking_number: trackingNumber }),
   })
 }
 
@@ -487,6 +508,9 @@ export interface KujiSetResponse {
   last_one_name: string | null
   last_one_image_url: string | null
   created_at: string
+  // 마지막 제비가 나간 시각(UTC) — 이 시각부터 하루 동안만 목록에 매진 카드로 남긴다
+  // TODO(backend): 아직 안 내려줌. 없으면 매진 카드가 계속 남아 있다
+  sold_out_at?: string | null
 }
 
 // 관리자용 — 원가·예상 매출 포함

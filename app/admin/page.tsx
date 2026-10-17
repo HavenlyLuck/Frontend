@@ -8,7 +8,7 @@ import {
   ChartBarIcon,
   ChartLineUpIcon,
   CoinsIcon,
-  DiceFiveIcon,
+  TruckIcon,
   DotsSixVerticalIcon,
   GearIcon,
   GiftIcon,
@@ -661,17 +661,17 @@ export default function AdminPage() {
           </div>
         </Link>
 
-        {/* 라플 추첨 바로가기 */}
-        <Link href="/admin/raffle-draw" style={{ textDecoration: 'none' }}>
+        {/* 배송 관리 바로가기 */}
+        <Link href="/admin/shipping" style={{ textDecoration: 'none' }}>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: 'var(--accent-tint)', border: '1px solid var(--accent-tint-border)', borderRadius: 14, padding: '20px 24px', marginBottom: 36, cursor: 'pointer',
+            background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 14, padding: '20px 24px', marginBottom: 36, cursor: 'pointer',
           }}>
             <div>
-              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><DiceFiveIcon size={18} weight="fill" color="var(--accent)" /> 라플 추첨</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>마감된 응모 상품의 당첨자를 추첨하고 결과 영상을 저장하세요</div>
+              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><TruckIcon size={18} weight="fill" color="var(--accent)" /> 배송 관리</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>고객이 배송 신청한 상품을 받는 곳과 함께 확인하고 송장번호를 입력하세요</div>
             </div>
-            <span style={{ color: 'var(--accent)', fontSize: 20 }}>→</span>
+            <span style={{ color: 'var(--text-secondary)', fontSize: 20 }}>→</span>
           </div>
         </Link>
 
