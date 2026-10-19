@@ -444,6 +444,26 @@ export function createAddress(token: string, payload: CreateAddressPayload) {
   })
 }
 
+export interface AddressSearchItem {
+  zip_code: string
+  road_address: string
+  jibun_address: string
+  building_name: string
+}
+
+export interface AddressSearchResponse {
+  total: number
+  page: number
+  items: AddressSearchItem[]
+}
+
+export function searchAddress(token: string, keyword: string, page = 1) {
+  const query = new URLSearchParams({ keyword, page: String(page) })
+  return request<AddressSearchResponse>(`/addresses/search?${query}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 export interface CreateStoreProductPayload {
   product_name: string
   description?: string
