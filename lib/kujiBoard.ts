@@ -1,6 +1,5 @@
 import { drawKuji, getKujiBoard, type KujiBoardResponse } from './api'
 import type { KujiLastOne } from './kujiData'
-import { drawTestKuji, getTestKujiBoard, isTestKuji } from './kujiTest'
 
 /*
  * 쿠지 제비판 — 서버 API(GET /kuji/{id}/board, POST /kuji/{id}/draw)를 화면에서 쓰기 좋게 감싼다.
@@ -28,13 +27,13 @@ function toBoard(b: KujiBoardResponse): KujiBoard {
 
 // since가 지금 버전과 같으면 바뀐 게 없으니 null
 export async function fetchKujiBoard(kujiId: number, since?: number): Promise<KujiBoard | null> {
-  const board = isTestKuji(kujiId) ? await getTestKujiBoard(since) : await getKujiBoard(kujiId, since)
+  const board = await getKujiBoard(kujiId, since)
   return board ? toBoard(board) : null
 }
 
 // 포인트 부족·매진 같은 실패는 ApiError로 던진다
 export async function confirmKujiDraw(token: string, kujiId: number, ticketIds: number[]): Promise<KujiDrawResponse> {
-  const res = isTestKuji(kujiId) ? await drawTestKuji(ticketIds) : await drawKuji(token, kujiId, ticketIds)
+  const res = await drawKuji(token, kujiId, ticketIds)
   const board = toBoard(res.board)
   if (!res.ok) return { ok: false, conflictIds: res.conflict_ticket_numbers, board }
   return {
