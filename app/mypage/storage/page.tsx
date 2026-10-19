@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { ArchiveIcon, CalendarIcon, ConfettiIcon, ShoppingBagIcon, TruckIcon, XIcon } from '@phosphor-icons/react'
+import { useEffect, useRef, useState } from 'react'
+import { ArchiveIcon, CalendarIcon, ConfettiIcon, MagnifyingGlassIcon, MapPinIcon, ShoppingBagIcon, TruckIcon, XIcon } from '@phosphor-icons/react'
 import { useStorage } from '@/hooks/useStorage'
 import { notifyStorageUpdated } from '@/lib/storage'
 import { getValidSession } from '@/lib/auth'
@@ -10,7 +10,9 @@ import {
   createAddress,
   getMyAddresses,
   requestShipping,
+  searchAddress,
   type AddressResponse,
+  type AddressSearchItem,
   type StorageItemResponse,
 } from '@/lib/api'
 
@@ -29,6 +31,12 @@ const modalCard: React.CSSProperties = {
   width: '100%', maxWidth: 420, background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 16,
   padding: '24px 24px 20px', maxHeight: '85vh', overflowY: 'auto',
   boxShadow: 'var(--shadow-lg)',
+}
+
+const headerBtnStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
+  border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)',
+  fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
 const EMPTY_ADDR_FORM = { label: '', recipient: '', phone: '', zipCode: '', address1: '', address2: '' }
@@ -59,6 +67,13 @@ export default function StoragePage() {
   const [addresses, setAddresses] = useState<AddressResponse[]>([])
   const [showAddrModal, setShowAddrModal] = useState(false)
   const [newAddr, setNewAddr] = useState(EMPTY_ADDR_FORM)
+  const [showDefaultModal, setShowDefaultModal] = useState(false)
+
+  const [showAddrSearch, setShowAddrSearch] = useState(false)
+  const [addrKeyword, setAddrKeyword] = useState('')
+  const [addrResults, setAddrResults] = useState<AddressSearchItem[] | null>(null)
+  const [addrSearching, setAddrSearching] = useState(false)
+  const [addrSearchError, setAddrSearchError] = useState('')
 
   const [showShipModal, setShowShipModal] = useState(false)
   const [selectedAddrId, setSelectedAddrId] = useState<number | null>(null)
@@ -118,6 +133,52 @@ export default function StoragePage() {
     }
   }
 
+  const defaultAddress = addresses.find(a => a.is_default) ?? null
+  const address2Ref = useRef<HTMLInputElement>(null)
+
+  const resetAddrSearch = () => {
+    setAddrKeyword('')
+    setAddrResults(null)
+    setAddrSearchError('')
+  }
+
+  const openAddrSearch = () => {
+    resetAddrSearch()
+    setShowAddrSearch(true)
+  }
+
+  const closeAddrModal = () => {
+    setShowAddrModal(false)
+    setShowAddrSearch(false)
+    setNewAddr(EMPTY_ADDR_FORM)
+    resetAddrSearch()
+  }
+
+  const handleSearchAddress = async () => {
+    const keyword = addrKeyword.trim()
+    if (keyword.length < 2 || addrSearching) return
+    const session = await getValidSession()
+    if (!session) return
+    setAddrSearching(true)
+    setAddrSearchError('')
+    try {
+      const res = await searchAddress(session.token, keyword)
+      setAddrResults(res.items)
+    } catch (err) {
+      setAddrResults(null)
+      setAddrSearchError(errorMessage(err))
+    } finally {
+      setAddrSearching(false)
+    }
+  }
+
+  const pickSearchResult = (item: AddressSearchItem) => {
+    setNewAddr(p => ({ ...p, zipCode: item.zip_code, address1: item.road_address }))
+    setShowAddrSearch(false)
+    resetAddrSearch()
+    setTimeout(() => address2Ref.current?.focus(), 0)
+  }
+
   const handleAddAddress = async () => {
     if (!newAddr.recipient.trim() || !newAddr.phone.trim() || !newAddr.address1.trim() || submitting) return
     const session = await getValidSession()
@@ -135,8 +196,7 @@ export default function StoragePage() {
       // 새 배송지가 기본이 되면 기존 기본 표시는 해제된다
       setAddresses(prev => [addr, ...prev.map(a => (addr.is_default ? { ...a, is_default: false } : a))])
       setSelectedAddrId(addr.address_id)
-      setNewAddr(EMPTY_ADDR_FORM)
-      setShowAddrModal(false)
+      closeAddrModal()
       showToast('배송지가 등록되었습니다.')
     } catch (err) {
       showToast(errorMessage(err))
@@ -154,13 +214,25 @@ export default function StoragePage() {
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
           당첨되거나 구매한 상품이 보관돼요. 받고 싶은 상품을 선택해서 한 번에 택배로 받아보세요.
         </p>
-        <button
-          onClick={() => setShowAddrModal(true)}
-          style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          <TruckIcon size={13} weight="fill" /> 배송지 등록
-        </button>
+        <div style={{ flexShrink: 0, display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowDefaultModal(true)} style={headerBtnStyle}>
+            <MapPinIcon size={13} weight="fill" /> 기본 배송지
+          </button>
+          <button onClick={() => setShowAddrModal(true)} style={headerBtnStyle}>
+            <TruckIcon size={13} weight="fill" /> 배송지 등록
+          </button>
+        </div>
       </div>
+
+      {readyItems.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={allSelected} onChange={toggleAll} style={{ width: 17, height: 17, accentColor: 'var(--accent)' }} />
+            전체선택
+          </label>
+          <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{selected.size}개 선택됨</span>
+        </div>
+      )}
 
       <div className="entry-list">
         {items.map(item => {
@@ -226,32 +298,19 @@ export default function StoragePage() {
       )}
 
       {readyItems.length > 0 && (
-        <div style={{
-          position: 'fixed', left: 0, right: 0, bottom: 0,
-          background: 'var(--surface)', borderTop: '1px solid var(--border)',
-          boxShadow: '0 -2px 10px rgba(0,0,0,0.3)', padding: '14px 16px', zIndex: 100,
-        }}>
-          <div style={{ width: '100%', maxWidth: 720, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0 }}>
-              <input type="checkbox" checked={allSelected} onChange={toggleAll} style={{ width: 17, height: 17, accentColor: 'var(--accent)' }} />
-              전체선택
-            </label>
-            <span style={{ fontSize: 13, color: 'var(--text-tertiary)', flex: 1 }}>{selected.size}개 선택됨</span>
-            <button
-              onClick={openShipModal}
-              disabled={selected.size === 0}
-              style={{
-                padding: '12px 20px', borderRadius: 10, border: 'none',
-                background: selected.size === 0 ? 'var(--border)' : 'var(--accent)',
-                color: selected.size === 0 ? 'var(--text-tertiary)' : '#ffffff',
-                fontSize: 14, fontWeight: 700,
-                cursor: selected.size === 0 ? 'default' : 'pointer',
-              }}
-            >
-              선택 상품 배송 신청{selected.size > 0 ? ` (${selected.size})` : ''}
-            </button>
-          </div>
-        </div>
+        <button
+          onClick={openShipModal}
+          disabled={selected.size === 0}
+          style={{
+            width: '100%', marginTop: 16, padding: '13px 20px', borderRadius: 10, border: 'none',
+            background: selected.size === 0 ? 'var(--border)' : 'var(--accent)',
+            color: selected.size === 0 ? 'var(--text-tertiary)' : '#ffffff',
+            fontSize: 14, fontWeight: 700,
+            cursor: selected.size === 0 ? 'default' : 'pointer',
+          }}
+        >
+          선택 상품 배송 신청{selected.size > 0 ? ` (${selected.size})` : ''}
+        </button>
       )}
 
       {/* 배송지 선택 모달 */}
@@ -329,13 +388,53 @@ export default function StoragePage() {
         </div>
       )}
 
+      {/* 기본 배송지 모달 */}
+      {showDefaultModal && (
+        <div style={overlayStyle} onClick={() => setShowDefaultModal(false)}>
+          <div style={modalCard} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}><MapPinIcon size={17} weight="fill" color="var(--accent)" /> 기본 배송지</div>
+              <button onClick={() => setShowDefaultModal(false)} style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', fontSize: 18, cursor: 'pointer', lineHeight: 1, display: 'flex' }}><XIcon size={18} /></button>
+            </div>
+
+            {defaultAddress ? (
+              <div style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{defaultAddress.label}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--surface)', border: '1px solid var(--accent-tint-border)', borderRadius: 20, padding: '1px 8px' }}>기본</span>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                  {defaultAddress.recipient} · {defaultAddress.phone}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text)' }}>
+                  {defaultAddress.zip_code && `(${defaultAddress.zip_code}) `}{defaultAddress.address1} {defaultAddress.address2}
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-tertiary)', fontSize: 13 }}>
+                등록된 배송지가 없어요.<br />배송지를 먼저 등록해주세요.
+              </div>
+            )}
+
+            {!defaultAddress && (
+              <button
+                onClick={() => { setShowDefaultModal(false); setShowAddrModal(true) }}
+                style={{ width: '100%', marginTop: 16, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#ffffff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+              >
+                배송지 등록하기
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 배송지 등록 모달 */}
       {showAddrModal && (
-        <div style={overlayStyle} onClick={() => setShowAddrModal(false)}>
+        <div style={overlayStyle} onClick={closeAddrModal}>
           <div style={modalCard} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}><TruckIcon size={17} weight="fill" color="var(--accent)" /> 배송지 등록</div>
-              <button onClick={() => setShowAddrModal(false)} style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', fontSize: 18, cursor: 'pointer', lineHeight: 1, display: 'flex' }}><XIcon size={18} /></button>
+              <button onClick={closeAddrModal} style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', fontSize: 18, cursor: 'pointer', lineHeight: 1, display: 'flex' }}><XIcon size={18} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
@@ -353,16 +452,39 @@ export default function StoragePage() {
                 </div>
               </div>
               <div>
-                <div style={labelStyle}>우편번호</div>
-                <input style={inputStyle} placeholder="예: 06134" value={newAddr.zipCode} onChange={e => setNewAddr(p => ({ ...p, zipCode: e.target.value }))} />
-              </div>
-              <div>
                 <div style={labelStyle}>주소 *</div>
-                <input style={inputStyle} placeholder="도로명 주소" value={newAddr.address1} onChange={e => setNewAddr(p => ({ ...p, address1: e.target.value }))} />
-              </div>
-              <div>
-                <div style={labelStyle}>상세 주소</div>
-                <input style={inputStyle} placeholder="동, 호수 등" value={newAddr.address2} onChange={e => setNewAddr(p => ({ ...p, address2: e.target.value }))} />
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <input
+                    style={{ ...inputStyle, width: 120, flexShrink: 0, cursor: 'pointer' }}
+                    placeholder="우편번호"
+                    value={newAddr.zipCode}
+                    readOnly
+                    onClick={openAddrSearch}
+                  />
+                  <button
+                    onClick={openAddrSearch}
+                    style={{
+                      flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0 14px', borderRadius: 8, border: 'none',
+                      background: 'var(--accent)', color: '#ffffff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    <MagnifyingGlassIcon size={14} weight="bold" /> 주소 검색
+                  </button>
+                </div>
+                <input
+                  style={{ ...inputStyle, cursor: 'pointer', marginBottom: 8 }}
+                  placeholder="주소 검색 버튼을 눌러주세요"
+                  value={newAddr.address1}
+                  readOnly
+                  onClick={openAddrSearch}
+                />
+                <input
+                  ref={address2Ref}
+                  style={inputStyle}
+                  placeholder="상세 주소 (동, 호수 등)"
+                  value={newAddr.address2}
+                  onChange={e => setNewAddr(p => ({ ...p, address2: e.target.value }))}
+                />
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
@@ -380,7 +502,7 @@ export default function StoragePage() {
                 등록하기
               </button>
               <button
-                onClick={() => { setShowAddrModal(false); setNewAddr(EMPTY_ADDR_FORM) }}
+                onClick={closeAddrModal}
                 style={{ padding: '11px 24px', borderRadius: 10, border: '1px solid var(--border-strong)', background: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: 14, cursor: 'pointer' }}
               >
                 취소
@@ -390,8 +512,73 @@ export default function StoragePage() {
         </div>
       )}
 
+      {/* 주소 검색 모달 (배송지 등록 모달 위에 뜬다) */}
+      {showAddrSearch && (
+        <div style={{ ...overlayStyle, zIndex: 450 }} onClick={() => setShowAddrSearch(false)}>
+          <div style={modalCard} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}><MagnifyingGlassIcon size={17} weight="bold" color="var(--accent)" /> 주소 검색</div>
+              <button onClick={() => setShowAddrSearch(false)} style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', fontSize: 18, cursor: 'pointer', lineHeight: 1, display: 'flex' }}><XIcon size={18} /></button>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                autoFocus
+                style={inputStyle}
+                placeholder="도로명, 건물명, 지번 (예: 테헤란로 152)"
+                value={addrKeyword}
+                onChange={e => setAddrKeyword(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSearchAddress() }}
+              />
+              <button
+                onClick={handleSearchAddress}
+                disabled={addrKeyword.trim().length < 2 || addrSearching}
+                style={{
+                  flexShrink: 0, padding: '0 16px', borderRadius: 8, border: 'none',
+                  background: addrKeyword.trim().length < 2 ? 'var(--border)' : 'var(--accent)',
+                  color: addrKeyword.trim().length < 2 ? 'var(--text-tertiary)' : '#ffffff',
+                  fontSize: 13, fontWeight: 700, cursor: addrKeyword.trim().length < 2 ? 'default' : 'pointer',
+                }}
+              >
+                {addrSearching ? '검색 중' : '검색'}
+              </button>
+            </div>
+            {addrSearchError && (
+              <div style={{ fontSize: 12, color: 'var(--danger, #e5484d)', marginTop: 8 }}>{addrSearchError}</div>
+            )}
+            {addrResults === null ? (
+              !addrSearchError && (
+                <div style={{ padding: '24px 0 8px', textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.7 }}>
+                  도로명 + 건물번호, 건물명, 동/리 + 번지로 검색하세요.
+                </div>
+              )
+            ) : (
+              <div style={{ marginTop: 12, maxHeight: 320, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+                {addrResults.length === 0 ? (
+                  <div style={{ padding: '20px', textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)' }}>검색 결과가 없어요.</div>
+                ) : addrResults.map((item, i) => (
+                  <button
+                    key={`${item.zip_code}-${item.road_address}`}
+                    onClick={() => pickSearchResult(item)}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left', padding: '11px 12px', border: 'none',
+                      borderTop: i === 0 ? 'none' : '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>
+                      <span style={{ color: 'var(--accent-fg)', fontWeight: 700, marginRight: 6 }}>{item.zip_code}</span>
+                      {item.road_address}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>지번 {item.jibun_address}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={{
-        position: 'fixed', left: '50%', bottom: readyItems.length > 0 ? 90 : 24, transform: 'translateX(-50%)',
+        position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)',
         background: 'var(--surface)', border: '1px solid var(--border-strong)', color: 'var(--text)', fontSize: 13, fontWeight: 600,
         padding: '12px 20px', borderRadius: 10, opacity: toast ? 1 : 0,
         boxShadow: 'var(--shadow-lg)',
