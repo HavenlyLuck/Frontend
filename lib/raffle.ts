@@ -44,7 +44,7 @@ export interface GroupedRaffleEntry {
   ends_at: string
   soldOutAt: string | null
   totalTicketCount: number
-  totalPointsSpent: number
+  totalAmountPaid: number  // 결제 금액 합계(원)
   lastEnteredAt: string
   entryNumber: number
   entryNumbers: number[]
@@ -59,7 +59,7 @@ export function groupEntriesByProduct(entries: MyRaffleEntryResponse[]): Grouped
     const existing = map.get(entry.raffle_product_id)
     if (existing) {
       existing.totalTicketCount += entry.ticket_count
-      existing.totalPointsSpent += entry.points_spent
+      existing.totalAmountPaid += entry.amount_paid
       if (!existing.entryNumbers.includes(entry.entry_number)) existing.entryNumbers.push(entry.entry_number)
       if (entry.created_at > existing.lastEnteredAt) existing.lastEnteredAt = entry.created_at
     } else {
@@ -71,7 +71,7 @@ export function groupEntriesByProduct(entries: MyRaffleEntryResponse[]): Grouped
         ends_at: entry.ends_at,
         soldOutAt: entry.sold_out_at,
         totalTicketCount: entry.ticket_count,
-        totalPointsSpent: entry.points_spent,
+        totalAmountPaid: entry.amount_paid,
         lastEnteredAt: entry.created_at,
         entryNumber: entry.entry_number,
         entryNumbers: [entry.entry_number],

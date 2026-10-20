@@ -34,7 +34,7 @@ export default function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchText, setSearchText] = useState("");
 
-  const { eungPoint, ssalPoint } = useMyPoints();
+  const { ssalPoint } = useMyPoints();
   const { readyCount: readyStorageCount } = useStorage();
 
   useEffect(() => {
@@ -76,19 +76,6 @@ export default function Navbar() {
         <div className="nav-actions">
           {isLoggedIn ? (
             <>
-              <div className="nav-point-item">
-                <span className="nav-point-label">🎰 운포인트</span>
-                <span className="nav-point-value">
-                  {eungPoint.toLocaleString()}P
-                </span>
-                <Link
-                  href="/charge"
-                  className="nav-point-plus"
-                  title="운포인트 충전"
-                >
-                  +
-                </Link>
-              </div>
               <div className="nav-point-item">
                 <span className="nav-point-label">🌾 쌀포인트</span>
                 <span className="nav-point-value">

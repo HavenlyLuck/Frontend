@@ -39,7 +39,7 @@ function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; r
       <div className="card-body">
         <div className="card-raffle-badge"><TicketIcon size={11} weight="fill" /> {rp.status === "completed" ? "추첨 완료" : soldOut ? "추첨 대기" : "응모 진행 중"}</div>
         <div className="card-title">{rp.product_name}</div>
-        <div className="card-price"><span className="nowrap">{rp.ticket_price.toLocaleString()} 운포인트</span> <span className="card-price-unit">/ 장당</span></div>
+        <div className="card-price"><span className="nowrap">{rp.ticket_price.toLocaleString()}원</span> <span className="card-price-unit">/ 장당</span></div>
         <div className="card-progress-row">
           <div className="card-progress-bar">
             <div className="card-progress-fill" style={{ width: `${soldPct}%` }} />
@@ -125,7 +125,7 @@ export default function HomePage() {
           <p className="hero-sub">
             모든 티켓이 팔리면 바로 추첨해요.
             <br />
-            1,000 운포인트부터 참여할 수 있어요.
+            1,000원부터 참여할 수 있어요.
           </p>
           <Link className="hero-cta" href="/eungmo">응모 보러 가기</Link>
         </div>
@@ -133,7 +133,7 @@ export default function HomePage() {
           <div className="hero-ticket">
             <div className="hero-ticket-main">
               <span className="hero-ticket-label">ADMIT ONE</span>
-              <span className="hero-ticket-price">1,000<small>운포인트</small></span>
+              <span className="hero-ticket-price">1,000<small>원</small></span>
               <span className="hero-ticket-note">한 장으로 응모</span>
             </div>
             <div className="hero-ticket-stub">천운</div>

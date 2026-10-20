@@ -12,14 +12,13 @@ import {
   WarningIcon,
 } from "@phosphor-icons/react";
 import {
-  createRaffleEntry,
   getRaffleProducts,
   type RaffleProductResponse,
   type RaffleEntryCreateResponse,
 } from "@/lib/api";
 import { isWished, toggleWishlist } from "@/lib/wishlist";
 import { getValidSession, isLoggedIn } from "@/lib/auth";
-import { notifyPointsUpdated } from "@/hooks/useMyPoints";
+import { payWithCard, paymentFailureMessage } from "@/lib/payment";
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return "마감";
@@ -159,11 +158,17 @@ export default function RaffleProductPage({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const entry = await createRaffleEntry(
-        session.token,
-        product.raffle_product_id,
-        ticketCount,
-      );
+      // 카드 결제 → 서버가 결제를 확인하고 응모권을 발급한다
+      const paid = await payWithCard(session.token, {
+        order_type: "raffle_entry",
+        target_id: product.raffle_product_id,
+        quantity: ticketCount,
+      });
+      if (paid.status !== "paid" || !paid.raffle_entry) {
+        setSubmitError(paid.status === "conflict" ? "응모할 수 없습니다." : paymentFailureMessage(paid));
+        return;
+      }
+      const entry = paid.raffle_entry;
       const newSoldSlots = product.sold_slots + entry.ticket_count;
       const justSoldOut = newSoldSlots >= product.total_slots;
       setProduct((prev) =>
@@ -175,7 +180,6 @@ export default function RaffleProductPage({
       // tearing 클래스는 모달이 닫힐 때까지 유지 — 먼저 풀면 찢어진 조각이 다시 붙어 보인다.
       setTearing(true);
       await new Promise((resolve) => setTimeout(resolve, 800));
-      notifyPointsUpdated();
       setPurchaseResult(entry);
       if (justSoldOut) {
         alert(
@@ -287,7 +291,7 @@ export default function RaffleProductPage({
                 <div className="stat-item">
                   <div className="stat-value">
                     {product.ticket_price.toLocaleString()}
-                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginLeft: 3 }}>운포인트</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginLeft: 3 }}>원</span>
                   </div>
                   <div className="stat-label">응모권 가격</div>
                 </div>
@@ -333,7 +337,7 @@ export default function RaffleProductPage({
                       href: `/eungmo/${product.raffle_product_id}`,
                       title: product.product_name,
                       image: product.image_url,
-                      subtitle: `${product.ticket_price.toLocaleString()} 운포인트 / 장당`,
+                      subtitle: `${product.ticket_price.toLocaleString()}원 / 장당`,
                     }),
                   )
                 }
@@ -372,7 +376,7 @@ export default function RaffleProductPage({
               <br />
               응모권 1장당{" "}
               <strong style={{ color: "var(--text)" }}>
-                {product.ticket_price.toLocaleString()} 운포인트
+                {product.ticket_price.toLocaleString()}원
               </strong>
               이며 추첨일에 당첨자를 발표합니다.
             </div>
@@ -393,7 +397,7 @@ export default function RaffleProductPage({
                   최대 {maxPurchasable.toLocaleString()}장까지 구매 가능
                 </span>
                 <span className="total">
-                  총 {(ticketCount * product.ticket_price).toLocaleString()} 운포인트
+                  총 {(ticketCount * product.ticket_price).toLocaleString()}원
                 </span>
               </div>
             </div>
@@ -408,7 +412,7 @@ export default function RaffleProductPage({
               />
               <span>
                 응모권 구매 후 직접 취소는 불가합니다. 기간 내에 응모권이 모두
-                팔리지 않으면 사용한 운포인트가 자동으로 환급됩니다.
+                팔리지 않으면 결제 금액이 카드로 자동 환불됩니다.
               </span>
             </div>
 
@@ -419,7 +423,7 @@ export default function RaffleProductPage({
                   weight="fill"
                   style={{ flexShrink: 0, marginTop: "2px" }}
                 />
-                <span>{submitError}</span>
+                <span style={{ whiteSpace: "pre-line" }}>{submitError}</span>
               </div>
             )}
 
@@ -437,7 +441,7 @@ export default function RaffleProductPage({
               disabled={submitting || soldOut || expired}
             >
               <TicketIcon size={15} weight="fill" />{" "}
-              {submitting ? "처리 중..." : "응모하기"}
+              {submitting ? "결제 중..." : "결제하기"}
             </button>
             </div>
           </div>

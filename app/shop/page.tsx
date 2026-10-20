@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CoinsIcon, GrainsIcon, StorefrontIcon } from "@phosphor-icons/react";
+import { CreditCardIcon, GrainsIcon, StorefrontIcon } from "@phosphor-icons/react";
 import {
   getStoreProducts,
   STORE_CATEGORIES,
   type StoreCategory,
+  type StorePayType,
   type StoreProductResponse,
 } from "@/lib/api";
 import StoreProductCard from "@/components/StoreProductCard";
@@ -13,27 +14,28 @@ import AvatarShop from "@/components/AvatarShop";
 
 const SORTS = ["최신순", "낮은 가격순", "높은 가격순", "인기순"];
 
-type StoreTab = "운포인트" | "쌀포인트";
+// 일반 상점: 카드 결제 상품, 쌀포인트 상점: 쌀포인트 상품
+type StoreTab = "일반" | "쌀포인트";
 
-const TAB_POINT_TYPE: Record<StoreTab, "woon" | "ssal"> = {
-  운포인트: "woon",
+const TAB_PAY_TYPE: Record<StoreTab, StorePayType> = {
+  일반: "cash",
   쌀포인트: "ssal",
 };
 const TAB_ICON: Record<StoreTab, React.ReactNode> = {
-  운포인트: <CoinsIcon size={15} weight="fill" />,
+  일반: <CreditCardIcon size={15} weight="fill" />,
   쌀포인트: <GrainsIcon size={15} weight="fill" />,
 };
 
 // 상점별 세부 탭 — "전체"는 분류가 없는 상품까지 모두 보여준다
 type SubTab = "all" | StoreCategory;
 const SUB_TABS: Record<StoreTab, { id: SubTab; label: string }[]> = {
-  운포인트: [{ id: "all", label: "전체" }, ...STORE_CATEGORIES.woon],
+  일반: [{ id: "all", label: "전체" }, ...STORE_CATEGORIES.cash],
   쌀포인트: [{ id: "all", label: "전체" }, ...STORE_CATEGORIES.ssal],
 };
 
 export default function ShopPage() {
   const [sort, setSort] = useState("최신순");
-  const [storeTab, setStoreTab] = useState<StoreTab>("운포인트");
+  const [storeTab, setStoreTab] = useState<StoreTab>("일반");
   // 탭별로 결과를 캐싱해서, 이미 불러온 탭은 다시 눌러도 상품이 그대로 유지되고
   // storeTab이 바뀌는 렌더와 상품 데이터가 항상 같이 바뀌어 라벨이 섞이는 프레임도 생기지 않음
   const [cache, setCache] = useState<
@@ -51,7 +53,7 @@ export default function ShopPage() {
   useEffect(() => {
     if (cache[storeTab] !== undefined) return;
     let cancelled = false;
-    getStoreProducts(TAB_POINT_TYPE[storeTab])
+    getStoreProducts(TAB_PAY_TYPE[storeTab])
       .then((data) => {
         if (!cancelled) setCache((prev) => ({ ...prev, [storeTab]: data }));
       })
@@ -109,7 +111,7 @@ export default function ShopPage() {
           }}
         >
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {(["운포인트", "쌀포인트"] as StoreTab[]).map((tab) => (
+            {(["일반", "쌀포인트"] as StoreTab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => {
@@ -136,7 +138,7 @@ export default function ShopPage() {
                 }}
               >
                 {TAB_ICON[tab]}{" "}
-                {tab === "운포인트" ? "운포인트 상점" : "쌀포인트 상점"}
+                {tab}{" "}상점
               </button>
             ))}
           </div>

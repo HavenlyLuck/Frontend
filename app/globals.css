@@ -1030,7 +1030,7 @@ a.product-card-home.is-soldout { cursor: pointer; }
   color: var(--text);
   margin-bottom: 10px;
 }
-/* "1,000 운포인트"와 "/ 장당"이 각각 한 덩어리로 줄바꿈되게 — 좁은 카드에서 "장당"만 혼자 떨어지지 않도록 */
+/* "1,000원"과 "/ 장당"이 각각 한 덩어리로 줄바꿈되게 — 좁은 카드에서 "장당"만 혼자 떨어지지 않도록 */
 .card-price .nowrap { white-space: nowrap; }
 .card-price-unit {
   font-family: "Noto Sans KR", sans-serif;

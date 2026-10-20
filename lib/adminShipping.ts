@@ -104,7 +104,7 @@ function mock(
 ): AdminShippingItemResponse {
   return {
     storage_item_id: id, source, raffle_product_id: null, store_product_id: null, kuji_set_id: null, kuji_prize_id: null,
-    product_name: name, image_url: image, quantity, price_krw: null, point_type: null, points_spent: null,
+    product_name: name, image_url: image, quantity, price_krw: null, pay_type: null, amount_spent: null,
     status: 'requested', address_id: addressId, requested_at: requestedAt, created_at: requestedAt,
     carrier: null, tracking_number: null, shipped_at: null,
     user_id: user[0], nickname: user[1], address: addr,

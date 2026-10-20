@@ -33,7 +33,7 @@ export default function PurchaseHistoryPage() {
                 </div>
               </div>
               <div className="entry-status">
-                <span className="status-badge waiting">{entry.points_spent.toLocaleString()} 운포인트</span>
+                <span className="status-badge waiting">{entry.amount_paid.toLocaleString()}원</span>
               </div>
             </div>
           ))}

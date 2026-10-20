@@ -29,7 +29,7 @@ export default function RaffleCard({ product: p, secondsLeft }: { product: Raffl
       <div className="card-body">
         <div className="card-raffle-badge"><TicketIcon size={11} weight="fill" /> {p.status === 'completed' ? '추첨 완료' : soldOut ? '추첨 대기' : '응모 진행 중'}</div>
         <div className="card-title">{p.product_name}</div>
-        <div className="card-price"><span className="nowrap">{p.ticket_price.toLocaleString()} 운포인트</span> <span className="card-price-unit">/ 장당</span></div>
+        <div className="card-price"><span className="nowrap">{p.ticket_price.toLocaleString()}원</span> <span className="card-price-unit">/ 장당</span></div>
         <div className="card-progress-row">
           <div className="card-progress-bar">
             <div

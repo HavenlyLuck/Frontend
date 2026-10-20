@@ -15,7 +15,7 @@ import {
 } from "@/lib/notifications";
 
 export default function MyPage() {
-  const { eungPoint, ssalPoint } = useMyPoints();
+  const { ssalPoint } = useMyPoints();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   useEffect(() => {
@@ -39,11 +39,6 @@ export default function MyPage() {
       </div>
 
       <div className="notif-list" style={{ display: "flex", padding: "18px 20px", marginBottom: 24 }}>
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 4 }}>🎰 운포인트</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)" }}>{eungPoint.toLocaleString()}P</div>
-        </div>
-        <div style={{ width: 1, background: "var(--border)" }} />
         <div style={{ flex: 1, textAlign: "center" }}>
           <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 4 }}>🌾 쌀포인트</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)" }}>{ssalPoint.toLocaleString()}P</div>

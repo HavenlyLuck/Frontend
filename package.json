@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "@portone/browser-sdk": "^0.1.13",
     "next": "14.2.5",
     "react": "^18",
     "react-dom": "^18"

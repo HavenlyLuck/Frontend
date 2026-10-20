@@ -18,7 +18,7 @@ import { getValidSession, isLoggedIn } from '@/lib/auth'
 import KujiReveal from '@/components/KujiReveal'
 import KujiAvatarScene from '@/components/KujiAvatarScene'
 import { ApiError, getMyProfile } from '@/lib/api'
-import { notifyPointsUpdated } from '@/hooks/useMyPoints'
+import { PaymentWindowError } from '@/lib/payment'
 import { DEFAULT_AVATAR, normalizeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 
 type DrawResult = { ticketId: number; grade: string; tier: KujiTier }[]
@@ -248,13 +248,12 @@ function KujiProductView({ product }: { product: KujiProduct }) {
       }
       applyBoard(res.board, res.drawn.map(d => d.ticketId))
       setConflictIds([])
-      notifyPointsUpdated()
       setResults(res.drawn.map(d => ({ ...d, tier: product.tiers.find(t => t.grade === d.grade)! })))
       setLastOne(res.lastOne)
       setSelected([])
     } catch (err) {
-      // 포인트 부족, 판매 종료 등은 서버가 알려준 이유를 그대로 보여준다
-      alert(err instanceof ApiError ? err.message : '뽑기 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.')
+      // 결제 취소, 판매 종료 등은 서버·결제창이 알려준 이유를 그대로 보여준다
+      alert(err instanceof ApiError || err instanceof PaymentWindowError ? err.message : '뽑기 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setConfirming(false)
     }
@@ -327,7 +326,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
             </div>
           </div>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
-            {product.pricePerTicket.toLocaleString()} 운포인트 <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-tertiary)' }}>/ 1장</span>
+            {product.pricePerTicket.toLocaleString()}원 <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-tertiary)' }}>/ 1장</span>
           </div>
         </div>
 
@@ -371,7 +370,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 8 }}>
-                총 {(product.pricePerTicket * qty).toLocaleString()} 운포인트 (최대 {maxQty}장)
+                총 {(product.pricePerTicket * qty).toLocaleString()}원 (최대 {maxQty}장)
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button
@@ -381,7 +380,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
                     href: `/kuji/${product.id}`,
                     title: product.title,
                     image: product.banner,
-                    subtitle: `${product.pricePerTicket.toLocaleString()} 운포인트 / 1장`,
+                    subtitle: `${product.pricePerTicket.toLocaleString()}원 / 1장`,
                   }))}
                 >
                   <HeartIcon size={19} weight={isLiked ? 'fill' : 'regular'} color={isLiked ? 'var(--danger)' : 'var(--text-tertiary)'} />
@@ -483,7 +482,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
                   opacity: confirming ? 0.7 : 1,
                 }}
               >
-                {confirming ? '뽑는 중...' : `선택 완료 (${selected.length}/${qty})`}
+                {confirming ? '결제 중...' : `${(product.pricePerTicket * selected.length).toLocaleString()}원 결제하고 뽑기 (${selected.length}/${qty})`}
               </button>
             </div>
           </div>
