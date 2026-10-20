@@ -1,9 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { signup, checkDuplicate, ApiError, DuplCheckField } from '@/lib/api'
+import { signup, checkDuplicate, verifyIdentity, ApiError, DuplCheckField } from '@/lib/api'
+import {
+  requestIdentityVerification,
+  readIdentityVerificationRedirect,
+  IdentityVerificationResult,
+} from '@/lib/identityVerification'
 
 type CheckState = 'idle' | 'checking' | 'ok' | 'fail'
 
@@ -12,6 +17,9 @@ const DUPL_CHECK_FIELDS: Record<'nickname' | 'userId' | 'email', DuplCheckField>
   userId: 'login_id',
   email: 'email',
 }
+
+// 모바일 본인인증은 페이지를 떠났다가 돌아오므로, 입력하던 값(비밀번호 제외)을 잠시 보관한다
+const SIGNUP_DRAFT_KEY = 'signup-draft'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,20}$/
@@ -35,13 +43,14 @@ function StatusMsg({ state, message }: { state: CheckState; message: string }) {
 
 export default function SignupPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ nickname: '', userId: '', password: '', confirm: '', email: '', phone: '' })
+  const [form, setForm] = useState({ nickname: '', userId: '', password: '', confirm: '', email: '' })
   const [checks, setChecks] = useState<{ nickname: CheckState; userId: CheckState; email: CheckState }>({
     nickname: 'idle', userId: 'idle', email: 'idle',
   })
   const [checkMessages, setCheckMessages] = useState({ nickname: '', userId: '', email: '' })
-  const [phoneCertified, setPhoneCertified] = useState(false)
-  const [phoneVerifiedAt, setPhoneVerifiedAt] = useState('')
+  // 본인인증: 포트원 인증 ID와 서버가 확인해 준 휴대폰 번호
+  const [identity, setIdentity] = useState<{ id: string; phone: string; name: string | null } | null>(null)
+  const [certifying, setCertifying] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -51,7 +60,61 @@ export default function SignupPage() {
       setChecks(prev => ({ ...prev, [name]: 'idle' }))
       setCheckMessages(prev => ({ ...prev, [name]: '' }))
     }
-    if (name === 'phone') setPhoneCertified(false)
+  }
+
+  // 모바일 본인인증 후 돌아온 경우: 보관해 둔 입력값을 복원하고 결과를 처리한다
+  useEffect(() => {
+    const result = readIdentityVerificationRedirect(window.location.search)
+    if (!result) return
+    window.history.replaceState(null, '', window.location.pathname)
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(SIGNUP_DRAFT_KEY) ?? 'null')
+      if (draft) {
+        setForm(prev => ({ ...prev, ...draft.form }))
+        setChecks(draft.checks)
+        setCheckMessages(draft.checkMessages)
+      }
+      sessionStorage.removeItem(SIGNUP_DRAFT_KEY)
+    } catch {}
+    handleCertResult(result)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleCertResult(result: IdentityVerificationResult) {
+    if (!result.ok) {
+      alert(result.message)
+      return
+    }
+    setCertifying(true)
+    try {
+      const res = await verifyIdentity(result.identityVerificationId)
+      setIdentity({ id: result.identityVerificationId, phone: res.phone, name: res.name })
+    } catch (err) {
+      setIdentity(null)
+      alert(err instanceof ApiError ? err.message : '본인인증 확인 중 오류가 발생했습니다.')
+    } finally {
+      setCertifying(false)
+    }
+  }
+
+  async function handlePhoneCert() {
+    try {
+      sessionStorage.setItem(SIGNUP_DRAFT_KEY, JSON.stringify({
+        form: { nickname: form.nickname, userId: form.userId, email: form.email },
+        checks,
+        checkMessages,
+      }))
+    } catch {}
+    setCertifying(true)
+    try {
+      const result = await requestIdentityVerification(`${window.location.origin}/signup`)
+      sessionStorage.removeItem(SIGNUP_DRAFT_KEY)
+      await handleCertResult(result)
+    } catch {
+      alert('본인인증 창을 열지 못했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setCertifying(false)
+    }
   }
 
   async function handleCheck(field: keyof typeof checks) {
@@ -76,12 +139,6 @@ export default function SignupPage() {
     }
   }
 
-  function handlePhoneCert() {
-    setPhoneCertified(true)
-    setPhoneVerifiedAt(new Date().toISOString())
-    alert('본인인증이 완료되었습니다.')
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!PASSWORD_REGEX.test(form.password)) {
@@ -92,7 +149,7 @@ export default function SignupPage() {
     if (checks.nickname !== 'ok' || checks.userId !== 'ok' || checks.email !== 'ok') {
       alert('닉네임, 아이디, 이메일 중복확인을 완료해주세요.'); return
     }
-    if (!phoneCertified) { alert('핸드폰 본인인증을 완료해주세요.'); return }
+    if (!identity) { alert('핸드폰 본인인증을 완료해주세요.'); return }
 
     setSubmitting(true)
     try {
@@ -101,8 +158,7 @@ export default function SignupPage() {
         nickname: form.nickname,
         email: form.email,
         password: form.password,
-        phone: form.phone,
-        phone_verified_at: phoneVerifiedAt,
+        identity_verification_id: identity.id,
       })
       alert('회원가입이 완료되었습니다. 로그인해주세요.')
       router.push('/login')
@@ -245,18 +301,21 @@ export default function SignupPage() {
               <div className="field-row">
                 <input
                   id="signup-phone"
-                  name="phone"
                   type="tel"
-                  placeholder="핸드폰 번호 (- 없이 입력)"
-                  value={form.phone}
-                  onChange={handleChange}
-                  required
+                  placeholder="핸드폰 번호 (본인인증 시 자동 입력)"
+                  value={identity?.phone ?? ''}
+                  readOnly
                   className="field-input"
-                  autoComplete="tel"
                 />
-                <button type="button" className="field-btn" onClick={handlePhoneCert}>본인인증</button>
+                <button type="button" disabled={certifying} className="field-btn" onClick={handlePhoneCert}>
+                  {certifying ? '인증 중...' : identity ? '재인증' : '본인인증'}
+                </button>
               </div>
-              {phoneCertified && <p className="field-hint ok">본인인증이 완료되었습니다.</p>}
+              {identity && (
+                <p className="field-hint ok">
+                  {identity.name ? `${identity.name}님, ` : ''}본인인증이 완료되었습니다.
+                </p>
+              )}
             </div>
 
             <button type="submit" disabled={submitting} className="auth-submit">

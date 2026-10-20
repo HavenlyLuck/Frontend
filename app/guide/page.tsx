@@ -90,17 +90,17 @@ export default function GuidePage() {
 
       {/* 포인트 */}
       <section id="포인트" className="guide-section">
-        <SectionTitle icon={CoinsIcon} title="포인트" summary="천운에는 운포인트, 쌀포인트, 쌀 응모권 세 가지가 있어요." />
+        <SectionTitle icon={CoinsIcon} title="포인트" summary="응모권 · 쿠지 · 일반 상점은 카드로 바로 결제해요. 포인트는 보상으로 받는 쌀포인트와 쌀 응모권이 있어요." />
         <div className="guide-table-wrap">
           <table className="guide-table">
             <thead>
-              <tr><th></th><th>🎰 운포인트</th><th>🌾 쌀포인트</th><th>🎫 쌀 응모권</th></tr>
+              <tr><th></th><th>🌾 쌀포인트</th><th>🎫 쌀 응모권</th></tr>
             </thead>
             <tbody>
-              <tr><th>얻는 방법</th><td>현금 충전 (1원 = 1P)</td><td>응모 낙첨 시 지급</td><td>대회·이벤트 보상</td></tr>
-              <tr><th>쓰는 곳</th><td>응모, 쿠지, 운포인트 상점</td><td>쌀포인트 상점, 운포인트 상점 할인, 캐릭터 아이템</td><td>응모 (1장 = 응모권 1장)</td></tr>
-              <tr><th>현금으로 돌려받기</th><td className="is-yes">가능</td><td className="is-no">불가</td><td className="is-no">불가</td></tr>
-              <tr><th>낙첨 시 쌀포인트</th><td>지급</td><td>-</td><td className="is-no">지급 안 됨</td></tr>
+              <tr><th>얻는 방법</th><td>응모 낙첨 시 지급</td><td>대회·이벤트 보상</td></tr>
+              <tr><th>쓰는 곳</th><td>쌀포인트 상점, 캐릭터 아이템</td><td>응모 (1장 = 응모권 1장)</td></tr>
+              <tr><th>현금으로 돌려받기</th><td className="is-no">불가</td><td className="is-no">불가</td></tr>
+              <tr><th>낙첨 시 쌀포인트</th><td>-</td><td className="is-no">지급 안 됨</td></tr>
             </tbody>
           </table>
         </div>
@@ -111,7 +111,7 @@ export default function GuidePage() {
       <section id="응모" className="guide-section">
         <SectionTitle icon={TicketIcon} title="응모" summary="응모권이 모두 팔리면 자동으로 추첨하는, 천운의 메인 시스템이에요." />
         <Steps items={[
-          { title: '응모권 구매', desc: '1장 1,000 운포인트. 한 상품에 여러 장 살 수 있어요.' },
+          { title: '응모권 구매', desc: '1장 1,000원, 카드로 결제해요. 한 상품에 여러 장 살 수 있어요.' },
           { title: '응모권 매진', desc: '상품마다 정해진 장수가 모두 팔리면 응모가 마감돼요.' },
           { title: '1분 뒤 자동 추첨', desc: 'drand(여러 기관이 함께 만드는 공개 난수)로 공정하게 추첨해요.' },
           { title: '결과 확인', desc: '마이페이지 › 응모 내역의 "당첨결과 확인하기"에서 번개 추첨 연출과 함께 확인해요.' },
@@ -128,7 +128,7 @@ export default function GuidePage() {
           <div className="guide-example">예) 15장 구매 → 당첨: 상품만 / 낙첨: 15,000 쌀포인트</div>
         </Callout>
         <Callout tone="warn">
-          <b>응모마다 제한 시간이 있어요.</b> 시간 안에 응모권이 다 팔리지 않으면 응모가 취소되고, 산 응모권은 운포인트로 자동 환급돼요.
+          <b>응모마다 제한 시간이 있어요.</b> 시간 안에 응모권이 다 팔리지 않으면 응모가 취소되고, 응모권 결제는 카드로 자동 환불돼요.
         </Callout>
       </section>
 
@@ -143,7 +143,7 @@ export default function GuidePage() {
         <Rules items={[
           <>응모와 달리 매진을 기다리지 않아요. <b>뽑는 즉시 등급이 확정</b>돼요.</>,
           <>상위상(A상·B상 등) 남은 수량은 쿠지판에서 실시간으로 확인할 수 있어요.</>,
-          <>고르는 사이 다른 분이 같은 번호를 먼저 뽑으면, 그 번호만 풀리고 다시 고를 수 있어요. 이때는 포인트가 빠지지 않아요.</>,
+          <>고르는 사이 다른 분이 같은 번호를 먼저 뽑으면, 그 번호만 풀리고 다시 고를 수 있어요. 이미 결제했다면 결제는 자동으로 취소돼요.</>,
           <>상위상이 모두 나가고 라스트원상만 남은 쿠지판은 조기 마감되거나 특별 이벤트가 열릴 수 있어요.</>,
         ]} />
         <Callout>
@@ -153,13 +153,13 @@ export default function GuidePage() {
 
       {/* 상점 */}
       <section id="상점" className="guide-section">
-        <SectionTitle icon={StorefrontIcon} title="상점" summary="피규어와 굿즈를 바로 살 수 있어요. 포인트에 따라 상점이 나뉘어요." />
+        <SectionTitle icon={StorefrontIcon} title="상점" summary="피규어와 굿즈를 바로 살 수 있어요. 결제 방식에 따라 상점이 나뉘어요." />
         <div className="guide-cards">
           <div className="guide-card">
-            <div className="guide-card-title">🎰 운포인트 상점</div>
+            <div className="guide-card-title">💳 일반 상점</div>
             <Rules items={[
               '피규어 · 굿즈 · 카드',
-              '일정 금액을 쌀포인트로 내고 할인받을 수 있어요.',
+              '카드로 바로 결제해요.',
             ]} />
           </div>
           <div className="guide-card">

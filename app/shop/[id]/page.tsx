@@ -11,11 +11,13 @@ import {
 } from "@/lib/api";
 import { notifyStorageUpdated } from "@/lib/storage";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
+import { payWithCard, paymentFailureMessage, PaymentWindowError } from "@/lib/payment";
 import { isWished, toggleWishlist } from "@/lib/wishlist";
 import { getValidSession } from "@/lib/auth";
 import StoreProductCard, {
-  POINT_LABEL,
-  PointTypeIcon,
+  STORE_LABEL,
+  PayTypeIcon,
+  formatStorePrice,
 } from "@/components/StoreProductCard";
 
 // 상점 상품 상세 — 관련 상품 섹션 때문에 목록을 받아 id로 찾는다.
@@ -92,13 +94,14 @@ export default function ShopProductPage({
   if (!product)
     return <div className="container" style={{ minHeight: "60vh" }} />;
 
-  const label = POINT_LABEL[product.point_type];
+  const label = STORE_LABEL[product.pay_type];
+  const isCash = product.pay_type === "cash";
   const soldOut = product.stock === 0;
   const related = (products ?? [])
     .filter(
       (p) =>
         p.store_product_id !== product.store_product_id &&
-        p.point_type === product.point_type,
+        p.pay_type === product.pay_type,
     )
     .slice(0, 4);
 
@@ -114,11 +117,22 @@ export default function ShopProductPage({
     }
     setPurchasing(true);
     try {
-      const res = await purchaseStoreProduct(
-        session.token,
-        product.store_product_id,
-        qty,
-      );
+      // 일반 상점은 카드 결제 후 서버가 지급, 쌀포인트 상점은 쌀포인트 차감
+      let res;
+      if (isCash) {
+        const paid = await payWithCard(session.token, {
+          order_type: "store_purchase",
+          target_id: product.store_product_id,
+          quantity: qty,
+        });
+        if (paid.status !== "paid" || !paid.store_purchase) {
+          showToast(paid.status === "conflict" ? "구매할 수 없습니다." : paymentFailureMessage(paid));
+          return;
+        }
+        res = paid.store_purchase;
+      } else {
+        res = await purchaseStoreProduct(session.token, product.store_product_id, qty);
+      }
       setProducts(
         (prev) =>
           prev?.map((p) =>
@@ -133,7 +147,7 @@ export default function ShopProductPage({
       showToast("🎉 구매가 완료되었습니다! 보관함에서 확인해주세요!");
     } catch (err) {
       showToast(
-        err instanceof ApiError
+        err instanceof ApiError || err instanceof PaymentWindowError
           ? err.message
           : "구매 처리 중 오류가 발생했습니다.",
       );
@@ -163,7 +177,7 @@ export default function ShopProductPage({
                 <img src={product.image_url} alt={product.product_name} />
               ) : (
                 <div className="image-placeholder">
-                  <PointTypeIcon type={product.point_type} size={64} />
+                  <PayTypeIcon type={product.pay_type} size={64} />
                 </div>
               )}
             </div>
@@ -175,7 +189,7 @@ export default function ShopProductPage({
                 className="badge on-sale"
                 style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
               >
-                <PointTypeIcon type={product.point_type} size={12} /> {label}{" "}
+                <PayTypeIcon type={product.pay_type} size={12} /> {label}{" "}
                 상점
               </span>
               {soldOut && (
@@ -194,7 +208,7 @@ export default function ShopProductPage({
 
             <div className="product-title">{product.product_name}</div>
             <div className="price">
-              {product.price.toLocaleString()} {label}
+              {formatStorePrice(product.pay_type, product.price)}
             </div>
             <div className="price-sub">
               {soldOut
@@ -289,7 +303,7 @@ export default function ShopProductPage({
               >
                 총 결제 금액{" "}
                 <strong>
-                  {(product.price * qty).toLocaleString()} {label}
+                  {formatStorePrice(product.pay_type, product.price * qty)}
                 </strong>
               </div>
             </div>
@@ -312,7 +326,7 @@ export default function ShopProductPage({
                       href: `/shop/${product.store_product_id}`,
                       title: product.product_name,
                       image: product.image_url,
-                      subtitle: `${product.price.toLocaleString()} ${label}`,
+                      subtitle: formatStorePrice(product.pay_type, product.price),
                     }),
                   )
                 }
@@ -344,16 +358,16 @@ export default function ShopProductPage({
         }}
       >
         <div className="modal">
-          <div className="modal-icon">🎰</div>
+          <div className="modal-icon">{isCash ? "💳" : "🌾"}</div>
           <div className="modal-title">구매 확인</div>
           <div className="modal-sub">
             {product.product_name}
             <br />
             {qty}개 · 총{" "}
             <strong style={{ color: "var(--text)" }}>
-              {(product.price * qty).toLocaleString()} {label}
-            </strong>{" "}
-            가 차감됩니다.
+              {formatStorePrice(product.pay_type, product.price * qty)}
+            </strong>
+            {isCash ? "을 카드로 결제합니다." : "가 차감됩니다."}
           </div>
 
           <div className="modal-notice">
@@ -369,7 +383,7 @@ export default function ShopProductPage({
               onClick={confirmPurchase}
               disabled={purchasing}
             >
-              {purchasing ? "처리 중..." : "구매하기 🎰"}
+              {purchasing ? "처리 중..." : isCash ? "결제하기" : "구매하기"}
             </button>
           </div>
         </div>

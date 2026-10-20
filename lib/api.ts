@@ -42,8 +42,7 @@ export interface SignupPayload {
   nickname: string
   email: string
   password: string
-  phone: string
-  phone_verified_at: string
+  identity_verification_id: string  // 포트원 본인인증 ID — 전화번호는 서버가 포트원에서 직접 가져온다
 }
 
 export interface SignupResponse {
@@ -75,6 +74,19 @@ export function signup(payload: SignupPayload) {
   return request<SignupResponse>('/users/signup', {
     method: 'POST',
     body: JSON.stringify(payload),
+  })
+}
+
+export interface IdentityVerifyResponse {
+  name: string | null
+  phone: string
+}
+
+// 포트원 본인인증을 마친 뒤 서버에서 결과를 확인한다 (이미 가입된 번호면 에러)
+export function verifyIdentity(identityVerificationId: string) {
+  return request<IdentityVerifyResponse>('/users/identity-verification', {
+    method: 'POST',
+    body: JSON.stringify({ identity_verification_id: identityVerificationId }),
   })
 }
 
@@ -113,7 +125,6 @@ export function verifyAdmin(token: string) {
 }
 
 export interface PointsResponse {
-  woon_point: number
   ssal_point: number
   // 쌀 응모권 — 대회·이벤트 보상으로만 받는 무료 응모권(낙첨돼도 쌀포인트 환급 없음, 돈으로는 못 삼)
   // TODO(backend): 아직 운영 서버에 없음 — 생기기 전까지는 0장으로 표시
@@ -239,21 +250,13 @@ export interface RaffleEntryResponse {
   entry_id: number
   raffle_product_id: number
   ticket_count: number
-  points_spent: number
+  amount_paid: number  // 결제 금액(원)
   created_at: string
   entry_number: number
 }
 
 export interface RaffleEntryCreateResponse extends RaffleEntryResponse {
   total_ticket_count: number
-}
-
-export function createRaffleEntry(token: string, raffleProductId: number, ticketCount: number) {
-  return request<RaffleEntryCreateResponse>(`/raffles/${raffleProductId}/entries`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ ticket_count: ticketCount }),
-  })
 }
 
 export function getMyRaffleEntriesForProduct(token: string, raffleProductId: number) {
@@ -266,7 +269,7 @@ export interface MyRaffleEntryResponse {
   entry_id: number
   raffle_product_id: number
   ticket_count: number
-  points_spent: number
+  amount_paid: number  // 결제 금액(원)
   entry_number: number
   created_at: string
   product_name: string
@@ -296,21 +299,23 @@ export interface StoreProductResponse {
   store_product_id: number
   product_name: string
   description: string | null
-  point_type: 'woon' | 'ssal'
+  pay_type: StorePayType
   price: number
   stock: number
   image_url: string | null
   created_at: string
-  // 상점 세부 탭 분류 — 운포인트: figure | goods | card / 쌀포인트: coupon | goods | avatar
+  // 상점 세부 탭 분류 — 결제 상점: figure | goods | card / 쌀포인트 상점: coupon | goods | avatar
   // 분류 도입 전에 등록된 상품은 null
   category: StoreCategory | null
 }
 
 export type StoreCategory = 'figure' | 'goods' | 'card' | 'coupon' | 'avatar'
+// cash: 카드 결제(원) 상품, ssal: 쌀포인트 상품
+export type StorePayType = 'cash' | 'ssal'
 
 // 상점별 분류 — 상점 세부 탭과 관리자 상품 등록 폼이 같이 쓴다
-export const STORE_CATEGORIES: Record<'woon' | 'ssal', { id: StoreCategory; label: string }[]> = {
-  woon: [
+export const STORE_CATEGORIES: Record<StorePayType, { id: StoreCategory; label: string }[]> = {
+  cash: [
     { id: 'figure', label: '피규어' },
     { id: 'goods', label: '굿즈' },
     { id: 'card', label: '카드' },
@@ -322,8 +327,8 @@ export const STORE_CATEGORIES: Record<'woon' | 'ssal', { id: StoreCategory; labe
   ],
 }
 
-export function getStoreProducts(pointType?: 'woon' | 'ssal') {
-  const query = pointType ? `?point_type=${pointType}` : ''
+export function getStoreProducts(payType?: StorePayType) {
+  const query = payType ? `?pay_type=${payType}` : ''
   return request<StoreProductResponse[]>(`/store-products${query}`)
 }
 
@@ -335,11 +340,12 @@ export interface StorePurchaseResponse {
   storage_item_id: number
   store_product_id: number
   quantity: number
-  points_spent: number
-  point_type: 'woon' | 'ssal'
+  amount_spent: number
+  pay_type: StorePayType
   remaining_stock: number
 }
 
+// 쌀포인트 상품 구매 (결제 상점 상품은 lib/payment.ts의 카드 결제로 산다)
 export function purchaseStoreProduct(token: string, storeProductId: number, quantity: number) {
   return request<StorePurchaseResponse>(`/store-products/${storeProductId}/purchase`, {
     method: 'POST',
@@ -359,8 +365,8 @@ export interface StorageItemResponse {
   image_url: string | null
   quantity: number
   price_krw: number | null
-  point_type: 'woon' | 'ssal' | null
-  points_spent: number | null
+  pay_type: StorePayType | null
+  amount_spent: number | null  // 결제 상점·쿠지는 원, 쌀포인트 상점은 쌀포인트
   status: 'ready' | 'requested' | 'shipped'
   address_id: number | null
   requested_at: string | null
@@ -467,7 +473,7 @@ export function searchAddress(token: string, keyword: string, page = 1) {
 export interface CreateStoreProductPayload {
   product_name: string
   description?: string
-  point_type: 'woon' | 'ssal'
+  pay_type: StorePayType
   price: number
   stock: number
   category: StoreCategory
@@ -478,7 +484,7 @@ export async function createStoreProduct(token: string, payload: CreateStoreProd
   const formData = new FormData()
   formData.append('product_name', payload.product_name)
   if (payload.description) formData.append('description', payload.description)
-  formData.append('point_type', payload.point_type)
+  formData.append('pay_type', payload.pay_type)
   formData.append('price', String(payload.price))
   formData.append('stock', String(payload.stock))
   formData.append('category', payload.category)
@@ -570,7 +576,7 @@ export interface KujiDrawResponse {
   ok: boolean
   drawn: { ticket_number: number; kuji_prize_id: number; grade: string; tier: 'upper' | 'lower'; name: string; image_url: string | null }[]
   last_one: { name: string; image_url: string | null } | null
-  points_spent: number
+  amount_paid: number  // 결제 금액(원)
   conflict_ticket_numbers: number[]
   board: KujiBoardResponse
 }
@@ -588,13 +594,6 @@ export function getKujiBoard(kujiSetId: number, since?: number) {
   return request<KujiBoardResponse | null>(`/kuji/${kujiSetId}/board${since != null ? `?since=${since}` : ''}`)
 }
 
-export function drawKuji(token: string, kujiSetId: number, ticketNumbers: number[]) {
-  return request<KujiDrawResponse>(`/kuji/${kujiSetId}/draw`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ ticket_numbers: ticketNumbers }),
-  })
-}
 
 export function getKujiSetsAdmin(token: string) {
   return request<KujiSetAdminResponse[]>('/kuji/admin', {
@@ -670,4 +669,45 @@ export async function createRaffleProduct(token: string, payload: CreateRafflePr
   }
 
   return data as RaffleProductResponse
+}
+
+// ── 카드 결제 (포트원) — 응모권 · 쿠지 제비 · 결제 상점 상품 ──
+export type PaymentOrder =
+  | { order_type: 'raffle_entry'; target_id: number; quantity: number }
+  | { order_type: 'kuji_draw'; target_id: number; ticket_numbers: number[] }
+  | { order_type: 'store_purchase'; target_id: number; quantity: number }
+
+export interface PaymentPrepareResponse {
+  // 없으면 결제창을 열지 않는다 — 쿠지에서 고른 제비가 이미 나간 경우
+  payment_id: string | null
+  order_name: string
+  amount: number
+  customer: { full_name: string; phone_number: string; email: string } | null
+  conflict_ticket_numbers: number[]
+}
+
+export interface PaymentCompleteResponse {
+  payment_id: string
+  order_type: PaymentOrder['order_type']
+  // cancelled: 결제 후 지급할 수 없어 결제를 자동 취소함(message에 이유), pending: 아직 결제 확인 전
+  status: 'paid' | 'pending' | 'failed' | 'cancelled'
+  message: string | null
+  raffle_entry: RaffleEntryCreateResponse | null
+  kuji_draw: KujiDrawResponse | null
+  store_purchase: StorePurchaseResponse | null
+}
+
+export function preparePayment(token: string, order: PaymentOrder) {
+  return request<PaymentPrepareResponse>('/payments/prepare', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(order),
+  })
+}
+
+export function completePayment(token: string, paymentId: string) {
+  return request<PaymentCompleteResponse>(`/payments/${encodeURIComponent(paymentId)}/complete`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
 }

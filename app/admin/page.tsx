@@ -33,7 +33,7 @@ const TYPE_COLOR: Record<string, string> = { '응모': 'var(--accent)', '쿠지'
 const TAB_ICON: Record<ProductType, React.ReactNode> = {
   '응모': <TicketIcon size={13} weight="fill" />,
   '쿠지': <GiftIcon size={13} weight="fill" />,
-  '상점(운포인트)': <CoinsIcon size={13} weight="fill" />,
+  '상점(일반)': <CoinsIcon size={13} weight="fill" />,
   '상점(쌀포인트)': <GrainsIcon size={13} weight="fill" />,
 }
 const ADMIN_PAGE_SIZE = 10
@@ -244,7 +244,7 @@ export default function AdminPage() {
   const [productPage, setProductPage] = useState(1)
   const [products, setProducts] = useState<Product[]>(() => [...PRODUCTS])
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newP, setNewP] = useState({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000 운포인트', description: '' })
+  const [newP, setNewP] = useState({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000원', description: '' })
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [deadlineDays, setDeadlineDays] = useState(1)
   const [storeCategory, setStoreCategory] = useState<StoreCategory | null>(null)
@@ -253,7 +253,7 @@ export default function AdminPage() {
   const autoMaxTickets = Math.floor((Number(newP.price.replace(/[^0-9]/g, '')) || 0) / 1000)
 
   function resetNewProductForm() {
-    setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000 운포인트', description: '' })
+    setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000원', description: '' })
     setNewImageFile(null)
     setDeadlineDays(1)
     setStoreCategory(null)
@@ -272,24 +272,23 @@ export default function AdminPage() {
       id: rp.raffle_product_id,
       type: '응모',
       title: rp.product_name,
-      price: `${rp.price_krw.toLocaleString()} 운포인트`,
+      price: `${rp.price_krw.toLocaleString()}원`,
       img: rp.image_url ?? '',
       active: rp.is_open,
       stock: 1,
       maxTickets: rp.total_slots,
-      ticketPrice: `${rp.ticket_price.toLocaleString()} 운포인트`,
+      ticketPrice: `${rp.ticket_price.toLocaleString()}원`,
       description: rp.description ?? undefined,
       deadlineLabel,
     }
   }
 
   function storeToProduct(sp: StoreProductResponse): Product {
-    const label = sp.point_type === 'woon' ? '운포인트' : '쌀포인트'
     return {
       id: sp.store_product_id,
-      type: sp.point_type === 'woon' ? '상점(운포인트)' : '상점(쌀포인트)',
+      type: sp.pay_type === 'cash' ? '상점(일반)' : '상점(쌀포인트)',
       title: sp.product_name,
-      price: `${sp.price.toLocaleString()} ${label}`,
+      price: sp.pay_type === 'cash' ? `${sp.price.toLocaleString()}원` : `${sp.price.toLocaleString()} 쌀포인트`,
       img: sp.image_url ?? '',
       active: true,
       stock: sp.stock,
@@ -303,12 +302,12 @@ export default function AdminPage() {
       id: ks.kuji_set_id,
       type: '쿠지',
       title: ks.title,
-      price: `${ks.ticket_price.toLocaleString()} 운포인트`,
+      price: `${ks.ticket_price.toLocaleString()}원`,
       img: ks.image_url ?? '',
       active: ks.status === 'open',
       stock: ks.remaining_tickets,
       maxTickets: ks.total_tickets,
-      ticketPrice: `${ks.ticket_price.toLocaleString()} 운포인트`,
+      ticketPrice: `${ks.ticket_price.toLocaleString()}원`,
       kujiItems: ks.prizes.filter(p => p.tier === 'upper').map(toItem),
       lowerItems: lower.map(toItem),
       lowerCount: lower.reduce((sum, p) => sum + p.quantity, 0),
@@ -515,9 +514,9 @@ export default function AdminPage() {
   // 탭별 상품 + 판매중 여부 (응모: 아직 응모권을 팔고 있음 / 상점·쿠지: 재고 있음)
   const tabItems: { product: Product; selling: boolean }[] = productTab === '응모'
     ? raffleProducts.map(rp => ({ product: raffleToProduct(rp), selling: rp.status === 'open' && rp.is_open && rp.remaining_slots > 0 }))
-    : productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)'
+    : productTab === '상점(일반)' || productTab === '상점(쌀포인트)'
       ? storeProducts
-          .filter(sp => sp.point_type === (productTab === '상점(운포인트)' ? 'woon' : 'ssal'))
+          .filter(sp => sp.pay_type === (productTab === '상점(일반)' ? 'cash' : 'ssal'))
           .map(sp => ({ product: storeToProduct(sp), selling: sp.stock > 0 }))
       : productTab === '쿠지'
         ? kujiSets.map(ks => ({ product: kujiToProduct(ks), selling: ks.status === 'open' && ks.remaining_tickets > 0 }))
@@ -711,7 +710,7 @@ export default function AdminPage() {
         {productTab === '쿠지' && kujiListError && (
           <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{kujiListError}</div>
         )}
-        {(productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)') && storeListError && (
+        {(productTab === '상점(일반)' || productTab === '상점(쌀포인트)') && storeListError && (
           <div style={{ color: '#e14d72', fontSize: 13, marginBottom: 12 }}>{storeListError}</div>
         )}
 
@@ -749,7 +748,7 @@ export default function AdminPage() {
                 </div>
                 <div style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, flexShrink: 0, background: p.active ? 'var(--accent-tint)' : 'var(--bg-subtle)', color: p.active ? 'var(--accent)' : 'var(--text-tertiary)', border: `1px solid ${p.active ? 'var(--accent-tint-border)' : 'var(--border)'}` }}>{p.active ? '활성' : '비활성'}</div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  {p.type === '응모' || p.type === '쿠지' || p.type === '상점(운포인트)' || p.type === '상점(쌀포인트)' ? (
+                  {p.type === '응모' || p.type === '쿠지' || p.type === '상점(일반)' || p.type === '상점(쌀포인트)' ? (
                     <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>상태 변경 API 미구현</span>
                   ) : (
                     <>
@@ -793,11 +792,11 @@ export default function AdminPage() {
                 <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>{productTab === '쿠지' ? '쿠지 이름 *' : '상품명 *'}</div>
                 <input style={lightInput} placeholder={productTab === '쿠지' ? '예: 주술회전 나오야 젠인 쿠지' : '상품 이름 입력'} value={newP.title} onChange={e => setNewP(p => ({ ...p, title: e.target.value }))} />
               </div>
-              {(productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)') && (
+              {(productTab === '상점(일반)' || productTab === '상점(쌀포인트)') && (
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>분류 * (상점 세부 탭)</div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {STORE_CATEGORIES[productTab === '상점(운포인트)' ? 'woon' : 'ssal'].map(c => (
+                    {STORE_CATEGORIES[productTab === '상점(일반)' ? 'cash' : 'ssal'].map(c => (
                       <button key={c.id} type="button" onClick={() => setStoreCategory(c.id)} style={{
                         flex: 1, padding: '9px 0', borderRadius: 8, fontSize: 14, cursor: 'pointer',
                         border: `1px solid ${storeCategory === c.id ? 'var(--accent-tint-border)' : 'var(--border-strong)'}`,
@@ -812,7 +811,7 @@ export default function AdminPage() {
               {productTab !== '쿠지' && (
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>판매가격 *</div>
-                  <input style={lightInput} placeholder={productTab === '응모' ? '예: 650000 (숫자만)' : '예: 50,000 운포인트'} value={newP.price} onChange={e => setNewP(p => ({ ...p, price: e.target.value }))} />
+                  <input style={lightInput} placeholder={productTab === '응모' ? '예: 650000 (숫자만)' : '예: 50000 (숫자만)'} value={newP.price} onChange={e => setNewP(p => ({ ...p, price: e.target.value }))} />
                 </div>
               )}
               {productTab !== '쿠지' && (
@@ -959,7 +958,7 @@ export default function AdminPage() {
               {productTab === '쿠지' && (
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>1장 가격</div>
-                  <input style={lightInput} placeholder="기본값: 10,000 운포인트" value={newP.ticketPrice} onChange={e => setNewP(p => ({ ...p, ticketPrice: e.target.value }))} />
+                  <input style={lightInput} placeholder="기본값: 10,000원" value={newP.ticketPrice} onChange={e => setNewP(p => ({ ...p, ticketPrice: e.target.value }))} />
                 </div>
               )}
               {productTab === '쿠지' && (
@@ -1017,7 +1016,7 @@ export default function AdminPage() {
                   }
                   return
                 }
-                if (productTab === '상점(운포인트)' || productTab === '상점(쌀포인트)') {
+                if (productTab === '상점(일반)' || productTab === '상점(쌀포인트)') {
                   if (!newP.title.trim() || !newP.price.trim() || !newP.stock.trim() || !adminToken) {
                     setRaffleSubmitError('상품명, 가격, 수량을 모두 입력해주세요.')
                     return
@@ -1038,7 +1037,7 @@ export default function AdminPage() {
                     const created = await createStoreProduct(adminToken, {
                       product_name: newP.title,
                       description: newP.description || undefined,
-                      point_type: productTab === '상점(운포인트)' ? 'woon' : 'ssal',
+                      pay_type: productTab === '상점(일반)' ? 'cash' : 'ssal',
                       price: priceNum,
                       stock: stockNum,
                       category: storeCategory,

@@ -1,12 +1,15 @@
-import { drawKuji, getKujiBoard, type KujiBoardResponse } from './api'
+import { getKujiBoard, type KujiBoardResponse } from './api'
 import type { KujiLastOne } from './kujiData'
+import { payWithCard, paymentFailureMessage, PaymentWindowError } from './payment'
 
 /*
- * 쿠지 제비판 — 서버 API(GET /kuji/{id}/board, POST /kuji/{id}/draw)를 화면에서 쓰기 좋게 감싼다.
+ * 쿠지 제비판 — 서버 API(GET /kuji/{id}/board, 카드 결제 /payments)를 화면에서 쓰기 좋게 감싼다.
  *
  * 동시성 방식(확정할 때만 확인): 제비를 고르는 건 화면에서만 하고, "선택 완료" 때 서버가 한 번에 확정한다.
- *   서버는 판을 잠그고, 고른 제비 중 하나라도 이미 나갔으면 아무것도 뽑지 않고 그 번호들을 돌려준다(부분 뽑기 없음).
- *   포인트 차감·보관함 적재·라스트원상도 같은 트랜잭션에서 서버가 처리한다.
+ *   결제창을 열기 전에 한 번, 카드 결제가 끝난 뒤 한 번 더 서버가 확인한다.
+ *   결제 후 확정할 때 서버는 판을 잠그고, 고른 제비 중 하나라도 이미 나갔으면 아무것도 뽑지 않고
+ *   그 번호들을 돌려주며 결제를 자동 취소한다(부분 뽑기 없음).
+ *   보관함 적재·라스트원상도 같은 트랜잭션에서 서버가 처리한다.
  *   제비판 조회는 판별 version을 두고, since=version이 최신이면 서버가 빈 응답(null)을 줘서 트래픽을 줄인다.
  *   아직 안 뽑힌 제비의 등급은 서버가 절대 내려주지 않는다(뽑힌 제비만 등급 공개).
  */
@@ -31,15 +34,25 @@ export async function fetchKujiBoard(kujiId: number, since?: number): Promise<Ku
   return board ? toBoard(board) : null
 }
 
-// 포인트 부족·매진 같은 실패는 ApiError로 던진다
+// 매진 같은 실패는 ApiError, 결제창을 닫았거나 결제 후 지급하지 못해 자동 취소된 경우는 PaymentWindowError로 던진다
 export async function confirmKujiDraw(token: string, kujiId: number, ticketIds: number[]): Promise<KujiDrawResponse> {
-  const res = await drawKuji(token, kujiId, ticketIds)
-  const board = toBoard(res.board)
-  if (!res.ok) return { ok: false, conflictIds: res.conflict_ticket_numbers, board }
+  const paid = await payWithCard(token, { order_type: 'kuji_draw', target_id: kujiId, ticket_numbers: ticketIds })
+  if (paid.status === 'conflict') {
+    // 결제창을 열기 전에 이미 나간 제비를 알았다 — 결제 없이 판만 새로 받아서 다시 고르게 한다
+    const board = await fetchKujiBoard(kujiId)
+    return { ok: false, conflictIds: paid.conflict_ticket_numbers, board: board ?? { version: 0, drawn: [] } }
+  }
+  const res = paid.kuji_draw
+  if (res && !res.ok) {
+    // 결제는 됐지만 그 사이 다른 사람이 먼저 가져간 제비가 있었다 — 결제는 서버가 자동 취소
+    alert(paymentFailureMessage(paid))
+    return { ok: false, conflictIds: res.conflict_ticket_numbers, board: toBoard(res.board) }
+  }
+  if (paid.status !== 'paid' || !res) throw new PaymentWindowError(paymentFailureMessage(paid))
   return {
     ok: true,
     drawn: res.drawn.map(d => ({ ticketId: d.ticket_number, grade: d.grade })),
     lastOne: res.last_one ? { title: res.last_one.name, image: res.last_one.image_url ?? '' } : null,
-    board,
+    board: toBoard(res.board),
   }
 }

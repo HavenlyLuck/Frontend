@@ -41,7 +41,6 @@ const headerBtnStyle: React.CSSProperties = {
 
 const EMPTY_ADDR_FORM = { label: '', recipient: '', phone: '', zipCode: '', address1: '', address2: '' }
 
-const POINT_LABEL = { woon: '운포인트', ssal: '쌀포인트' } as const
 const STATUS_LABEL = { ready: '보관 중', requested: '배송 신청됨', shipped: '발송 완료' } as const
 
 function itemTitle(item: StorageItemResponse) {
@@ -50,7 +49,9 @@ function itemTitle(item: StorageItemResponse) {
 
 function itemValue(item: StorageItemResponse) {
   if (item.source === 'raffle') return item.price_krw != null ? `정가 ${item.price_krw.toLocaleString()}원` : ''
-  if (item.points_spent != null && item.point_type) return `${item.points_spent.toLocaleString()} ${POINT_LABEL[item.point_type]}`
+  if (item.amount_spent != null && item.pay_type) {
+    return item.pay_type === 'cash' ? `${item.amount_spent.toLocaleString()}원` : `${item.amount_spent.toLocaleString()} 쌀포인트`
+  }
   return ''
 }
 

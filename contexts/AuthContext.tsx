@@ -8,7 +8,6 @@ const ADMIN_PW = 'admin1234'
 type Role = 'admin' | 'user' | null
 
 interface Points {
-  eung: number  // 운포인트
   ssal: number  // 쌀포인트
 }
 
@@ -23,7 +22,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null)
 
 // 나중에 백엔드 API 호출로 교체
-const MOCK_POINTS: Points = { eung: 2320, ssal: 23200 }
+const MOCK_POINTS: Points = { ssal: 23200 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role>(null)
