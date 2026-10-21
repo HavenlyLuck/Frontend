@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { ArrowRightIcon, ClipboardTextIcon, CoinsIcon, PencilSimpleIcon } from '@phosphor-icons/react'
+import { ArrowRightIcon, ClipboardTextIcon, PencilSimpleIcon } from '@phosphor-icons/react'
 import InventoryManager from '@/components/admin/InventoryManager'
+import { AdminPageHeader } from '@/components/admin/AdminShell'
 import {
   EXPENSE_RECORDS, addExpenseRecord, removeExpenseRecord, todayKey,
   getExpensesForPeriod, getPeriodSummary, getSalesForPeriod,
@@ -31,7 +31,7 @@ const PERIOD_TABS: { key: Period; label: string }[] = [
   { key: 'year', label: '년도별' },
 ]
 
-// 재고·자금 관리 — 손익(한눈에) · 재고 · 부대비용을 한 화면에서. 관리자 확인은 페이지가 하고 토큰을 받는다.
+// 재고·자금 관리 — 손익(한눈에) · 재고 · 부대비용을 한 화면에서. 관리자 확인은 AdminShell이 하고 토큰을 받는다.
 export default function FinanceWorkspace({ token, initialTab = 'overview' }: { token: string; initialTab?: WorkspaceTab }) {
   const [tab, setTab] = useState<WorkspaceTab>(initialTab)
   const today = todayKey()
@@ -47,13 +47,8 @@ export default function FinanceWorkspace({ token, initialTab = 'overview' }: { t
   }
 
   return (
-    <div className="home-container" style={{ maxWidth: 960 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <Link href="/admin" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 20 }}>←</Link>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CoinsIcon size={23} weight="fill" color="var(--gold)" /> 재고·자금 관리
-        </h1>
-      </div>
+    <div>
+      <AdminPageHeader title="재고·자금" description="물건 입고와 재고, 매출 · 원가 · 부대비용 · 순이익을 한곳에서 봐요." />
 
       <div className="admin-sale-toggle" role="tablist" aria-label="재고·자금 메뉴" style={{ marginBottom: 24 }}>
         {TABS.map(t => (
@@ -81,17 +76,15 @@ function PeriodPicker({ period, periodKey, onPeriod, onKey }: {
   onKey: (k: string) => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-      {PERIOD_TABS.map(t => (
-        <button key={t.key} onClick={() => onPeriod(t.key)} style={{
-          padding: '8px 18px', borderRadius: 10, fontSize: 14, cursor: 'pointer',
-          border: `1px solid ${period === t.key ? 'var(--accent-tint-border)' : 'var(--border-strong)'}`,
-          background: period === t.key ? 'var(--accent-tint)' : 'var(--surface)',
-          color: period === t.key ? 'var(--accent)' : 'var(--text-secondary)',
-          fontWeight: period === t.key ? 700 : 400,
-        }}>{t.label}</button>
-      ))}
-      <div style={{ marginLeft: 'auto' }}>
+    <div className="admin-toolbar">
+      <div className="admin-sale-toggle" role="tablist" aria-label="기간">
+        {PERIOD_TABS.map(t => (
+          <button key={t.key} role="tab" aria-selected={period === t.key} className={period === t.key ? 'active' : ''} onClick={() => onPeriod(t.key)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div>
         {period === 'day' && <input type="date" value={periodKey} onChange={e => onKey(e.target.value)} style={{ ...lightInput, width: 'auto' }} />}
         {period === 'week' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -218,7 +211,7 @@ function PlRow({ label, hint, value, muted, strong, action }: {
         {action && <div style={{ marginTop: 4 }}>{action}</div>}
       </div>
       <div style={{ fontSize: strong ? 18 : 16, fontWeight: 800, color: muted ? 'var(--text-secondary)' : value < 0 ? 'var(--danger)' : 'var(--text)', whiteSpace: 'nowrap' }}>
-        {won(value)}
+        {won(value === 0 ? 0 : value) /* -0원 방지 */}
       </div>
     </div>
   )

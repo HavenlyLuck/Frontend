@@ -1,11 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { CopyIcon, DownloadSimpleIcon, PackageIcon, TruckIcon } from '@phosphor-icons/react'
-import { verifyAdmin, ApiError } from '@/lib/api'
-import { getValidSession, clearAuth } from '@/lib/auth'
+import { CopyIcon, DownloadSimpleIcon, PackageIcon } from '@phosphor-icons/react'
+import { ApiError } from '@/lib/api'
+import { AdminPageHeader, useAdminToken } from '@/components/admin/AdminShell'
 import {
   CARRIERS, boxesToCsv, downloadCsv, fetchShippingBoxes, shipBox,
   type ShippingBox, type ShippingStatus,
@@ -20,31 +18,11 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('ko-KR',
 
 // 배송 관리 — 고객이 보관함에서 배송 신청한 상품을 박스 단위로 보고, 송장번호를 넣어 발송 처리한다
 export default function AdminShippingPage() {
-  const router = useRouter()
-  const [adminToken, setAdminToken] = useState<string | null>(null)
+  const adminToken = useAdminToken()
   const [status, setStatus] = useState<ShippingStatus>('requested')
   const [boxes, setBoxes] = useState<ShippingBox[] | null>(null)
   const [counts, setCounts] = useState<Record<ShippingStatus, number>>({ requested: 0, shipped: 0 })
   const [loadError, setLoadError] = useState('')
-
-  useEffect(() => {
-    let cancelled = false
-    getValidSession().then((session) => {
-      if (cancelled) return
-      if (!session) {
-        router.replace('/login')
-        return
-      }
-      verifyAdmin(session.token)
-        .then(() => { if (!cancelled) setAdminToken(session.token) })
-        .catch((err) => {
-          if (cancelled) return
-          if (err instanceof ApiError && (err.status === 401 || err.status === 403)) clearAuth()
-          router.replace('/')
-        })
-    })
-    return () => { cancelled = true }
-  }, [router])
 
   const load = async (token: string, s: ShippingStatus) => {
     try {
@@ -59,19 +37,15 @@ export default function AdminShippingPage() {
   }
 
   useEffect(() => {
-    if (adminToken) load(adminToken, status)
+    load(adminToken, status)
   }, [adminToken, status])
 
-  if (!adminToken) return null
-
   return (
-    <div className="home-container" style={{ maxWidth: 820 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <Link href="/admin" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 20 }}>←</Link>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-          <TruckIcon size={23} weight="fill" color="var(--accent)" /> 배송 관리
-        </h1>
-        {status === 'requested' && boxes && boxes.length > 0 && (
+    <div>
+      <AdminPageHeader
+        title="배송"
+        description="한 번에 배송 신청한 상품끼리 한 박스로 묶여 있어요. 송장번호를 넣고 발송 처리하면 고객 보관함에도 보여요."
+        actions={status === 'requested' && boxes && boxes.length > 0 && (
           <button
             onClick={() => downloadCsv(`배송대기_${new Date().toISOString().slice(0, 10)}.csv`, boxesToCsv(boxes))}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
@@ -79,10 +53,7 @@ export default function AdminShippingPage() {
             <DownloadSimpleIcon size={15} weight="bold" /> 택배 접수용 엑셀
           </button>
         )}
-      </div>
-      <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 20, lineHeight: 1.6 }}>
-        고객이 보관함에서 한 번에 배송 신청한 상품끼리 한 박스로 묶여 있어요. 송장번호를 넣고 발송 처리하면 고객 보관함에도 보여요.
-      </div>
+      />
 
       <div className="admin-sale-toggle" role="tablist" aria-label="배송 상태">
         {([['requested', '배송 대기'], ['shipped', '발송 완료']] as const).map(([key, label]) => (
