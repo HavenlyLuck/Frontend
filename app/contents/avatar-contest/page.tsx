@@ -114,7 +114,8 @@ export default function AvatarContestPage() {
               <PixelAvatar config={e.avatar_config} size={rank === 1 ? 128 : 100} alt={`${e.nickname}의 캐릭터`} />
               <div className="contest-podium-name">{e.nickname}</div>
               <div className="contest-podium-votes"><HeartIcon size={12} weight="fill" /> {e.votes.toLocaleString()}표</div>
-              <div className="contest-podium-block" style={{ borderColor: RANK_COLOR[rank] }}>{rank}</div>
+              {/* 시상대 — 메달 색을 단 전체에 옅게 깔고 숫자를 메달 색으로 */}
+              <div className="contest-podium-block" style={{ color: RANK_COLOR[rank], background: `color-mix(in srgb, ${RANK_COLOR[rank]} 18%, var(--bg-subtle))` }}>{rank}</div>
             </div>
           )
         })}

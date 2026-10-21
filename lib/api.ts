@@ -291,8 +291,10 @@ export interface CreateRaffleProductPayload {
   product_name: string
   description?: string
   price_krw: number
-  image: File
+  image: Blob
   duration_days: number
+  // 재고 품목에서 고른 경우 — 서버가 그 품목 1개를 이 응모에 묶는다 (TODO(backend))
+  inventory_item_id?: number
 }
 
 export interface StoreProductResponse {
@@ -450,6 +452,141 @@ export function createAddress(token: string, payload: CreateAddressPayload) {
   })
 }
 
+// 관리자 재고 관리 — 품목(떼 온 물건) · 입고 기록 · 상품에 걸린 수량
+// TODO(backend): /inventory API 아직 없음 (lib/inventory.ts가 그때까지 가짜 데이터를 쓴다)
+export interface InventoryItemResponse {
+  item_id: number
+  name: string
+  image_url: string | null
+  memo: string | null
+  total_received: number   // 지금까지 입고된 수량
+  reserved: number         // 응모·쿠지·상점에 걸려 있는(판매 중) 수량
+  sold: number             // 팔려서 나간 수량
+  available: number        // 아무 상품에도 안 쓴 수량 = total_received - reserved - sold
+  avg_unit_cost: number    // 입고 단가의 수량 가중 평균(원)
+  last_received_at: string | null
+}
+
+export interface InventoryReceiptResponse {
+  receipt_id: number
+  item_id: number
+  quantity: number
+  unit_cost: number        // 1개당 매입 단가(원, 부가세 포함)
+  received_at: string      // 매입일 YYYY-MM-DD
+  supplier: string | null
+  tax_invoice: boolean     // 세금계산서·현금영수증을 받았는지
+  memo: string | null
+  created_at: string
+}
+
+export interface InventoryAllocationResponse {
+  product_type: 'raffle' | 'kuji' | 'store'
+  product_id: number
+  product_name: string
+  reserved: number
+  sold: number
+}
+
+export interface InventoryItemDetailResponse extends InventoryItemResponse {
+  receipts: InventoryReceiptResponse[]
+  allocations: InventoryAllocationResponse[]
+}
+
+export interface CreateInventoryReceiptPayload {
+  item_id?: number         // 기존 품목에 추가 입고할 때
+  name?: string            // 새 품목일 때
+  image?: Blob             // 새 품목일 때 (선택)
+  quantity: number
+  unit_cost: number
+  received_at: string
+  supplier?: string
+  tax_invoice: boolean
+  memo?: string
+}
+
+export function getInventoryItems(token: string) {
+  return request<InventoryItemResponse[]>('/inventory/items', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export function getInventoryItem(token: string, itemId: number) {
+  return request<InventoryItemDetailResponse>(`/inventory/items/${itemId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function createInventoryReceipt(token: string, payload: CreateInventoryReceiptPayload) {
+  const formData = new FormData()
+  if (payload.item_id != null) formData.append('item_id', String(payload.item_id))
+  if (payload.name) formData.append('name', payload.name)
+  if (payload.image) formData.append('image', payload.image)
+  formData.append('quantity', String(payload.quantity))
+  formData.append('unit_cost', String(payload.unit_cost))
+  formData.append('received_at', payload.received_at)
+  if (payload.supplier) formData.append('supplier', payload.supplier)
+  formData.append('tax_invoice', String(payload.tax_invoice))
+  if (payload.memo) formData.append('memo', payload.memo)
+
+  const res = await fetch(`${API_URL}/inventory/receipts`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    const detail = data?.detail
+    throw new ApiError(res.status, typeof detail === 'string' ? detail : '입고 등록 중 오류가 발생했습니다.')
+  }
+  return data as InventoryItemDetailResponse
+}
+
+// 입고 기록 고치기·지우기 — 이미 상품에 올렸거나 팔린 수량보다 적게 만들 수는 없다(서버가 막아야 함)
+export type UpdateInventoryReceiptPayload = Partial<Pick<InventoryReceiptResponse, 'quantity' | 'unit_cost' | 'received_at' | 'supplier' | 'tax_invoice' | 'memo'>>
+
+export function updateInventoryReceipt(token: string, receiptId: number, payload: UpdateInventoryReceiptPayload) {
+  return request<InventoryReceiptResponse>(`/inventory/receipts/${receiptId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteInventoryReceipt(token: string, receiptId: number) {
+  return request<null>(`/inventory/receipts/${receiptId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 관리자 상품 판매 종료·수량 조정 — 남은 물건은 서버가 재고로 되돌린다
+// TODO(backend): 세 API 모두 아직 없음 (lib/productActions.ts가 그때까지 흉내 낸다)
+
+// 응모 취소: 매진 전에만. 산 사람 전원에게 카드 결제를 취소(전액 환불)하고 물건 1개를 재고로 되돌린다
+export function cancelRaffleProduct(token: string, raffleProductId: number) {
+  return request<RaffleProductResponse>(`/raffles/${raffleProductId}/cancel`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 쿠지 판매 종료: 이미 뽑힌 제비는 그대로, 아직 안 뽑힌 상품과 라스트원상은 재고로 되돌린다
+export function closeKujiSet(token: string, kujiSetId: number) {
+  return request<KujiSetAdminResponse>(`/kuji/${kujiSetId}/close`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 상점 수량 조정: 줄이면 줄인 만큼 재고로, 늘리면 재고에서 더 가져온다 (0이면 판매 종료)
+export function updateStoreProductStock(token: string, storeProductId: number, stock: number) {
+  return request<StoreProductResponse>(`/store-products/${storeProductId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ stock }),
+  })
+}
+
 export interface AddressSearchItem {
   zip_code: string
   road_address: string
@@ -477,7 +614,9 @@ export interface CreateStoreProductPayload {
   price: number
   stock: number
   category: StoreCategory
-  image?: File
+  image?: Blob
+  // 재고 품목에서 고른 경우 — 서버가 stock만큼 그 품목을 이 상품에 묶는다 (TODO(backend))
+  inventory_item_id?: number
 }
 
 export async function createStoreProduct(token: string, payload: CreateStoreProductPayload) {
@@ -489,6 +628,7 @@ export async function createStoreProduct(token: string, payload: CreateStoreProd
   formData.append('stock', String(payload.stock))
   formData.append('category', payload.category)
   if (payload.image) formData.append('image', payload.image)
+  if (payload.inventory_item_id != null) formData.append('inventory_item_id', String(payload.inventory_item_id))
 
   const res = await fetch(`${API_URL}/store-products`, {
     method: 'POST',
@@ -553,6 +693,8 @@ export interface CreateKujiPrize {
   quantity: number
   cost: number
   image?: Blob
+  // 재고 품목에서 고른 경우 — 서버가 quantity만큼 그 품목을 이 상에 묶는다 (TODO(backend))
+  inventory_item_id?: number
 }
 
 export interface CreateKujiSetPayload {
@@ -561,7 +703,7 @@ export interface CreateKujiSetPayload {
   ticket_price: number
   image: Blob
   prizes: CreateKujiPrize[]
-  last_one?: { name: string; cost: number; image?: Blob }
+  last_one?: { name: string; cost: number; image?: Blob; inventory_item_id?: number }
 }
 
 export interface KujiBoardResponse {
@@ -619,6 +761,7 @@ export async function createKujiSet(token: string, payload: CreateKujiSetPayload
     formData.append('last_one_name', payload.last_one.name)
     formData.append('last_one_cost', String(payload.last_one.cost))
     if (payload.last_one.image) formData.append('last_one_image', payload.last_one.image)
+    if (payload.last_one.inventory_item_id != null) formData.append('last_one_inventory_item_id', String(payload.last_one.inventory_item_id))
   }
 
   const res = await fetch(`${API_URL}/kuji`, {
@@ -649,6 +792,7 @@ export async function createRaffleProduct(token: string, payload: CreateRafflePr
   formData.append('price_krw', String(payload.price_krw))
   formData.append('image', payload.image)
   formData.append('duration_days', String(payload.duration_days))
+  if (payload.inventory_item_id != null) formData.append('inventory_item_id', String(payload.inventory_item_id))
 
   const res = await fetch(`${API_URL}/raffles`, {
     method: 'POST',
