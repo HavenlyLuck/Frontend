@@ -1,6 +1,7 @@
 export type ProductType = '응모' | '쿠지' | '상점(일반)' | '상점(쌀포인트)'
 
-export interface KujiItem { name: string; img: string; count: string; cost: string }
+// itemId: 재고 품목에서 고른 줄이면 그 품목 id (이름·사진·원가가 재고에서 채워진다)
+export interface KujiItem { name: string; img: string; count: string; cost: string; itemId?: number }
 
 export interface Product {
   id: number

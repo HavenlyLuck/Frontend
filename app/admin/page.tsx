@@ -4,9 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  CalendarIcon,
-  ChartBarIcon,
-  ChartLineUpIcon,
   CoinsIcon,
   TruckIcon,
   DotsSixVerticalIcon,
@@ -15,21 +12,24 @@ import {
   GrainsIcon,
   PackageIcon,
   PaperclipIcon,
-  ShoppingBagIcon,
   TicketIcon,
-  UsersIcon,
 } from '@phosphor-icons/react'
 import { verifyAdmin, ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse, getStoreProducts, createStoreProduct, getKujiSetsAdmin, createKujiSet, type KujiSetAdminResponse, STORE_CATEGORIES, type StoreCategory, type StoreProductResponse } from '@/lib/api'
 import { getValidSession, clearAuth } from '@/lib/auth'
-import { TODAY, DAILY_REV, MONTHLY_REV, DAILY_SALES } from '@/lib/adminStats'
+import { TODAY, THIS_MONTH, DAILY_REV, MONTHLY_REV } from '@/lib/adminStats'
 import {
   PRODUCTS, PRODUCT_TABS, removeProduct, toggleProductActive,
   type ProductType, type KujiItem, type Product,
 } from '@/lib/adminProducts'
+import { fetchInventoryItems, inventoryItemForProduct, reserveInventoryForProduct, type InventoryItem } from '@/lib/inventory'
+import { PRODUCT_ACTIONS_MOCK, cancelRaffle, closeKuji, setStoreStock } from '@/lib/productActions'
+import InventoryPicker from '@/components/admin/InventoryPicker'
 
 type KujiTier = 'upper' | 'lower'
 
-const TYPE_COLOR: Record<string, string> = { '응모': 'var(--accent)', '쿠지': 'var(--gold)', '상점': 'var(--type-store)' }
+// 미리보기용 사진 주소(data URL 또는 재고 품목 사진 URL)를 업로드할 파일로 바꾼다
+const urlToBlob = async (url: string) => (url ? await (await fetch(url)).blob() : undefined)
+
 const TAB_ICON: Record<ProductType, React.ReactNode> = {
   '응모': <TicketIcon size={13} weight="fill" />,
   '쿠지': <GiftIcon size={13} weight="fill" />,
@@ -37,128 +37,6 @@ const TAB_ICON: Record<ProductType, React.ReactNode> = {
   '상점(쌀포인트)': <GrainsIcon size={13} weight="fill" />,
 }
 const ADMIN_PAGE_SIZE = 10
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
-const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
-
-// ── Helpers ───────────────────────────────────────────────
-function getDailyWindow(endDate: string) {
-  const result: { label: string; fullDate: string; amount: number }[] = []
-  const end = new Date(endDate + 'T00:00:00')
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(end)
-    d.setDate(d.getDate() - i)
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    const fullDate = `${d.getFullYear()}-${mm}-${dd}`
-    result.push({ label: `${mm}-${dd}`, fullDate, amount: DAILY_REV[fullDate] ?? 0 })
-  }
-  return result
-}
-
-function getMonthlyWindow(year: string) {
-  return Array.from({ length: 12 }, (_, i) => {
-    const m = `${year}-${String(i + 1).padStart(2, '0')}`
-    return { label: `${i + 1}월`, fullDate: m, amount: MONTHLY_REV[m] ?? 0 }
-  })
-}
-
-// ── Calendar Components ────────────────────────────────────
-const popupStyle: React.CSSProperties = {
-  position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 300,
-  background: 'var(--surface)',
-  border: '1px solid var(--border-strong)', borderRadius: 14, padding: 16,
-  boxShadow: 'var(--shadow-lg)',
-}
-const navBtn: React.CSSProperties = {
-  background: 'none', border: 'none', color: 'var(--text-secondary)',
-  fontSize: 18, cursor: 'pointer', padding: '2px 10px', borderRadius: 6,
-}
-
-function DayCalendar({ selected, onSelect, highlighted }: {
-  selected: string; onSelect: (d: string) => void; highlighted: Set<string>
-}) {
-  const [vy, setVy] = useState(() => parseInt(selected.slice(0, 4)))
-  const [vm, setVm] = useState(() => parseInt(selected.slice(5, 7)) - 1)
-
-  function prev() { if (vm === 0) { setVy(y => y - 1); setVm(11) } else setVm(m => m - 1) }
-  function next() { if (vm === 11) { setVy(y => y + 1); setVm(0) } else setVm(m => m + 1) }
-
-  const firstDow = new Date(vy, vm, 1).getDay()
-  const daysInMonth = new Date(vy, vm + 1, 0).getDate()
-  const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
-  while (cells.length % 7 !== 0) cells.push(null)
-
-  return (
-    <div style={{ width: 252 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <button style={navBtn} onClick={prev}>‹</button>
-        <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: 14 }}>{vy}년 {MONTH_NAMES[vm]}</span>
-        <button style={navBtn} onClick={next}>›</button>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
-        {WEEKDAYS.map((w, i) => (
-          <div key={w} style={{ textAlign: 'center', fontSize: 10, padding: '2px 0', color: i === 0 ? 'var(--danger)' : i === 6 ? 'var(--gold)' : 'var(--text-tertiary)' }}>{w}</div>
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
-        {cells.map((day, i) => {
-          if (!day) return <div key={i} style={{ aspectRatio: '1' }} />
-          const ds = `${vy}-${String(vm + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-          const isSel = ds === selected
-          const isToday = ds === TODAY
-          const hasDot = highlighted.has(ds)
-          return (
-            <button key={i} onClick={() => onSelect(ds)} style={{
-              position: 'relative', aspectRatio: '1', borderRadius: 6, cursor: 'pointer',
-              border: isToday && !isSel ? '1px solid var(--accent-tint-border)' : 'none',
-              background: isSel ? 'var(--accent)' : 'transparent',
-              color: isSel ? '#fff' : i % 7 === 0 ? 'var(--danger)' : i % 7 === 6 ? 'var(--gold)' : 'var(--text-secondary)',
-              fontSize: 12, fontWeight: isSel || isToday ? 700 : 400,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              {day}
-              {hasDot && !isSel && (
-                <span style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 3, height: 3, borderRadius: '50%', background: 'var(--gold)' }} />
-              )}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function MonthCalendar({ selected, onSelect, highlighted }: {
-  selected: string; onSelect: (m: string) => void; highlighted: Set<string>
-}) {
-  const [vy, setVy] = useState(() => parseInt(selected.slice(0, 4)))
-  return (
-    <div style={{ width: 220 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button style={navBtn} onClick={() => setVy(y => y - 1)}>‹</button>
-        <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: 14 }}>{vy}년</span>
-        <button style={navBtn} onClick={() => setVy(y => y + 1)}>›</button>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-        {MONTH_NAMES.map((mn, i) => {
-          const ms = `${vy}-${String(i + 1).padStart(2, '0')}`
-          const isSel = ms === selected
-          const hasData = highlighted.has(ms)
-          return (
-            <button key={mn} onClick={() => hasData && onSelect(ms)} style={{
-              padding: '10px 4px', borderRadius: 8, fontSize: 13,
-              border: isSel ? 'none' : hasData ? '1px solid var(--border-strong)' : 'none',
-              background: isSel ? 'var(--accent)' : hasData ? 'var(--bg-subtle)' : 'transparent',
-              color: isSel ? '#fff' : hasData ? 'var(--text-secondary)' : 'var(--text-tertiary)',
-              fontWeight: isSel ? 700 : 400, cursor: hasData ? 'pointer' : 'default',
-            }}>{mn}</button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 const lightInput: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text)', padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
 
 // ── Main ───────────────────────────────────────────────────
@@ -233,12 +111,6 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authChecked, adminToken])
 
-  const [revenueTab, setRevenueTab] = useState<'일별' | '월별'>('일별')
-  const [revDate, setRevDate] = useState(TODAY)
-  const [revMonth, setRevMonth] = useState('2026-08')
-  const [showRevCal, setShowRevCal] = useState(false)
-  const [saleDate, setSaleDate] = useState(TODAY)
-  const [showSalCal, setShowSalCal] = useState(false)
   const [productTab, setProductTab] = useState<ProductType>('응모')
   const [saleFilter, setSaleFilter] = useState<'selling' | 'done'>('selling')
   const [productPage, setProductPage] = useState(1)
@@ -252,7 +124,145 @@ export default function AdminPage() {
   const [raffleSubmitError, setRaffleSubmitError] = useState<string | null>(null)
   const autoMaxTickets = Math.floor((Number(newP.price.replace(/[^0-9]/g, '')) || 0) / 1000)
 
+  // 재고에서 고르기 — 응모·상점은 품목 하나, 쿠지는 상 한 줄마다(KujiItem.itemId)
+  const [invItems, setInvItems] = useState<InventoryItem[] | null>(null)
+  const [pickedItemId, setPickedItemId] = useState<number | null>(null)
+  const pickedItem = invItems?.find(i => i.item_id === pickedItemId) ?? null
+  const reloadInventory = () => {
+    if (adminToken) fetchInventoryItems(adminToken).then(setInvItems).catch(() => setInvItems([]))
+  }
+  useEffect(() => {
+    if (showAddForm && invItems === null) reloadInventory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddForm, adminToken])
+
+  // 고른 품목으로 상품명·원가·사진을 채운다 (사진은 등록할 때 파일로 바꿔 올린다)
+  const pickForProduct = (item: InventoryItem | null) => {
+    setPickedItemId(item?.item_id ?? null)
+    if (!item) {
+      setNewP(p => ({ ...p, cost: '' }))
+      return
+    }
+    setNewP(p => ({ ...p, title: item.name, cost: String(item.avg_unit_cost), img: item.image_url ?? p.img }))
+    if (item.image_url) setNewImageFile(null)
+  }
+
+  // 판매 종료 · 수량 조정 — 남은 물건은 재고로 돌아간다 (lib/productActions.ts)
+  const [actionBusy, setActionBusy] = useState<string | null>(null)
+  const runProductAction = async (key: string, fn: () => Promise<void>) => {
+    if (!adminToken || actionBusy) return
+    setActionBusy(key)
+    try {
+      await fn()
+      reloadInventory()
+      if (PRODUCT_ACTIONS_MOCK) {
+        alert('아직 서버 기능이 없어서 화면에서만 바뀌었어요. 실제 판매 종료·환불은 되지 않았고, 새로고침하면 원래대로 돌아가요.')
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '처리 중 오류가 발생했어요.')
+    } finally {
+      setActionBusy(null)
+    }
+  }
+  const actionBtn = (danger: boolean): React.CSSProperties => ({
+    padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: actionBusy ? 'default' : 'pointer', whiteSpace: 'nowrap',
+    border: `1px solid ${danger ? 'var(--danger-tint-border)' : 'var(--border-strong)'}`,
+    background: danger ? 'var(--danger-tint)' : 'var(--surface)',
+    color: danger ? 'var(--danger)' : 'var(--text-secondary)',
+    opacity: actionBusy ? 0.6 : 1,
+  })
+  const actionNote = (text: string) => <span style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>{text}</span>
+
+  function renderProductActions(p: Product) {
+    const key = `${p.type}-${p.id}`
+    if (p.type === '응모') {
+      const rp = raffleProducts.find(r => r.raffle_product_id === p.id)
+      if (!rp) return null
+      if (rp.status === 'completed') return actionNote('추첨 완료')
+      if (rp.status === 'cancelled') return actionNote('취소됨 · 재고로 돌아감')
+      if (rp.remaining_slots <= 0) return actionNote('매진 · 취소 불가')
+      return (
+        <button
+          disabled={!!actionBusy}
+          style={actionBtn(true)}
+          onClick={() => {
+            if (!confirm(`"${rp.product_name}" 응모를 취소할까요?\n\n지금까지 응모권을 산 ${rp.sold_slots}장은 모두 전액 환불되고, 물건은 재고로 돌아가요. 되돌릴 수 없어요.`)) return
+            runProductAction(key, async () => {
+              const updated = await cancelRaffle(adminToken!, rp)
+              setRaffleProducts(prev => prev.map(r => (r.raffle_product_id === rp.raffle_product_id ? updated : r)))
+            })
+          }}
+        >
+          {actionBusy === key ? '취소 중...' : '응모 취소'}
+        </button>
+      )
+    }
+    if (p.type === '쿠지') {
+      const ks = kujiSets.find(k => k.kuji_set_id === p.id)
+      if (!ks) return null
+      if (ks.status !== 'open') return actionNote(ks.status === 'closed' ? '판매 종료됨 · 남은 상품은 재고로' : '매진')
+      return (
+        <button
+          disabled={!!actionBusy}
+          style={actionBtn(true)}
+          onClick={() => {
+            if (!confirm(`"${ks.title}" 쿠지 판매를 끝낼까요?\n\n남은 제비 ${ks.remaining_tickets}장에 해당하는 상품과 라스트원상은 재고로 돌아가요. 이미 뽑힌 상품은 그대로예요. 되돌릴 수 없어요.`)) return
+            runProductAction(key, async () => {
+              const updated = await closeKuji(adminToken!, ks)
+              setKujiSets(prev => prev.map(k => (k.kuji_set_id === ks.kuji_set_id ? updated : k)))
+            })
+          }}
+        >
+          {actionBusy === key ? '종료 중...' : '판매 종료'}
+        </button>
+      )
+    }
+    const sp = storeProducts.find(s => s.store_product_id === p.id)
+    if (!sp) return null
+    const linked = inventoryItemForProduct('store', sp.store_product_id)
+    const changeStock = (next: number) => runProductAction(key, async () => {
+      const updated = await setStoreStock(adminToken!, sp, next)
+      setStoreProducts(prev => prev.map(s => (s.store_product_id === sp.store_product_id ? updated : s)))
+    })
+    return (
+      <>
+        <button
+          disabled={!!actionBusy}
+          style={actionBtn(false)}
+          onClick={() => {
+            const max = sp.stock + (linked?.available ?? 0)
+            const input = prompt(
+              `"${sp.product_name}" 판매 수량을 몇 개로 바꿀까요?\n지금 ${sp.stock}개 · ${linked ? `재고에 ${linked.available}개 더 있어서 최대 ${max}개` : '재고 연결 정보 없음'}\n줄이면 줄인 만큼 재고로 돌아가요.`,
+              String(sp.stock),
+            )
+            if (input == null) return
+            const next = Number(input.replace(/[^0-9]/g, ''))
+            if (!Number.isInteger(next) || input.trim() === '') return alert('숫자로 적어주세요.')
+            if (linked && next > max) return alert(`재고가 모자라요. 최대 ${max}개까지 올릴 수 있어요.`)
+            if (next === sp.stock) return
+            changeStock(next)
+          }}
+        >
+          {actionBusy === key ? '바꾸는 중...' : '수량 조정'}
+        </button>
+        {sp.stock > 0 && (
+          <button
+            disabled={!!actionBusy}
+            style={actionBtn(true)}
+            onClick={() => {
+              if (!confirm(`"${sp.product_name}" 판매를 끝낼까요?\n남은 ${sp.stock}개는 재고로 돌아가요.`)) return
+              changeStock(0)
+            }}
+          >
+            판매 종료
+          </button>
+        )}
+      </>
+    )
+  }
+
   function resetNewProductForm() {
+    setPickedItemId(null)
     setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000원', description: '' })
     setNewImageFile(null)
     setDeadlineDays(1)
@@ -261,6 +271,7 @@ export default function AdminPage() {
     setLowerItems([{ name: '', img: '', count: '1', cost: '' }])
     setLastOneItem({ name: '', img: '', cost: '' })
     setRaffleSubmitError(null)
+    reloadInventory()
   }
 
   function raffleToProduct(rp: RaffleProductResponse): Product {
@@ -327,7 +338,19 @@ export default function AdminPage() {
   const kujiTotalPapers = kujiItemCount + kujiLowerCount
   // 원가 책정용 — 총 원가, 예상 매출(총 장수 × 1장 가격), 마진
   // 라스트원상 — 제비가 아니라 마지막 장을 뽑은 사람에게 추가로 주는 상이라 장수에는 안 들어가고 원가에만 더한다
-  const [lastOneItem, setLastOneItem] = useState({ name: '', img: '', cost: '' })
+  const [lastOneItem, setLastOneItem] = useState<{ name: string; img: string; cost: string; itemId?: number }>({ name: '', img: '', cost: '' })
+
+  // 쿠지에서 같은 재고 품목을 여러 줄(+라스트원)에 나눠 쓸 수 있으니 품목별로 합쳐서 재고와 비교한다
+  const kujiItemUsage = new Map<number, number>()
+  for (const it of [...filledItems(kujiItems), ...filledItems(lowerItems)]) {
+    if (it.itemId != null) kujiItemUsage.set(it.itemId, (kujiItemUsage.get(it.itemId) ?? 0) + (Number(it.count) || 1))
+  }
+  if (lastOneItem.itemId != null && lastOneItem.name.trim()) kujiItemUsage.set(lastOneItem.itemId, (kujiItemUsage.get(lastOneItem.itemId) ?? 0) + 1)
+  const kujiShortage = (itemId: number | undefined) => {
+    if (itemId == null) return 0
+    const available = invItems?.find(i => i.item_id === itemId)?.available ?? 0
+    return Math.max(0, (kujiItemUsage.get(itemId) ?? 0) - available)
+  }
   const lastOneCost = toNum(lastOneItem.cost)
   const kujiTicketPrice = toNum(newP.ticketPrice) || 10000
   const kujiTotalCost = sumCost(kujiItems) + sumCost(lowerItems) + lastOneCost
@@ -407,7 +430,7 @@ export default function AdminPage() {
             padding: draggingKuji ? 6 : 0,
             outline: draggingKuji ? `2px dashed ${listDropActive ? 'var(--accent)' : 'var(--border-strong)'}` : 'none',
             background: listDropActive ? 'var(--accent-tint)' : 'transparent',
-            transition: 'padding 0.12s',
+            transition: 'background-color 0.12s',
           }}
         >
           {list.map((item, idx) => {
@@ -456,6 +479,19 @@ export default function AdminPage() {
                 value={item.name}
                 onChange={e => update(idx, { name: e.target.value })}
               />
+              <InventoryPicker
+                compact
+                items={invItems}
+                selectedId={item.itemId}
+                onSelect={inv => update(idx, inv
+                  ? { itemId: inv.item_id, name: inv.name, img: inv.image_url ?? item.img, cost: String(inv.avg_unit_cost) }
+                  : { itemId: undefined, cost: '' })}
+              />
+              {kujiShortage(item.itemId) > 0 && (
+                <span style={{ flexBasis: '100%', fontSize: 12, color: 'var(--danger)' }}>
+                  이 품목은 재고가 {kujiShortage(item.itemId)}개 모자라요 (이 판 전체에서 같은 품목을 쓴 개수 기준)
+                </span>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                 <input
                   style={{ ...lightInput, width: 56, textAlign: 'center', padding: '8px 6px' }}
@@ -469,14 +505,10 @@ export default function AdminPage() {
                 <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>개</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                <input
-                  style={{ ...lightInput, width: 84, textAlign: 'center', padding: '8px 6px' }}
-                  placeholder="개당 원가"
-                  aria-label="개당 원가(원)"
-                  value={item.cost}
-                  onChange={e => update(idx, { cost: e.target.value })}
-                />
-                <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>원</span>
+                {/* 원가는 재고 평균 원가로만 — 손으로 고치지 않는다 */}
+                <span title="개당 원가 (재고 평균 원가)" style={{ ...lightInput, width: 'auto', minWidth: 84, textAlign: 'center', padding: '8px 8px', background: 'var(--bg-subtle)', color: item.itemId != null ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 13 }}>
+                  {item.itemId != null ? `${toNum(item.cost).toLocaleString()}원` : '원가 -'}
+                </span>
               </div>
               <label style={{ ...lightInput, width: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: item.img ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 12, padding: '8px 10px' }}>
                 <PaperclipIcon size={12} /> 사진
@@ -504,13 +536,6 @@ export default function AdminPage() {
     )
   }
 
-  const chartData = revenueTab === '일별' ? getDailyWindow(revDate) : getMonthlyWindow(revMonth.slice(0, 4))
-  const maxAmt = Math.max(...chartData.map(d => d.amount), 1)
-
-  const dailyRevDates = new Set(Object.keys(DAILY_REV))
-  const monthlyRevMonths = new Set(Object.keys(MONTHLY_REV))
-  const saleDates = new Set(Object.keys(DAILY_SALES))
-  const currentSales = DAILY_SALES[saleDate] ?? []
   // 탭별 상품 + 판매중 여부 (응모: 아직 응모권을 팔고 있음 / 상점·쿠지: 재고 있음)
   const tabItems: { product: Product; selling: boolean }[] = productTab === '응모'
     ? raffleProducts.map(rp => ({ product: raffleToProduct(rp), selling: rp.status === 'open' && rp.is_open && rp.remaining_slots > 0 }))
@@ -528,12 +553,6 @@ export default function AdminPage() {
   const currentPage = Math.min(productPage, pageCount)
   const filtered = saleFiltered.slice((currentPage - 1) * ADMIN_PAGE_SIZE, currentPage * ADMIN_PAGE_SIZE)
 
-  const calBtn: React.CSSProperties = {
-    padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border-strong)',
-    background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer',
-    display: 'flex', alignItems: 'center', gap: 6,
-  }
-
   if (!authChecked) return null
 
   return (
@@ -544,117 +563,19 @@ export default function AdminPage() {
           <GearIcon size={28} weight="fill" color="var(--accent)" /> 관리자 메뉴
         </h1>
 
-        {/* 스탯 카드 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 36 }}>
-          {[
-            { label: '현재 이용자 수', value: '1,247명', icon: <UsersIcon size={22} weight="fill" />, color: 'var(--accent)' },
-            { label: '오늘 매출', value: (DAILY_REV[TODAY] ?? 0).toLocaleString() + '원', icon: <CalendarIcon size={22} weight="fill" />, color: 'var(--type-store)' },
-            { label: '이번 달 매출', value: (MONTHLY_REV['2026-08'] ?? 0).toLocaleString() + '원', icon: <ChartLineUpIcon size={22} weight="fill" />, color: 'var(--gold)' },
-          ].map(c => (
-            <div key={c.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', boxShadow: 'var(--shadow-sm)' }}>
-              <div style={{ marginBottom: 8, color: c.color }}>{c.icon}</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 6 }}>{c.label}</div>
-              <div style={{ color: c.color, fontSize: 22, fontWeight: 800 }}>{c.value}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* 매출 차트 */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, marginBottom: 28, boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}><ChartBarIcon size={17} weight="fill" color="var(--accent)" /> 매출 현황</div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {(['일별', '월별'] as const).map(t => (
-                <button key={t} onClick={() => { setRevenueTab(t); setShowRevCal(false) }} style={{
-                  padding: '5px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer',
-                  border: `1px solid ${revenueTab === t ? 'var(--accent-tint-border)' : 'var(--border-strong)'}`,
-                  background: revenueTab === t ? 'var(--accent-tint)' : 'var(--surface)',
-                  color: revenueTab === t ? 'var(--accent)' : 'var(--text-secondary)',
-                  fontWeight: revenueTab === t ? 700 : 400,
-                }}>{t}</button>
-              ))}
-              <div style={{ position: 'relative' }}>
-                <button onClick={() => setShowRevCal(v => !v)} style={calBtn}>
-                  <CalendarIcon size={14} /> {revenueTab === '일별' ? revDate.slice(5) : revMonth}
-                </button>
-                {showRevCal && (
-                  <>
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 299 }} onClick={() => setShowRevCal(false)} />
-                    <div style={popupStyle}>
-                      {revenueTab === '일별'
-                        ? <DayCalendar selected={revDate} onSelect={d => { setRevDate(d); setShowRevCal(false) }} highlighted={dailyRevDates} />
-                        : <MonthCalendar selected={revMonth} onSelect={m => { setRevMonth(m); setShowRevCal(false) }} highlighted={monthlyRevMonths} />
-                      }
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 160 }}>
-            {chartData.map((d, i) => {
-              const pct = d.amount / maxAmt
-              const isSel = revenueTab === '일별' ? d.fullDate === revDate : d.fullDate === revMonth
-              return (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
-                  {d.amount > 0 && <div style={{ color: 'var(--text-tertiary)', fontSize: 9, whiteSpace: 'nowrap' }}>{(d.amount / 10000).toFixed(0)}만</div>}
-                  <div style={{
-                    width: '100%', height: 120, borderRadius: '4px 4px 0 0',
-                    transformOrigin: 'bottom', transition: 'transform 0.3s',
-                    transform: `scaleY(${d.amount > 0 ? Math.max(pct, 4 / 120) : 2 / 120})`,
-                    background: isSel ? 'var(--accent)' : d.amount > 0 ? 'var(--border-strong)' : 'var(--border)',
-                    boxShadow: isSel ? '0 0 8px rgba(217,51,71,0.4)' : undefined,
-                  }} />
-                  <div style={{ color: isSel ? 'var(--accent)' : 'var(--text-tertiary)', fontSize: 9, whiteSpace: 'nowrap', fontWeight: isSel ? 700 : 400 }}>{d.label}</div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* 판매 내역 */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, marginBottom: 36, boxShadow: 'var(--shadow-sm)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}><ShoppingBagIcon size={17} weight="fill" color="var(--accent)" /> 일별 판매 내역</div>
-            <div style={{ position: 'relative' }}>
-              <button onClick={() => setShowSalCal(v => !v)} style={calBtn}>
-                <CalendarIcon size={14} /> {saleDate.slice(5)}
-              </button>
-              {showSalCal && (
-                <>
-                  <div style={{ position: 'fixed', inset: 0, zIndex: 299 }} onClick={() => setShowSalCal(false)} />
-                  <div style={popupStyle}>
-                    <DayCalendar selected={saleDate} onSelect={d => { setSaleDate(d); setShowSalCal(false) }} highlighted={saleDates} />
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-          {currentSales.length === 0
-            ? <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '24px 0' }}>{saleDate.slice(5)} 판매 내역이 없습니다.</div>
-            : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {currentSales.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 10, background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
-                    <div style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0, background: `color-mix(in srgb, ${TYPE_COLOR[item.type]} 16%, transparent)`, color: TYPE_COLOR[item.type], border: `1px solid color-mix(in srgb, ${TYPE_COLOR[item.type]} 45%, transparent)` }}>{item.type}</div>
-                    <div style={{ flex: 1, color: 'var(--text)', fontSize: 14 }}>{item.title}</div>
-                    <div style={{ color: 'var(--text-tertiary)', fontSize: 12, flexShrink: 0 }}>{item.buyer}</div>
-                    <div style={{ color: 'var(--text)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{item.price}</div>
-                  </div>
-                ))}
-              </div>
-          }
-        </div>
-
-        {/* 자금 관리 바로가기 */}
+        {/* 재고·자금 관리 바로가기 */}
         <Link href="/admin/finance" style={{ textDecoration: 'none' }}>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: 'var(--gold-tint)', border: '1px solid var(--gold-tint-border)', borderRadius: 14, padding: '20px 24px', marginBottom: 36, cursor: 'pointer',
           }}>
             <div>
-              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><CoinsIcon size={18} weight="fill" color="var(--gold)" /> 자금 관리</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>부대비용을 기록하고 일별 · 주별 · 월별 · 년도별 순이익을 확인하세요</div>
+              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><CoinsIcon size={18} weight="fill" color="var(--gold)" /> 재고·자금 관리</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>물건 입고와 재고, 매출 · 원가 · 부대비용 · 순이익을 한곳에서 확인하세요</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 10, fontSize: 13, color: 'var(--text-secondary)' }}>
+                <span>오늘 매출 <b style={{ color: 'var(--text)' }}>{(DAILY_REV[TODAY] ?? 0).toLocaleString()}원</b></span>
+                <span>이번 달 매출 <b style={{ color: 'var(--text)' }}>{(MONTHLY_REV[THIS_MONTH] ?? 0).toLocaleString()}원</b></span>
+              </div>
             </div>
             <span style={{ color: 'var(--gold)', fontSize: 20 }}>→</span>
           </div>
@@ -678,7 +599,7 @@ export default function AdminPage() {
         <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 18, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}><PackageIcon size={19} weight="fill" color="var(--accent)" /> 상품 관리</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
           {PRODUCT_TABS.map(t => (
-            <button key={t} onClick={() => { setProductTab(t); setShowAddForm(false); setStoreCategory(null); setSaleFilter('selling'); setProductPage(1) }} style={{
+            <button key={t} onClick={() => { setProductTab(t); setShowAddForm(false); setStoreCategory(null); setPickedItemId(null); setSaleFilter('selling'); setProductPage(1) }} style={{
               padding: '9px 20px', borderRadius: 10, fontSize: 14, cursor: 'pointer',
               border: `1px solid ${productTab === t ? 'var(--accent-tint-border)' : 'var(--border-strong)'}`,
               background: productTab === t ? 'var(--accent-tint)' : 'var(--surface)',
@@ -749,7 +670,7 @@ export default function AdminPage() {
                 <div style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, flexShrink: 0, background: p.active ? 'var(--accent-tint)' : 'var(--bg-subtle)', color: p.active ? 'var(--accent)' : 'var(--text-tertiary)', border: `1px solid ${p.active ? 'var(--accent-tint-border)' : 'var(--border)'}` }}>{p.active ? '활성' : '비활성'}</div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   {p.type === '응모' || p.type === '쿠지' || p.type === '상점(일반)' || p.type === '상점(쌀포인트)' ? (
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>상태 변경 API 미구현</span>
+                    renderProductActions(p)
                   ) : (
                     <>
                       <button onClick={() => { if (p.active && !confirm(`"${p.title}"을(를) 비활성화할까요? 지금 이 상품은 목록에서 즉시 내려갑니다.`)) return; toggleProductActive(p.id); setProducts(prev => prev.map(x => x.id === p.id ? { ...x, active: !x.active } : x)) }} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${p.active ? 'var(--danger-tint-border)' : 'var(--accent-tint-border)'}`, background: p.active ? 'var(--danger-tint)' : 'var(--accent-tint)', color: p.active ? 'var(--danger)' : 'var(--accent)' }}>{p.active ? '내리기' : '올리기'}</button>
@@ -788,10 +709,28 @@ export default function AdminPage() {
           <div style={{ border: '1px solid var(--border)', borderRadius: 14, background: 'var(--surface)', padding: '24px 24px 20px', boxShadow: 'var(--shadow-md)' }}>
             <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>{TAB_ICON[productTab]} {productTab} 상품 추가</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {productTab !== '쿠지' && (
+                // 상품은 재고에서만 만든다 — 재고에 없으면 먼저 입고해야 원가·수량이 손익과 맞는다
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>
+                    재고에서 고르기 * (이름·사진·원가가 채워지고, 등록하면 {productTab === '응모' ? '1개가' : '올린 수량만큼'} 판매 중으로 넘어가요)
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+                    <InventoryPicker items={invItems} selectedId={pickedItemId} onSelect={pickForProduct} />
+                    <Link href="/admin/finance?tab=inventory" style={{ color: 'var(--accent-fg)', fontSize: 12 }}>재고에 없으면 먼저 입고하기 →</Link>
+                  </div>
+                </div>
+              )}
               <div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>{productTab === '쿠지' ? '쿠지 이름 *' : '상품명 *'}</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>{productTab === '쿠지' ? '쿠지 이름 *' : '상품명 * (재고 이름과 다르게 보여주고 싶으면 고치세요)'}</div>
                 <input style={lightInput} placeholder={productTab === '쿠지' ? '예: 주술회전 나오야 젠인 쿠지' : '상품 이름 입력'} value={newP.title} onChange={e => setNewP(p => ({ ...p, title: e.target.value }))} />
               </div>
+              {productTab === '쿠지' && (
+                <div style={{ color: 'var(--text-tertiary)', fontSize: 12, lineHeight: 1.6 }}>
+                  상위상·하위상·라스트원상은 줄마다 <b style={{ color: 'var(--text-secondary)' }}>재고</b> 버튼으로 품목을 골라야 해요. 이름·사진·원가가 채워지고, 등록하면 개수만큼 재고에서 판매 중으로 넘어가요.
+                  {' '}<Link href="/admin/finance?tab=inventory" style={{ color: 'var(--accent-fg)' }}>재고에 먼저 입고하기 →</Link>
+                </div>
+              )}
               {(productTab === '상점(일반)' || productTab === '상점(쌀포인트)') && (
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>분류 * (상점 세부 탭)</div>
@@ -816,8 +755,10 @@ export default function AdminPage() {
               )}
               {productTab !== '쿠지' && (
                 <div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>제품 원가</div>
-                  <input style={lightInput} placeholder="예: 30,000원" value={newP.cost} onChange={e => setNewP(p => ({ ...p, cost: e.target.value }))} />
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>제품 원가 (재고 평균 원가)</div>
+                  <div style={{ ...lightInput, background: 'var(--bg-subtle)', color: pickedItem ? 'var(--text)' : 'var(--text-tertiary)' }}>
+                    {pickedItem ? `${pickedItem.avg_unit_cost.toLocaleString()}원` : '재고에서 고르면 자동으로 채워져요'}
+                  </div>
                 </div>
               )}
               {(
@@ -885,15 +826,23 @@ export default function AdminPage() {
                       value={lastOneItem.name}
                       onChange={e => setLastOneItem(v => ({ ...v, name: e.target.value }))}
                     />
+                    <InventoryPicker
+                      compact
+                      items={invItems}
+                      selectedId={lastOneItem.itemId}
+                      onSelect={inv => setLastOneItem(v => (inv
+                        ? { ...v, itemId: inv.item_id, name: inv.name, img: inv.image_url ?? v.img, cost: String(inv.avg_unit_cost) }
+                        : { ...v, itemId: undefined, cost: '' }))}
+                    />
+                    {kujiShortage(lastOneItem.itemId) > 0 && (
+                      <span style={{ flexBasis: '100%', fontSize: 12, color: 'var(--danger)' }}>
+                        이 품목은 재고가 {kujiShortage(lastOneItem.itemId)}개 모자라요
+                      </span>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                      <input
-                        style={{ ...lightInput, width: 84, textAlign: 'center', padding: '8px 6px' }}
-                        placeholder="원가"
-                        aria-label="라스트원상 원가(원)"
-                        value={lastOneItem.cost}
-                        onChange={e => setLastOneItem(v => ({ ...v, cost: e.target.value }))}
-                      />
-                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>원</span>
+                      <span title="라스트원상 원가 (재고 평균 원가)" style={{ ...lightInput, width: 'auto', minWidth: 84, textAlign: 'center', padding: '8px 8px', background: 'var(--bg-subtle)', color: lastOneItem.itemId != null ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 13 }}>
+                        {lastOneItem.itemId != null ? `${lastOneCost.toLocaleString()}원` : '원가 -'}
+                      </span>
                     </div>
                     <label style={{ ...lightInput, width: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: lastOneItem.img ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 12, padding: '8px 10px' }}>
                       <PaperclipIcon size={12} /> 사진
@@ -925,7 +874,15 @@ export default function AdminPage() {
                 </div>
               )}
               {productTab !== '응모' && productTab !== '쿠지' && (
-                <div><div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>수량 *</div><input style={lightInput} placeholder="올릴 수량 입력 (예: 10)" type="number" min="1" value={newP.stock} onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))} /></div>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>
+                    수량 *{pickedItem && ` (재고 ${pickedItem.available}개까지)`}
+                  </div>
+                  <input style={lightInput} placeholder="올릴 수량 입력 (예: 10)" type="number" min="1" max={pickedItem?.available} value={newP.stock} onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))} />
+                  {pickedItem && Number(newP.stock) > pickedItem.available && (
+                    <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 5 }}>재고가 {pickedItem.available}개뿐이에요.</div>
+                  )}
+                </div>
               )}
               {productTab === '응모' && (
                 <div>
@@ -987,7 +944,12 @@ export default function AdminPage() {
             <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
               <button disabled={raffleSubmitting} onClick={async () => {
                 if (productTab === '응모') {
-                  if (!newP.title.trim() || !newP.price.trim() || !newImageFile || !adminToken) {
+                  if (!pickedItem) {
+                    setRaffleSubmitError('재고에서 품목을 골라주세요. 재고에 없으면 재고·자금 관리에서 먼저 입고해 주세요.')
+                    return
+                  }
+                  // 재고 품목 사진을 그대로 쓴다 (따로 올린 사진이 있으면 그걸로)
+                  if (!newP.title.trim() || !newP.price.trim() || (!newImageFile && !newP.img) || !adminToken) {
                     setRaffleSubmitError('상품명, 가격, 이미지를 모두 입력해주세요.')
                     return
                   }
@@ -996,16 +958,26 @@ export default function AdminPage() {
                     setRaffleSubmitError('가격은 숫자로 입력해주세요.')
                     return
                   }
+                  if (pickedItem && pickedItem.available < 1) {
+                    setRaffleSubmitError('고른 품목의 재고가 없어요.')
+                    return
+                  }
                   try {
                     setRaffleSubmitting(true)
                     setRaffleSubmitError(null)
+                    const image = newImageFile ?? await urlToBlob(newP.img)
+                    if (!image) throw new Error('이미지를 불러오지 못했어요.')
                     const created = await createRaffleProduct(adminToken, {
                       product_name: newP.title,
                       description: newP.description || undefined,
                       price_krw: priceNum,
-                      image: newImageFile,
+                      image,
                       duration_days: deadlineDays,
+                      inventory_item_id: pickedItem?.item_id,
                     })
+                    if (pickedItem) {
+                      reserveInventoryForProduct([{ itemId: pickedItem.item_id, quantity: 1, productType: 'raffle', productId: created.raffle_product_id, productName: `[응모] ${created.product_name}` }])
+                    }
                     setRaffleProducts(prev => [created, ...prev])
                     resetNewProductForm()
                     setShowAddForm(false)
@@ -1025,10 +997,18 @@ export default function AdminPage() {
                     setRaffleSubmitError('분류를 선택해주세요.')
                     return
                   }
+                  if (!pickedItem) {
+                    setRaffleSubmitError('재고에서 품목을 골라주세요. 재고에 없으면 재고·자금 관리에서 먼저 입고해 주세요.')
+                    return
+                  }
                   const priceNum = Number(newP.price.replace(/[^0-9]/g, ''))
                   const stockNum = Number(newP.stock)
                   if (!priceNum) {
                     setRaffleSubmitError('가격은 숫자로 입력해주세요.')
+                    return
+                  }
+                  if (pickedItem && stockNum > pickedItem.available) {
+                    setRaffleSubmitError(`고른 품목의 재고가 ${pickedItem.available}개뿐이에요.`)
                     return
                   }
                   try {
@@ -1041,8 +1021,15 @@ export default function AdminPage() {
                       price: priceNum,
                       stock: stockNum,
                       category: storeCategory,
-                      image: newImageFile ?? undefined,
+                      image: newImageFile ?? await urlToBlob(newP.img),
+                      inventory_item_id: pickedItem?.item_id,
                     })
+                    if (pickedItem) {
+                      reserveInventoryForProduct([{
+                        itemId: pickedItem.item_id, quantity: stockNum, productType: 'store', productId: created.store_product_id,
+                        productName: `${created.pay_type === 'cash' ? '[상점]' : '[쌀포인트 상점]'} ${created.product_name}`,
+                      }])
+                    }
                     setStoreProducts(prev => [created, ...prev])
                     resetNewProductForm()
                     setShowAddForm(false)
@@ -1071,8 +1058,17 @@ export default function AdminPage() {
                   setRaffleSubmitError('쿠지 대표 이미지를 올려주세요.')
                   return
                 }
-                // 상품 사진은 미리보기용 data URL로 들고 있어서 파일로 되돌려 보낸다
-                const toBlob = async (dataUrl: string) => (dataUrl ? await (await fetch(dataUrl)).blob() : undefined)
+                if ([...filledItems(kujiItems), ...filledItems(lowerItems)].some(it => it.itemId == null)
+                  || (lastOneItem.name.trim() && lastOneItem.itemId == null)) {
+                  setRaffleSubmitError('상마다 재고에서 품목을 골라주세요. 재고에 없으면 재고·자금 관리에서 먼저 입고해 주세요.')
+                  return
+                }
+                if ([...kujiItemUsage.keys()].some(id => kujiShortage(id) > 0)) {
+                  setRaffleSubmitError('재고가 모자란 품목이 있어요. 개수를 줄이거나 재고에 먼저 입고해 주세요.')
+                  return
+                }
+                // 상품 사진은 미리보기용 data URL(또는 재고 품목 사진 URL)로 들고 있어서 파일로 바꿔 보낸다
+                const toBlob = urlToBlob
                 try {
                   setRaffleSubmitting(true)
                   setRaffleSubmitError(null)
@@ -1083,6 +1079,7 @@ export default function AdminPage() {
                       quantity: Number(it.count) || 1,
                       cost: toNum(it.cost),
                       image: await toBlob(it.img),
+                      inventory_item_id: it.itemId,
                     })))
                   const created = await createKujiSet(adminToken, {
                     title: newP.title.trim(),
@@ -1090,9 +1087,23 @@ export default function AdminPage() {
                     image: newImageFile,
                     prizes: [...await toPrizes(kujiItems, 'upper'), ...await toPrizes(lowerItems, 'lower')],
                     last_one: lastOneItem.name.trim()
-                      ? { name: lastOneItem.name.trim(), cost: lastOneCost, image: await toBlob(lastOneItem.img) }
+                      ? { name: lastOneItem.name.trim(), cost: lastOneCost, image: await toBlob(lastOneItem.img), inventory_item_id: lastOneItem.itemId }
                       : undefined,
                   })
+                  // 재고에서 고른 줄만큼 판매 중으로 묶는다 (등급 이름은 화면과 같은 A, B, … 순서)
+                  const gradeLines = [
+                    ...kujiItems.map((it, i) => ({ it, grade: String.fromCharCode(65 + i) })),
+                    ...lowerItems.map((it, i) => ({ it, grade: String.fromCharCode(65 + kujiItems.length + i) })),
+                  ].filter(({ it }) => it.name.trim() && it.itemId != null)
+                  reserveInventoryForProduct([
+                    ...gradeLines.map(({ it, grade }) => ({
+                      itemId: it.itemId!, quantity: Number(it.count) || 1, productType: 'kuji' as const,
+                      productId: created.kuji_set_id, productName: `[쿠지] ${created.title} ${grade}상`,
+                    })),
+                    ...(lastOneItem.itemId != null && lastOneItem.name.trim()
+                      ? [{ itemId: lastOneItem.itemId, quantity: 1, productType: 'kuji' as const, productId: created.kuji_set_id, productName: `[쿠지] ${created.title} 라스트원상` }]
+                      : []),
+                  ])
                   setKujiSets(prev => [created, ...prev])
                   resetNewProductForm()
                   setShowAddForm(false)
