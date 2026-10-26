@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowRightIcon, ClipboardTextIcon, PencilSimpleIcon } from '@phosphor-icons/react'
 import InventoryManager from '@/components/admin/InventoryManager'
 import { AdminPageHeader } from '@/components/admin/AdminShell'
+import { ApiError } from '@/lib/api'
 import {
-  EXPENSE_RECORDS, addExpenseRecord, removeExpenseRecord, todayKey,
-  getExpensesForPeriod, getPeriodSummary, getSalesForPeriod,
-  type ExpenseRecord, type Period,
+  addExpense, fetchPeriodFinance, removeExpense, todayKey,
+  type Period, type PeriodFinance,
 } from '@/lib/finance'
 
 const lightInput: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text)', padding: '9px 12px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
@@ -62,9 +62,9 @@ export default function FinanceWorkspace({ token, initialTab = 'overview' }: { t
         <PeriodPicker period={period} periodKey={periodKey} onPeriod={setPeriod} onKey={setKey} />
       )}
 
-      {tab === 'overview' && <Overview period={period} periodKey={periodKey} onGo={changeTab} />}
+      {tab === 'overview' && <Overview token={token} period={period} periodKey={periodKey} onGo={changeTab} />}
       {tab === 'inventory' && <InventoryManager token={token} />}
-      {tab === 'expenses' && <Expenses period={period} periodKey={periodKey} />}
+      {tab === 'expenses' && <Expenses token={token} period={period} periodKey={periodKey} />}
     </div>
   )
 }
@@ -105,12 +105,39 @@ function PeriodPicker({ period, periodKey, onPeriod, onKey }: {
   )
 }
 
+// 기간 손익 데이터를 서버에서 받는다 — 기간이 바뀌거나 reload()하면 다시 받는다
+function usePeriodFinance(token: string, period: Period, periodKey: string) {
+  const [data, setData] = useState<PeriodFinance | null>(null)
+  const [error, setError] = useState('')
+
+  const reload = useCallback(async () => {
+    try {
+      setData(await fetchPeriodFinance(token, period, periodKey))
+      setError('')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '손익 데이터를 불러오지 못했어요.')
+    }
+  }, [token, period, periodKey])
+
+  useEffect(() => {
+    setData(null)
+    reload()
+  }, [reload])
+
+  return { data, error, reload }
+}
+
+const loadingBox = <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '40px 0' }}>불러오는 중...</div>
+
 // ── 한눈에: 손익 + 기간 판매 내역 ──
-function Overview({ period, periodKey, onGo }: { period: Period; periodKey: string; onGo: (t: WorkspaceTab) => void }) {
-  const summary = getPeriodSummary(period, periodKey)
-  const sales = getSalesForPeriod(period, periodKey)
+function Overview({ token, period, periodKey, onGo }: { token: string; period: Period; periodKey: string; onGo: (t: WorkspaceTab) => void }) {
+  const { data, error } = usePeriodFinance(token, period, periodKey)
   const [shown, setShown] = useState(20)
   useEffect(() => { setShown(20) }, [period, periodKey])
+
+  if (error) return <div style={{ color: 'var(--danger)', marginBottom: 16 }}>{error}</div>
+  if (!data) return loadingBox
+  const { summary, sales } = data
 
   const marginRate = summary.revenue > 0 ? Math.round((summary.margin / summary.revenue) * 100) : 0
 
@@ -172,7 +199,7 @@ function Overview({ period, periodKey, onGo }: { period: Period; periodKey: stri
                     <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>{s.date.slice(5)}</td>
                     <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>{s.pay === 'ssal' ? '쌀포인트' : s.type}</td>
                     <td style={{ padding: '6px 8px', color: 'var(--text)' }}>{s.title}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right' }}>{s.pay === 'ssal' ? `${s.ssalPrice.toLocaleString()}P` : won(s.revenue)}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right' }}>{s.pay === 'ssal' ? `${s.ssal_price.toLocaleString()}P` : won(s.revenue)}</td>
                     <td style={{ padding: '6px 8px', textAlign: 'right' }}>{won(s.cost)}</td>
                     <td style={{ padding: '6px 8px', textAlign: 'right', color: s.revenue - s.cost >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                       {won(s.revenue - s.cost)}
@@ -218,25 +245,37 @@ function PlRow({ label, hint, value, muted, strong, action }: {
 }
 
 // ── 부대비용: 기입 + 기간 내역 ──
-function Expenses({ period, periodKey }: { period: Period; periodKey: string }) {
-  // EXPENSE_RECORDS를 직접 읽으므로 이 state는 다시 그리기용
-  const [, setRecords] = useState<ExpenseRecord[]>(() => [...EXPENSE_RECORDS])
+function Expenses({ token, period, periodKey }: { token: string; period: Period; periodKey: string }) {
+  const { data, error, reload } = usePeriodFinance(token, period, periodKey)
   const [form, setForm] = useState({ date: todayKey(), label: '', amount: '' })
-  const list = getExpensesForPeriod(period, periodKey)
+  const [busy, setBusy] = useState(false)
+  const list = data?.expenses ?? []
   const total = list.reduce((n, r) => n + r.amount, 0)
-  const canAdd = form.label.trim() !== '' && (Number(form.amount.replace(/[^0-9]/g, '')) || 0) > 0
+  const canAdd = !busy && form.label.trim() !== '' && (Number(form.amount.replace(/[^0-9]/g, '')) || 0) > 0
 
-  const add = () => {
-    if (!canAdd) return
-    const record: ExpenseRecord = { id: `${Date.now()}`, date: form.date, label: form.label.trim(), amount: Number(form.amount.replace(/[^0-9]/g, '')) }
-    addExpenseRecord(record)
-    setRecords(prev => [record, ...prev])
-    setForm(f => ({ ...f, label: '', amount: '' }))
+  const run = async (fn: () => Promise<unknown>) => {
+    setBusy(true)
+    try {
+      await fn()
+      await reload()
+      return true
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : '처리 중 오류가 발생했어요.')
+      return false
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const remove = (id: string) => {
-    removeExpenseRecord(id)
-    setRecords(prev => prev.filter(r => r.id !== id))
+  const add = async () => {
+    if (!canAdd) return
+    const ok = await run(() => addExpense(token, { date: form.date, label: form.label.trim(), amount: Number(form.amount.replace(/[^0-9]/g, '')) }))
+    if (ok) setForm(f => ({ ...f, label: '', amount: '' }))
+  }
+
+  const remove = (id: number) => {
+    if (busy) return
+    run(() => removeExpense(token, id))
   }
 
   return (
@@ -279,16 +318,20 @@ function Expenses({ period, periodKey }: { period: Period; periodKey: string }) 
           <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ClipboardTextIcon size={17} weight="fill" color="var(--accent)" /> 선택 기간 부대비용</span>
           <span style={{ fontSize: 15, color: 'var(--gold)' }}>{won(total)}</span>
         </div>
-        {list.length === 0 ? (
+        {error ? (
+          <div style={{ color: 'var(--danger)' }}>{error}</div>
+        ) : !data ? (
+          loadingBox
+        ) : list.length === 0 ? (
           <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '24px 0' }}>이 기간에 기록된 부대비용이 없어요.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {list.map(r => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-tertiary)', fontSize: 12, flexShrink: 0 }}>{r.date}</span>
+              <div key={r.expense_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text-tertiary)', fontSize: 12, flexShrink: 0 }}>{r.spent_on}</span>
                 <span style={{ flex: 1, color: 'var(--text)', fontSize: 14 }}>{r.label}</span>
                 <span style={{ color: 'var(--gold)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{won(r.amount)}</span>
-                <button onClick={() => remove(r.id)} style={{ border: 'none', background: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>삭제</button>
+                <button onClick={() => remove(r.expense_id)} disabled={busy} style={{ border: 'none', background: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>삭제</button>
               </div>
             ))}
           </div>

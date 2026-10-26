@@ -7,8 +7,7 @@ import { getRaffleProducts, type RaffleProductResponse } from '@/lib/api'
 import { AdminPageHeader, useAdminToken } from '@/components/admin/AdminShell'
 import { fetchShippingBoxes } from '@/lib/adminShipping'
 import { fetchInventoryItems, type InventoryItem } from '@/lib/inventory'
-import { getPeriodSummary } from '@/lib/finance'
-import { DAILY_REV, THIS_MONTH, TODAY } from '@/lib/adminStats'
+import { fetchPeriodFinance, todayKey, type PeriodFinance } from '@/lib/finance'
 
 const won = (n: number) => `${n.toLocaleString()}원`
 const DAY = 86400
@@ -19,17 +18,21 @@ export default function AdminHomePage() {
   const [shipping, setShipping] = useState<number | null>(null)
   const [items, setItems] = useState<InventoryItem[] | null>(null)
   const [raffles, setRaffles] = useState<RaffleProductResponse[] | null>(null)
+  const [month, setMonth] = useState<PeriodFinance | null>(null)
+  const today = todayKey()
 
   useEffect(() => {
     fetchShippingBoxes(token, 'requested').then(b => setShipping(b.length)).catch(() => setShipping(0))
     fetchInventoryItems(token).then(setItems).catch(() => setItems([]))
     getRaffleProducts('open').then(setRaffles).catch(() => setRaffles([]))
-  }, [token])
+    fetchPeriodFinance(token, 'month', today.slice(0, 7)).then(setMonth).catch(() => setMonth(null))
+  }, [token, today])
 
   const outOfStock = items?.filter(i => i.available === 0) ?? []
   const closingSoon = raffles?.filter(r => r.remaining_slots > 0 && r.remaining_seconds > 0 && r.remaining_seconds < DAY) ?? []
   const waitingDraw = raffles?.filter(r => r.remaining_slots <= 0) ?? []
-  const month = getPeriodSummary('month', THIS_MONTH)
+  const todayRevenue = month?.sales.filter(s => s.date === today).reduce((n, s) => n + s.revenue, 0)
+  const wonOrDots = (n: number | undefined) => (n == null ? '…' : won(n))
 
   const tasks = [
     {
@@ -102,9 +105,14 @@ export default function AdminHomePage() {
           <Link href="/admin/finance" style={{ fontSize: 13, color: 'var(--accent-fg)', textDecoration: 'none', fontWeight: 600 }}>손익 자세히 →</Link>
         </div>
         <div className="admin-stat-grid">
-          <Stat label="오늘 매출" value={won(DAILY_REV[TODAY] ?? 0)} />
-          <Stat label="이번 달 매출" value={won(month.revenue)} />
-          <Stat label="이번 달 순이익" value={won(month.netProfit)} tone={month.netProfit >= 0 ? 'good' : 'bad'} sub={`매출 − 판매 원가 − 부대비용`} />
+          <Stat label="오늘 매출" value={wonOrDots(todayRevenue)} />
+          <Stat label="이번 달 매출" value={wonOrDots(month?.summary.revenue)} />
+          <Stat
+            label="이번 달 순이익"
+            value={wonOrDots(month?.summary.netProfit)}
+            tone={month ? (month.summary.netProfit >= 0 ? 'good' : 'bad') : undefined}
+            sub={`매출 − 판매 원가 − 부대비용`}
+          />
         </div>
       </section>
     </div>

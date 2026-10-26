@@ -1,16 +1,21 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ArchiveIcon, CalendarIcon, ConfettiIcon, MagnifyingGlassIcon, MapPinIcon, ShoppingBagIcon, TruckIcon, XIcon } from '@phosphor-icons/react'
+import Link from 'next/link'
+import { ArchiveIcon, CalendarIcon, ConfettiIcon, MagnifyingGlassIcon, MapPinIcon, PackageIcon, ShoppingBagIcon, TrashIcon, TruckIcon, XIcon } from '@phosphor-icons/react'
 import { useStorage } from '@/hooks/useStorage'
 import { notifyStorageUpdated } from '@/lib/storage'
 import { getValidSession } from '@/lib/auth'
 import {
   ApiError,
+  cancelStorePurchase,
   createAddress,
+  deleteAddress,
   getMyAddresses,
+  MAX_ADDRESSES,
   requestShipping,
   searchAddress,
+  setDefaultAddress,
   type AddressResponse,
   type AddressSearchItem,
   type StorageItemResponse,
@@ -39,9 +44,7 @@ const headerBtnStyle: React.CSSProperties = {
   fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
-const EMPTY_ADDR_FORM = { label: '', recipient: '', phone: '', zipCode: '', address1: '', address2: '' }
-
-const STATUS_LABEL = { ready: '보관 중', requested: '배송 신청됨', shipped: '발송 완료' } as const
+const EMPTY_ADDR_FORM = { label: '', recipient: '', phone: '', zipCode: '', address1: '', address2: '', isDefault: false }
 
 function itemTitle(item: StorageItemResponse) {
   return item.quantity > 1 ? `${item.product_name} x${item.quantity}` : item.product_name
@@ -90,6 +93,16 @@ export default function StoragePage() {
     return () => { cancelled = true }
   }, [])
 
+  // 5개가 넘으면 서버가 오래된 배송지를 정리하므로 등록 후엔 목록을 다시 받는다
+  const reloadAddresses = async (token: string) => {
+    try {
+      setAddresses(await getMyAddresses(token))
+    } catch {
+      // 목록 갱신 실패 시 이전 목록 유지
+    }
+  }
+
+  // 배송 신청한 상품은 배송 내역으로 옮겨가고, 보관함에는 보관 중인 것만 남는다
   const readyItems = items.filter(i => i.status === 'ready')
   const allSelected = readyItems.length > 0 && readyItems.every(i => selected.has(i.storage_item_id))
 
@@ -126,7 +139,7 @@ export default function StoragePage() {
       setSelected(new Set())
       setShowShipModal(false)
       notifyStorageUpdated()
-      showToast('택배 신청이 접수되었습니다!')
+      showToast('배송 신청이 접수되었어요. 배송 내역에서 확인할 수 있어요.')
     } catch (err) {
       showToast(errorMessage(err))
     } finally {
@@ -134,7 +147,8 @@ export default function StoragePage() {
     }
   }
 
-  const defaultAddress = addresses.find(a => a.is_default) ?? null
+  const atAddressLimit = addresses.length >= MAX_ADDRESSES
+  const oldestRemovable = [...addresses].filter(a => !a.is_default).sort((a, b) => (a.created_at < b.created_at ? -1 : 1))[0]
   const address2Ref = useRef<HTMLInputElement>(null)
 
   const resetAddrSearch = () => {
@@ -193,12 +207,68 @@ export default function StoragePage() {
         zip_code: newAddr.zipCode,
         address1: newAddr.address1,
         address2: newAddr.address2,
+        is_default: newAddr.isDefault,
       })
-      // 새 배송지가 기본이 되면 기존 기본 표시는 해제된다
-      setAddresses(prev => [addr, ...prev.map(a => (addr.is_default ? { ...a, is_default: false } : a))])
+      await reloadAddresses(session.token)
       setSelectedAddrId(addr.address_id)
       closeAddrModal()
       showToast('배송지가 등록되었습니다.')
+    } catch (err) {
+      showToast(errorMessage(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleSetDefault = async (addressId: number) => {
+    if (submitting) return
+    const session = await getValidSession()
+    if (!session) return
+    setSubmitting(true)
+    try {
+      await setDefaultAddress(session.token, addressId)
+      await reloadAddresses(session.token)
+      showToast('기본 배송지가 변경되었습니다.')
+    } catch (err) {
+      showToast(errorMessage(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleCancelPurchase = async (item: StorageItemResponse) => {
+    if (submitting) return
+    if (!window.confirm(`'${itemTitle(item)}' 구매를 취소할까요?\n카드 결제는 취소되고 환불까지 며칠 걸릴 수 있어요.`)) return
+    const session = await getValidSession()
+    if (!session) return
+    setSubmitting(true)
+    try {
+      setItems(await cancelStorePurchase(session.token, item.storage_item_id))
+      setSelected(prev => {
+        const next = new Set(prev)
+        next.delete(item.storage_item_id)
+        return next
+      })
+      notifyStorageUpdated()
+      showToast('구매가 취소되었어요.')
+    } catch (err) {
+      showToast(errorMessage(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteAddress = async (addr: AddressResponse) => {
+    if (submitting) return
+    if (!window.confirm(`'${addr.label}' 배송지를 삭제할까요?`)) return
+    const session = await getValidSession()
+    if (!session) return
+    setSubmitting(true)
+    try {
+      await deleteAddress(session.token, addr.address_id)
+      await reloadAddresses(session.token)
+      if (selectedAddrId === addr.address_id) setSelectedAddrId(null)
+      showToast('배송지가 삭제되었습니다.')
     } catch (err) {
       showToast(errorMessage(err))
     } finally {
@@ -216,8 +286,11 @@ export default function StoragePage() {
           당첨되거나 구매한 상품이 보관돼요. 받고 싶은 상품을 선택해서 한 번에 택배로 받아보세요.
         </p>
         <div style={{ flexShrink: 0, display: 'flex', gap: 8 }}>
+          <Link href="/mypage/shipping" style={{ ...headerBtnStyle, textDecoration: 'none' }}>
+            <PackageIcon size={13} weight="fill" /> 배송 내역
+          </Link>
           <button onClick={() => setShowDefaultModal(true)} style={headerBtnStyle}>
-            <MapPinIcon size={13} weight="fill" /> 기본 배송지
+            <MapPinIcon size={13} weight="fill" /> 배송지 관리
           </button>
           <button onClick={() => setShowAddrModal(true)} style={headerBtnStyle}>
             <TruckIcon size={13} weight="fill" /> 배송지 등록
@@ -236,29 +309,26 @@ export default function StoragePage() {
       )}
 
       <div className="entry-list">
-        {items.map(item => {
+        {readyItems.map(item => {
           const isSelected = selected.has(item.storage_item_id)
-          const isReady = item.status === 'ready'
           const title = itemTitle(item)
           const value = itemValue(item)
           return (
             <div
               key={item.storage_item_id}
-              onClick={() => isReady && toggle(item.storage_item_id)}
+              onClick={() => toggle(item.storage_item_id)}
               className="entry-item"
               style={{
-                cursor: isReady ? 'pointer' : 'default',
-                opacity: isReady ? 1 : 0.6,
+                cursor: 'pointer',
                 background: isSelected ? 'var(--accent-tint)' : undefined,
               }}
             >
               <input
                 type="checkbox"
                 checked={isSelected}
-                disabled={!isReady}
                 onChange={() => toggle(item.storage_item_id)}
                 onClick={e => e.stopPropagation()}
-                style={{ width: 18, height: 18, accentColor: 'var(--accent)', flexShrink: 0, cursor: isReady ? 'pointer' : 'default' }}
+                style={{ width: 18, height: 18, accentColor: 'var(--accent)', flexShrink: 0, cursor: 'pointer' }}
               />
               <div className="entry-emoji">
                 {item.image_url != null ? (
@@ -275,24 +345,30 @@ export default function StoragePage() {
                   </span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {item.created_at.slice(0, 10)}</span>
                   {value && <span>{value}</span>}
-                  {item.tracking_number && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      <TruckIcon size={12} /> {item.carrier} {item.tracking_number}
-                    </span>
-                  )}
                 </div>
               </div>
-              <div className="entry-status">
-                <span className={`status-badge ${isReady ? 'waiting' : 'lose'}`}>
-                  {STATUS_LABEL[item.status]}
-                </span>
+              <div className="entry-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                <span className="status-badge waiting">보관 중</span>
+                {/* 카드 결제 상점 구매만 취소 가능 — 쌀포인트 구매는 취소 불가 */}
+                {item.source === 'store' && item.pay_type === 'cash' && (
+                  <button
+                    onClick={e => { e.stopPropagation(); handleCancelPurchase(item) }}
+                    disabled={submitting}
+                    style={{
+                      padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)',
+                      color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    구매 취소
+                  </button>
+                )}
               </div>
             </div>
           )
         })}
       </div>
 
-      {loaded && items.length === 0 && (
+      {loaded && readyItems.length === 0 && (
         <div className="coming-soon-box">
           <div className="desc">보관함이 비어 있어요.</div>
         </div>
@@ -389,42 +465,82 @@ export default function StoragePage() {
         </div>
       )}
 
-      {/* 기본 배송지 모달 */}
+      {/* 배송지 관리 모달 — 등록된 배송지 목록과 기본 배송지 지정 */}
       {showDefaultModal && (
         <div style={overlayStyle} onClick={() => setShowDefaultModal(false)}>
           <div style={modalCard} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}><MapPinIcon size={17} weight="fill" color="var(--accent)" /> 기본 배송지</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <MapPinIcon size={17} weight="fill" color="var(--accent)" /> 배송지 관리
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>{addresses.length}/{MAX_ADDRESSES}</span>
+              </div>
               <button onClick={() => setShowDefaultModal(false)} style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', fontSize: 18, cursor: 'pointer', lineHeight: 1, display: 'flex' }}><XIcon size={18} /></button>
             </div>
 
-            {defaultAddress ? (
-              <div style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{defaultAddress.label}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--surface)', border: '1px solid var(--accent-tint-border)', borderRadius: 20, padding: '1px 8px' }}>기본</span>
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                  {defaultAddress.recipient} · {defaultAddress.phone}
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                  {defaultAddress.zip_code && `(${defaultAddress.zip_code}) `}{defaultAddress.address1} {defaultAddress.address2}
-                </div>
-              </div>
-            ) : (
+            {addresses.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-tertiary)', fontSize: 13 }}>
                 등록된 배송지가 없어요.<br />배송지를 먼저 등록해주세요.
               </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {addresses.map(addr => (
+                  <div
+                    key={addr.address_id}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 10,
+                      border: `1px solid ${addr.is_default ? 'var(--accent-tint-border)' : 'var(--border)'}`,
+                      background: addr.is_default ? 'var(--accent-tint)' : 'var(--surface)',
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{addr.label}</span>
+                        {addr.is_default && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-fg)', background: 'var(--surface)', border: '1px solid var(--accent-tint-border)', borderRadius: 20, padding: '1px 8px' }}>기본</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 2 }}>{addr.recipient} · {addr.phone}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text)' }}>
+                        {addr.zip_code && `(${addr.zip_code}) `}{addr.address1} {addr.address2}
+                      </div>
+                    </div>
+                    <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                      {!addr.is_default && (
+                        <button
+                          onClick={() => handleSetDefault(addr.address_id)}
+                          disabled={submitting}
+                          style={{
+                            padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-strong)',
+                            background: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          기본으로 지정
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteAddress(addr)}
+                        disabled={submitting}
+                        aria-label={`${addr.label} 배송지 삭제`}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 8,
+                          border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--danger, #e5484d)',
+                          fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        <TrashIcon size={12} weight="bold" /> 삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
-            {!defaultAddress && (
-              <button
-                onClick={() => { setShowDefaultModal(false); setShowAddrModal(true) }}
-                style={{ width: '100%', marginTop: 16, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#ffffff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
-              >
-                배송지 등록하기
-              </button>
-            )}
+            <button
+              onClick={() => setShowAddrModal(true)}
+              style={{ width: '100%', marginTop: 16, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#ffffff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+            >
+              + 새 배송지 추가
+            </button>
           </div>
         </div>
       )}
@@ -487,6 +603,21 @@ export default function StoragePage() {
                   onChange={e => setNewAddr(p => ({ ...p, address2: e.target.value }))}
                 />
               </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={newAddr.isDefault || addresses.length === 0}
+                  disabled={addresses.length === 0}
+                  onChange={e => setNewAddr(p => ({ ...p, isDefault: e.target.checked }))}
+                  style={{ width: 16, height: 16, accentColor: 'var(--accent)' }}
+                />
+                기본 배송지로 지정
+              </label>
+              {atAddressLimit && oldestRemovable && (
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
+                  배송지는 최대 {MAX_ADDRESSES}개까지 저장돼요. 등록하면 가장 오래된 &lsquo;{oldestRemovable.label}&rsquo; 배송지가 삭제돼요.
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
               <button

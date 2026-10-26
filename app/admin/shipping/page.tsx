@@ -44,7 +44,7 @@ export default function AdminShippingPage() {
     <div>
       <AdminPageHeader
         title="배송"
-        description="한 번에 배송 신청한 상품끼리 한 박스로 묶여 있어요. 송장번호를 넣고 발송 처리하면 고객 보관함에도 보여요."
+        description="같은 고객이 같은 배송지로 신청한 상품은 발송 전까지 한 박스로 묶여요. 송장번호를 넣고 발송 처리하면 고객 보관함에도 보여요."
         actions={status === 'requested' && boxes && boxes.length > 0 && (
           <button
             onClick={() => downloadCsv(`배송대기_${new Date().toISOString().slice(0, 10)}.csv`, boxesToCsv(boxes))}
@@ -96,6 +96,8 @@ function ShippingBoxCard({ box, onShip }: { box: ShippingBox; onShip: (carrier: 
   const [copied, setCopied] = useState(false)
   const a = box.address
   const shipped = box.trackingNumber != null
+  // 같은 고객이 발송 전에 여러 번 신청한 건 한 박스로 묶여 있다
+  const requestCount = new Set(box.items.map(i => i.requested_at)).size
   const fullAddress = a ? [a.zip_code && `(${a.zip_code})`, a.address1, a.address2].filter(Boolean).join(' ') : ''
 
   const copyAddress = () => {
@@ -123,6 +125,11 @@ function ShippingBoxCard({ box, onShip }: { box: ShippingBox; onShip: (carrier: 
         <div style={{ fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <PackageIcon size={17} weight="fill" color="var(--accent)" /> {box.nickname}
           <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-tertiary)' }}>상품 {box.items.length}종</span>
+          {requestCount > 1 && (
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', background: 'var(--gold-tint)', border: '1px solid var(--gold-tint-border)', borderRadius: 20, padding: '2px 8px' }}>
+              신청 {requestCount}건 합배송
+            </span>
+          )}
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
           {shipped ? `발송 ${fmt(box.shippedAt)}` : `신청 ${fmt(box.requestedAt)}`}
