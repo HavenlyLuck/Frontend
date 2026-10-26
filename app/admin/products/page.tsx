@@ -13,11 +13,11 @@ import {
 import { ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse, getStoreProducts, createStoreProduct, getKujiSetsAdmin, createKujiSet, type KujiSetAdminResponse, STORE_CATEGORIES, type StoreCategory, type StoreProductResponse } from '@/lib/api'
 import { AdminPageHeader, useAdminToken } from '@/components/admin/AdminShell'
 import {
-  PRODUCTS, PRODUCT_TABS,
+  PRODUCT_TABS,
   type ProductType, type KujiItem, type Product,
 } from '@/lib/adminProducts'
-import { fetchInventoryItems, inventoryItemForProduct, reserveInventoryForProduct, type InventoryItem } from '@/lib/inventory'
-import { PRODUCT_ACTIONS_MOCK, cancelRaffle, closeKuji, setStoreStock } from '@/lib/productActions'
+import { fetchInventoryItemForProduct, fetchInventoryItems, type InventoryItem } from '@/lib/inventory'
+import { cancelRaffle, closeKuji, setStoreStock } from '@/lib/productActions'
 import InventoryPicker from '@/components/admin/InventoryPicker'
 
 type KujiTier = 'upper' | 'lower'
@@ -82,7 +82,6 @@ export default function AdminProductsPage() {
   const [productTab, setProductTab] = useState<ProductType>('응모')
   const [saleFilter, setSaleFilter] = useState<'selling' | 'done'>('selling')
   const [productPage, setProductPage] = useState(1)
-  const [products] = useState<Product[]>(() => [...PRODUCTS])
   const [showAddForm, setShowAddForm] = useState(false)
   const [newP, setNewP] = useState({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000원', description: '' })
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
@@ -123,9 +122,6 @@ export default function AdminProductsPage() {
     try {
       await fn()
       reloadInventory()
-      if (PRODUCT_ACTIONS_MOCK) {
-        alert('아직 서버 기능이 없어서 화면에서만 바뀌었어요. 실제 판매 종료·환불은 되지 않았고, 새로고침하면 원래대로 돌아가요.')
-      }
     } catch (err) {
       alert(err instanceof Error ? err.message : '처리 중 오류가 발생했어요.')
     } finally {
@@ -233,7 +229,6 @@ export default function AdminProductsPage() {
     }
     const sp = storeProducts.find(s => s.store_product_id === p.id)
     if (!sp) return null
-    const linked = inventoryItemForProduct('store', sp.store_product_id)
     const changeStock = (next: number) => runProductAction(key, async () => {
       const updated = await setStoreStock(adminToken!, sp, next)
       setStoreProducts(prev => prev.map(s => (s.store_product_id === sp.store_product_id ? updated : s)))
@@ -243,7 +238,8 @@ export default function AdminProductsPage() {
         <button
           disabled={!!actionBusy}
           style={actionBtn(false)}
-          onClick={() => {
+          onClick={async () => {
+            const linked = await fetchInventoryItemForProduct(adminToken!, 'store', sp.store_product_id).catch(() => null)
             const max = sp.stock + (linked?.available ?? 0)
             const input = prompt(
               `"${sp.product_name}" 판매 수량을 몇 개로 바꿀까요?\n지금 ${sp.stock}개 · ${linked ? `재고에 ${linked.available}개 더 있어서 최대 ${max}개` : '재고 연결 정보 없음'}\n줄이면 줄인 만큼 재고로 돌아가요.`,
@@ -557,9 +553,7 @@ export default function AdminProductsPage() {
       ? storeProducts
           .filter(sp => sp.pay_type === (productTab === '상점(일반)' ? 'cash' : 'ssal'))
           .map(sp => ({ product: storeToProduct(sp), selling: sp.stock > 0 }))
-      : productTab === '쿠지'
-        ? kujiSets.map(ks => ({ product: kujiToProduct(ks), selling: ks.status === 'open' && ks.remaining_tickets > 0 }))
-        : products.filter(p => p.type === productTab).map(p => ({ product: p, selling: p.active && p.stock > 0 }))
+      : kujiSets.map(ks => ({ product: kujiToProduct(ks), selling: ks.status === 'open' && ks.remaining_tickets > 0 }))
   const sellingCount = tabItems.filter(x => x.selling).length
   const doneCount = tabItems.length - sellingCount
   const saleFiltered = tabItems.filter(x => x.selling === (saleFilter === 'selling')).map(x => x.product)
@@ -633,6 +627,37 @@ export default function AdminProductsPage() {
                     <InventoryPicker items={invItems} selectedId={pickedItemId} onSelect={pickForProduct} />
                     <Link href="/admin/finance?tab=inventory" style={{ color: 'var(--accent-fg)', fontSize: 12 }}>재고에 없으면 먼저 입고하기 →</Link>
                   </div>
+                </div>
+              )}
+              {/* 상점은 재고 중 몇 개를 올릴지 정한다 — 나머지는 재고에 남아 다른 상품에 쓸 수 있다 */}
+              {productTab !== '응모' && productTab !== '쿠지' && (
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>
+                    판매 수량 *{pickedItem && ` (재고 ${pickedItem.available}개 중 몇 개를 올릴지 — 나머지는 재고에 남아요)`}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      style={lightInput}
+                      placeholder="올릴 수량 입력 (예: 10)"
+                      type="number"
+                      min="1"
+                      max={pickedItem?.available}
+                      value={newP.stock}
+                      onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))}
+                    />
+                    {pickedItem && pickedItem.available > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setNewP(p => ({ ...p, stock: String(pickedItem.available) }))}
+                        style={{ flexShrink: 0, padding: '0 14px', borderRadius: 8, border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        전부 ({pickedItem.available}개)
+                      </button>
+                    )}
+                  </div>
+                  {pickedItem && Number(newP.stock) > pickedItem.available && (
+                    <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 5 }}>재고가 {pickedItem.available}개뿐이에요.</div>
+                  )}
                 </div>
               )}
               <div>
@@ -787,17 +812,6 @@ export default function AdminProductsPage() {
                   />
                 </div>
               )}
-              {productTab !== '응모' && productTab !== '쿠지' && (
-                <div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>
-                    수량 *{pickedItem && ` (재고 ${pickedItem.available}개까지)`}
-                  </div>
-                  <input style={lightInput} placeholder="올릴 수량 입력 (예: 10)" type="number" min="1" max={pickedItem?.available} value={newP.stock} onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))} />
-                  {pickedItem && Number(newP.stock) > pickedItem.available && (
-                    <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 5 }}>재고가 {pickedItem.available}개뿐이에요.</div>
-                  )}
-                </div>
-              )}
               {productTab === '응모' && (
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>최대 응모권 수 (자동 계산: 가격 ÷ 1,000)</div>
@@ -889,9 +903,6 @@ export default function AdminProductsPage() {
                       duration_days: deadlineDays,
                       inventory_item_id: pickedItem?.item_id,
                     })
-                    if (pickedItem) {
-                      reserveInventoryForProduct([{ itemId: pickedItem.item_id, quantity: 1, productType: 'raffle', productId: created.raffle_product_id, productName: `[응모] ${created.product_name}` }])
-                    }
                     setRaffleProducts(prev => [created, ...prev])
                     resetNewProductForm()
                     setShowAddForm(false)
@@ -938,12 +949,6 @@ export default function AdminProductsPage() {
                       image: newImageFile ?? await urlToBlob(newP.img),
                       inventory_item_id: pickedItem?.item_id,
                     })
-                    if (pickedItem) {
-                      reserveInventoryForProduct([{
-                        itemId: pickedItem.item_id, quantity: stockNum, productType: 'store', productId: created.store_product_id,
-                        productName: `${created.pay_type === 'cash' ? '[상점]' : '[쌀포인트 상점]'} ${created.product_name}`,
-                      }])
-                    }
                     setStoreProducts(prev => [created, ...prev])
                     resetNewProductForm()
                     setShowAddForm(false)
@@ -1004,20 +1009,6 @@ export default function AdminProductsPage() {
                       ? { name: lastOneItem.name.trim(), cost: lastOneCost, image: await toBlob(lastOneItem.img), inventory_item_id: lastOneItem.itemId }
                       : undefined,
                   })
-                  // 재고에서 고른 줄만큼 판매 중으로 묶는다 (등급 이름은 화면과 같은 A, B, … 순서)
-                  const gradeLines = [
-                    ...kujiItems.map((it, i) => ({ it, grade: String.fromCharCode(65 + i) })),
-                    ...lowerItems.map((it, i) => ({ it, grade: String.fromCharCode(65 + kujiItems.length + i) })),
-                  ].filter(({ it }) => it.name.trim() && it.itemId != null)
-                  reserveInventoryForProduct([
-                    ...gradeLines.map(({ it, grade }) => ({
-                      itemId: it.itemId!, quantity: Number(it.count) || 1, productType: 'kuji' as const,
-                      productId: created.kuji_set_id, productName: `[쿠지] ${created.title} ${grade}상`,
-                    })),
-                    ...(lastOneItem.itemId != null && lastOneItem.name.trim()
-                      ? [{ itemId: lastOneItem.itemId, quantity: 1, productType: 'kuji' as const, productId: created.kuji_set_id, productName: `[쿠지] ${created.title} 라스트원상` }]
-                      : []),
-                  ])
                   setKujiSets(prev => [created, ...prev])
                   resetNewProductForm()
                   setShowAddForm(false)

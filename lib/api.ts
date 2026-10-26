@@ -293,7 +293,7 @@ export interface CreateRaffleProductPayload {
   price_krw: number
   image: Blob
   duration_days: number
-  // 재고 품목에서 고른 경우 — 서버가 그 품목 1개를 이 응모에 묶는다 (TODO(backend))
+  // 재고 품목에서 고른 경우 — 서버가 그 품목 1개를 이 응모에 묶는다
   inventory_item_id?: number
 }
 
@@ -373,10 +373,10 @@ export interface StorageItemResponse {
   address_id: number | null
   requested_at: string | null
   created_at: string
-  // TODO(backend): 발송 처리 때 저장 — 아직 서버가 안 내려주면 undefined
-  carrier?: string | null
-  tracking_number?: string | null
-  shipped_at?: string | null
+  // 관리자가 발송 처리할 때 저장된다
+  carrier: string | null
+  tracking_number: string | null
+  shipped_at: string | null
 }
 
 export function getMyStorage(token: string) {
@@ -393,8 +393,15 @@ export function requestShipping(token: string, storageItemIds: number[], address
   })
 }
 
+// 보관함에서 상점 구매 취소 — 배송 신청 전인 카드 결제 상점 구매만 (쌀포인트 구매는 취소 불가)
+export function cancelStorePurchase(token: string, storageItemId: number) {
+  return request<StorageItemResponse[]>(`/storage/${storageItemId}/cancel`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 // 관리자 배송 관리 — 배송 신청된 보관함 상품 + 누가 · 어디로
-// TODO(backend): GET /storage/admin?status=, POST /storage/admin/ship 아직 없음 (lib/adminShipping.ts가 그때까지 가짜 데이터를 쓴다)
 export interface AdminShippingItemResponse extends StorageItemResponse {
   user_id: number
   nickname: string
@@ -452,8 +459,25 @@ export function createAddress(token: string, payload: CreateAddressPayload) {
   })
 }
 
+// 배송지는 5개까지 — 새로 등록해서 넘치면 서버가 기본이 아닌 오래된 배송지부터 정리한다
+export const MAX_ADDRESSES = 5
+
+export function setDefaultAddress(token: string, addressId: number) {
+  return request<AddressResponse>(`/addresses/${addressId}/default`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 배송지 삭제 — 기본 배송지를 지우면 서버가 남은 것 중 가장 최근 배송지를 기본으로 바꾼다
+export function deleteAddress(token: string, addressId: number) {
+  return request<null>(`/addresses/${addressId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 // 관리자 재고 관리 — 품목(떼 온 물건) · 입고 기록 · 상품에 걸린 수량
-// TODO(backend): /inventory API 아직 없음 (lib/inventory.ts가 그때까지 가짜 데이터를 쓴다)
 export interface InventoryItemResponse {
   item_id: number
   name: string
@@ -474,7 +498,6 @@ export interface InventoryReceiptResponse {
   unit_cost: number        // 1개당 매입 단가(원, 부가세 포함)
   received_at: string      // 매입일 YYYY-MM-DD
   supplier: string | null
-  tax_invoice: boolean     // 세금계산서·현금영수증을 받았는지
   memo: string | null
   created_at: string
 }
@@ -500,7 +523,6 @@ export interface CreateInventoryReceiptPayload {
   unit_cost: number
   received_at: string
   supplier?: string
-  tax_invoice: boolean
   memo?: string
 }
 
@@ -525,7 +547,6 @@ export async function createInventoryReceipt(token: string, payload: CreateInven
   formData.append('unit_cost', String(payload.unit_cost))
   formData.append('received_at', payload.received_at)
   if (payload.supplier) formData.append('supplier', payload.supplier)
-  formData.append('tax_invoice', String(payload.tax_invoice))
   if (payload.memo) formData.append('memo', payload.memo)
 
   const res = await fetch(`${API_URL}/inventory/receipts`, {
@@ -542,7 +563,7 @@ export async function createInventoryReceipt(token: string, payload: CreateInven
 }
 
 // 입고 기록 고치기·지우기 — 이미 상품에 올렸거나 팔린 수량보다 적게 만들 수는 없다(서버가 막아야 함)
-export type UpdateInventoryReceiptPayload = Partial<Pick<InventoryReceiptResponse, 'quantity' | 'unit_cost' | 'received_at' | 'supplier' | 'tax_invoice' | 'memo'>>
+export type UpdateInventoryReceiptPayload = Partial<Pick<InventoryReceiptResponse, 'quantity' | 'unit_cost' | 'received_at' | 'supplier' | 'memo'>>
 
 export function updateInventoryReceipt(token: string, receiptId: number, payload: UpdateInventoryReceiptPayload) {
   return request<InventoryReceiptResponse>(`/inventory/receipts/${receiptId}`, {
@@ -559,8 +580,64 @@ export function deleteInventoryReceipt(token: string, receiptId: number) {
   })
 }
 
+// 상품에 연결된 재고 품목 — 연결이 없으면 null
+export type InventoryLinkType = 'raffle' | 'store' | 'kuji_prize' | 'kuji_last_one'
+
+export function getInventoryItemForProduct(token: string, productType: InventoryLinkType, productId: number) {
+  return request<InventoryItemResponse | null>(`/inventory/products/${productType}/${productId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 재고·자금 손익 — 기간(한국 날짜, 양 끝 포함)의 판매 기록 · 부대비용 · 입고 금액
+export interface SaleRecordResponse {
+  id: string
+  date: string             // YYYY-MM-DD (한국 시간)
+  type: '응모' | '쿠지' | '상점'
+  pay: 'cash' | 'ssal'
+  title: string
+  buyer: string
+  revenue: number          // 카드 결제 금액(원). 쌀포인트 결제는 0
+  ssal_price: number       // 쌀포인트로 산 경우 쓴 쌀포인트
+  cost: number             // 나간 물건의 원가 합계(원)
+  item_id: number | null
+}
+
+export interface ExpenseResponse {
+  expense_id: number
+  spent_on: string         // YYYY-MM-DD
+  label: string
+  amount: number
+}
+
+export interface FinanceResponse {
+  sales: SaleRecordResponse[]
+  expenses: ExpenseResponse[]
+  purchases: number        // 이 기간 입고(물건 사는 데 쓴 돈)
+}
+
+export function getFinance(token: string, from: string, to: string) {
+  return request<FinanceResponse>(`/finance?${new URLSearchParams({ from, to })}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export function createExpense(token: string, payload: Pick<ExpenseResponse, 'spent_on' | 'label' | 'amount'>) {
+  return request<ExpenseResponse>('/finance/expenses', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteExpense(token: string, expenseId: number) {
+  return request<null>(`/finance/expenses/${expenseId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 // 관리자 상품 판매 종료·수량 조정 — 남은 물건은 서버가 재고로 되돌린다
-// TODO(backend): 세 API 모두 아직 없음 (lib/productActions.ts가 그때까지 흉내 낸다)
 
 // 응모 취소: 매진 전에만. 산 사람 전원에게 카드 결제를 취소(전액 환불)하고 물건 1개를 재고로 되돌린다
 export function cancelRaffleProduct(token: string, raffleProductId: number) {
@@ -615,7 +692,7 @@ export interface CreateStoreProductPayload {
   stock: number
   category: StoreCategory
   image?: Blob
-  // 재고 품목에서 고른 경우 — 서버가 stock만큼 그 품목을 이 상품에 묶는다 (TODO(backend))
+  // 재고 품목에서 고른 경우 — 서버가 stock만큼 그 품목을 이 상품에 묶는다
   inventory_item_id?: number
 }
 
@@ -693,7 +770,7 @@ export interface CreateKujiPrize {
   quantity: number
   cost: number
   image?: Blob
-  // 재고 품목에서 고른 경우 — 서버가 quantity만큼 그 품목을 이 상에 묶는다 (TODO(backend))
+  // 재고 품목에서 고른 경우 — 서버가 quantity만큼 그 품목을 이 상에 묶는다
   inventory_item_id?: number
 }
 

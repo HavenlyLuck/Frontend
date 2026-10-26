@@ -187,7 +187,7 @@ function ReceiptRow({ receipt: r, token, onChanged }: {
   onChanged: () => void
 }) {
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState({ received_at: r.received_at, quantity: String(r.quantity), unit_cost: String(r.unit_cost), supplier: r.supplier ?? '', memo: r.memo ?? '', tax_invoice: r.tax_invoice })
+  const [draft, setDraft] = useState({ received_at: r.received_at, quantity: String(r.quantity), unit_cost: String(r.unit_cost), supplier: r.supplier ?? '', memo: r.memo ?? '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const cell: React.CSSProperties = { padding: '6px 8px', verticalAlign: 'middle' }
@@ -195,7 +195,7 @@ function ReceiptRow({ receipt: r, token, onChanged }: {
   const textBtn = (color: string): React.CSSProperties => ({ border: 'none', background: 'none', color, fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer', padding: '2px 4px' })
 
   const startEdit = () => {
-    setDraft({ received_at: r.received_at, quantity: String(r.quantity), unit_cost: String(r.unit_cost), supplier: r.supplier ?? '', memo: r.memo ?? '', tax_invoice: r.tax_invoice })
+    setDraft({ received_at: r.received_at, quantity: String(r.quantity), unit_cost: String(r.unit_cost), supplier: r.supplier ?? '', memo: r.memo ?? '' })
     setError('')
     setEditing(true)
   }
@@ -220,7 +220,7 @@ function ReceiptRow({ receipt: r, token, onChanged }: {
     if (quantity <= 0 || unitCost <= 0) return setError('수량과 단가를 확인해 주세요.')
     run(() => editInventoryReceipt(token, r.receipt_id, {
       received_at: draft.received_at, quantity, unit_cost: unitCost,
-      supplier: draft.supplier.trim() || null, memo: draft.memo.trim() || null, tax_invoice: draft.tax_invoice,
+      supplier: draft.supplier.trim() || null, memo: draft.memo.trim() || null,
     }))
   }
 
@@ -238,14 +238,13 @@ function ReceiptRow({ receipt: r, token, onChanged }: {
           <td style={cell}>{won(r.unit_cost)}</td>
           <td style={{ ...cell, color: 'var(--text)', fontWeight: 600 }}>{won(r.unit_cost * r.quantity)}</td>
           <td style={cell}>{r.supplier ?? '-'}{r.memo && <span style={{ color: 'var(--text-tertiary)' }}> · {r.memo}</span>}</td>
-          <td style={{ ...cell, color: r.tax_invoice ? 'var(--success)' : 'var(--text-tertiary)' }}>{r.tax_invoice ? '받음' : '없음'}</td>
           <td style={{ ...cell, whiteSpace: 'nowrap', textAlign: 'right' }}>
             <button onClick={startEdit} disabled={busy} style={textBtn('var(--text-secondary)')}>수정</button>
             <button onClick={remove} disabled={busy} style={textBtn('var(--danger)')}>삭제</button>
           </td>
         </tr>
         {error && (
-          <tr><td colSpan={7} style={{ ...cell, color: 'var(--danger)', fontSize: 12 }}>{error}</td></tr>
+          <tr><td colSpan={6} style={{ ...cell, color: 'var(--danger)', fontSize: 12 }}>{error}</td></tr>
         )}
       </>
     )
@@ -266,18 +265,13 @@ function ReceiptRow({ receipt: r, token, onChanged }: {
             <input aria-label="메모" placeholder="메모" style={{ ...small, minWidth: 90 }} value={draft.memo} onChange={e => setDraft(d => ({ ...d, memo: e.target.value }))} />
           </div>
         </td>
-        <td style={cell}>
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            <input type="checkbox" checked={draft.tax_invoice} onChange={e => setDraft(d => ({ ...d, tax_invoice: e.target.checked }))} style={{ accentColor: 'var(--accent)' }} /> 받음
-          </label>
-        </td>
         <td style={{ ...cell, whiteSpace: 'nowrap', textAlign: 'right' }}>
           <button onClick={save} disabled={busy} style={textBtn('var(--accent-fg)')}>{busy ? '저장 중' : '저장'}</button>
           <button onClick={() => { setEditing(false); setError('') }} disabled={busy} style={textBtn('var(--text-tertiary)')}>취소</button>
         </td>
       </tr>
       {error && (
-        <tr><td colSpan={7} style={{ ...cell, color: 'var(--danger)', fontSize: 12 }}>{error}</td></tr>
+        <tr><td colSpan={6} style={{ ...cell, color: 'var(--danger)', fontSize: 12 }}>{error}</td></tr>
       )}
     </>
   )
@@ -296,7 +290,9 @@ function ItemRow({ item, token, open, onToggle, onRestock, onChanged }: {
   useEffect(() => {
     if (!open) return
     let cancelled = false
-    fetchInventoryItem(token, item.item_id).then(d => { if (!cancelled) setDetail(d) })
+    fetchInventoryItem(token, item.item_id)
+      .then(d => { if (!cancelled) setDetail(d) })
+      .catch(() => { if (!cancelled) setDetail(null) })
     return () => { cancelled = true }
   }, [open, token, item])
 
@@ -352,7 +348,7 @@ function ItemRow({ item, token, open, onToggle, onRestock, onChanged }: {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 520 }}>
                   <thead>
                     <tr style={{ color: 'var(--text-tertiary)', textAlign: 'left' }}>
-                      {['매입일', '수량', '단가', '합계', '거래처 · 메모', '증빙', ''].map(h => (
+                      {['매입일', '수량', '단가', '합계', '거래처 · 메모', ''].map(h => (
                         <th key={h} style={{ fontWeight: 500, padding: '6px 8px', borderBottom: '1px solid var(--border)' }}>{h}</th>
                       ))}
                     </tr>
@@ -406,7 +402,6 @@ function ReceiptForm({ items, initialItemId, onCancel, onSubmit }: {
   const [unitCost, setUnitCost] = useState('')
   const [receivedAt, setReceivedAt] = useState(today())
   const [supplier, setSupplier] = useState('')
-  const [taxInvoice, setTaxInvoice] = useState(true)
   const [memo, setMemo] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -440,7 +435,6 @@ function ReceiptForm({ items, initialItemId, onCancel, onSubmit }: {
         unit_cost: cost,
         received_at: receivedAt,
         supplier: supplier.trim() || undefined,
-        tax_invoice: taxInvoice,
         memo: memo.trim() || undefined,
       })
     } catch (err) {
@@ -516,10 +510,6 @@ function ReceiptForm({ items, initialItemId, onCancel, onSubmit }: {
           <div style={label}>메모</div>
           <input style={lightInput} placeholder="예: 정품 인증서 동봉, 박스 손상 1개" value={memo} onChange={e => setMemo(e.target.value)} />
         </div>
-        <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-          <input type="checkbox" checked={taxInvoice} onChange={e => setTaxInvoice(e.target.checked)} style={{ accentColor: 'var(--accent)' }} />
-          세금계산서 · 현금영수증 받음 (원가 처리 증빙)
-        </label>
       </div>
 
       <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 10, background: 'var(--bg-subtle)', fontSize: 13, color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: 16 }}>

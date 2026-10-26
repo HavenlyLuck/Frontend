@@ -8,6 +8,7 @@ import {
   GearIcon,
   HeartIcon,
   HouseIcon,
+  PackageIcon,
   PaintBrushIcon,
   PencilSimpleIcon,
   ReceiptIcon,
@@ -30,6 +31,7 @@ function getMenuItems(ongoingCount: number, readyStorageCount: number) {
     { icon: <TicketIcon size={16} weight="fill" />, label: '응모 내역', href: '/mypage/entries', badge: ongoingCount },
     { icon: <ReceiptIcon size={16} weight="fill" />, label: '구매 내역', href: '/mypage/purchases', badge: 0 },
     { icon: <ArchiveIcon size={16} weight="fill" />, label: '보관함', href: '/mypage/storage', badge: readyStorageCount },
+    { icon: <PackageIcon size={16} weight="fill" />, label: '배송 내역', href: '/mypage/shipping', badge: 0 },
     { icon: <HeartIcon size={16} weight="fill" />, label: '찜한 상품', href: '/mypage/wishlist', badge: 0 },
     { icon: <GearIcon size={16} weight="fill" />, label: '설정', href: '/mypage/settings', badge: 0 },
   ]
