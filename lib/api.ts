@@ -42,7 +42,7 @@ export interface SignupPayload {
   nickname: string
   email: string
   password: string
-  identity_verification_id: string  // 포트원 본인인증 ID — 전화번호는 서버가 포트원에서 직접 가져온다
+  phone: string  // 테스트 버전: 본인인증 없이 번호 중복확인만 한다
 }
 
 export interface SignupResponse {
@@ -104,7 +104,7 @@ export function refreshAccessToken(refreshToken: string) {
   })
 }
 
-export type DuplCheckField = 'login_id' | 'nickname' | 'email'
+export type DuplCheckField = 'login_id' | 'nickname' | 'email' | 'phone'
 
 export interface DuplCheckResponse {
   available: boolean
