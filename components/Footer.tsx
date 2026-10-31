@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BIZ_INFO } from "./PolicyDoc";
+import EscrowMark from "./EscrowMark";
 
 const CLOUD_MARK_PATH =
   "M6 20 C6 15.5 9.6 12.5 13.5 13.2 C14.6 9.6 19 8.3 22 11 C25.6 11.4 28 14.3 27 17.8 C29.2 19 29.2 22.4 26.5 23.3 C25.5 25.6 22.6 26.2 20.8 24.6 C19.4 26.4 16.4 26.3 15.1 24.4 C12.8 25.6 9.8 24.3 9.3 21.8 C7.4 21.9 6 21.2 6 20 Z";
@@ -59,6 +60,8 @@ export default function Footer() {
           </div>
           <p className="footer-copyright">© 2026 {BIZ_INFO.name}. All rights reserved.</p>
         </div>
+
+        <EscrowMark />
       </div>
     </footer>
   );
