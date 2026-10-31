@@ -5604,6 +5604,33 @@ a.product-card-home.is-soldout { cursor: pointer; }
   }
 }
 
+/* 구매안전서비스(에스크로) 인증마크 */
+.footer-escrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.footer-escrow-mark {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.footer-escrow p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+  max-width: 520px;
+}
+
 .footer-biz-row a {
   color: var(--text-secondary);
   text-decoration: underline;

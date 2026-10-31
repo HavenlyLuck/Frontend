@@ -1,5 +1,6 @@
 'use client'
 
+import { CONTENTS_OPEN } from '@/lib/features'
 import {
   ArchiveIcon,
   CoinsIcon,
@@ -186,7 +187,11 @@ export default function GuidePage() {
 
       {/* 컨텐츠 */}
       <section id="컨텐츠" className="guide-section">
-        <SectionTitle icon={SparkleIcon} title="컨텐츠" summary="일시적인 이벤트나 각종 컨텐츠를 즐길 수 있어요." />
+        <SectionTitle
+          icon={SparkleIcon}
+          title="컨텐츠"
+          summary={CONTENTS_OPEN ? "일시적인 이벤트나 각종 컨텐츠를 즐길 수 있어요." : "일시적인 이벤트나 각종 컨텐츠를 즐길 수 있어요. 지금은 준비 중이라 곧 열릴 예정이에요."}
+        />
         <div className="guide-card">
           <div className="guide-card-title">👑 아바타 자랑 대회 (매주)</div>
           <Rules items={[
