@@ -19,6 +19,7 @@ import {
 import { isWished, toggleWishlist } from "@/lib/wishlist";
 import { getValidSession, isLoggedIn } from "@/lib/auth";
 import { payWithCard, paymentFailureMessage } from "@/lib/payment";
+import RefundNotice from "@/components/RefundNotice";
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return "마감";
@@ -349,6 +350,8 @@ export default function RaffleProductPage({
                 />
               </button>
             </div>
+
+            <RefundNotice kind="raffle" />
           </div>
         </div>
       </div>
@@ -411,8 +414,12 @@ export default function RaffleProductPage({
                 style={{ flexShrink: 0, marginTop: "2px" }}
               />
               <span>
-                응모권 구매 후 직접 취소는 불가합니다. 기간 내에 응모권이 모두
-                팔리지 않으면 결제 금액이 카드로 자동 환불됩니다.
+                매진 전에는 마이페이지 응모 내역에서 취소할 수 있어요.{" "}
+                <b>매진되어 추첨이 시작되면 취소·환불할 수 없어요.</b> 기간 안에
+                응모권이 다 팔리지 않으면 결제 금액이 카드로 자동 환불돼요.{" "}
+                <a href="/refund#응모" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>
+                  취소·환불 정책
+                </a>
               </span>
             </div>
 

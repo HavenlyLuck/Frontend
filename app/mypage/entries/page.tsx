@@ -12,7 +12,8 @@ import { formatRelativeDate } from "@/lib/date";
 import LightningDrawScene from "@/components/LightningDrawScene";
 import { prefetchDrawCast } from "@/lib/raffleCast";
 import { normalizeAvatar } from "@/lib/avatar/compose";
-import type { RaffleCastMember } from "@/lib/api";
+import { ApiError, cancelMyRaffleEntries, type RaffleCastMember } from "@/lib/api";
+import { getValidSession } from "@/lib/auth";
 import type { SceneEntrant } from "@/lib/lightningDraw/scene";
 
 // 매진 후 추첨까지 남은 시간 — 0이 됐는데 아직 결과가 없으면(폴링 전) 기다림 문구로 바뀐다
@@ -45,7 +46,36 @@ function DrawCountdown({ drawAt }: { drawAt: number | null }) {
 }
 
 export default function RaffleEntriesPage() {
-  const { items, entries, checkResult } = useRaffleEntryPhases();
+  const { items, entries, checkResult, reload } = useRaffleEntryPhases();
+  const [cancelingId, setCancelingId] = useState<number | null>(null);
+
+  // 매진 전 응모만 취소할 수 있다 — 이 상품에 산 응모권 전부를 취소하고 카드 결제를 환불한다
+  async function cancelEntries(item: PhasedRaffleEntry) {
+    if (cancelingId != null) return;
+    if (
+      !window.confirm(
+        `'${item.product_name}' 응모를 취소할까요?\n\n산 응모권 ${item.totalTicketCount}장(${item.totalAmountPaid.toLocaleString()}원)이 모두 취소되고, 카드 결제가 환불돼요. 환불이 카드에 반영되기까지 며칠 걸릴 수 있어요.`,
+      )
+    )
+      return;
+    const session = await getValidSession();
+    if (!session) return;
+    setCancelingId(item.raffle_product_id);
+    try {
+      await cancelMyRaffleEntries(session.token, item.raffle_product_id);
+      await reload();
+      alert("응모가 취소되었어요. 카드 결제가 환불될 예정이에요.");
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 404 || err.status === 405)) {
+        alert("지금은 화면에서 바로 취소할 수 없어요. 고객센터(010-9831-1138 · havenlyluck@gmail.com)로 요청해 주시면 취소해 드릴게요.");
+      } else {
+        alert(err instanceof ApiError ? err.message : "취소 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
+      }
+      await reload();
+    } finally {
+      setCancelingId(null);
+    }
+  }
   const [resultItem, setResultItem] = useState<PhasedRaffleEntry | null>(null);
   // 번개 연출이 끝나야 결과 문구가 이어서 나온다
   const [revealed, setRevealed] = useState(false);
@@ -190,7 +220,22 @@ export default function RaffleEntriesPage() {
                   ) : item.phase === "drawPending" ? (
                     <span className="status-badge ongoing">추첨 대기 중</span>
                   ) : (
-                    <span className="status-badge waiting">대기 중</span>
+                    <>
+                      <span className="status-badge waiting">대기 중</span>
+                      <button
+                        type="button"
+                        className="entry-cancel-btn"
+                        disabled={cancelingId === item.raffle_product_id}
+                        onClick={(e) => {
+                          // 카드 전체가 상세 페이지 링크라서 이동을 막는다
+                          e.preventDefault();
+                          e.stopPropagation();
+                          cancelEntries(item);
+                        }}
+                      >
+                        {cancelingId === item.raffle_product_id ? "취소 중..." : "응모 취소"}
+                      </button>
+                    </>
                   )}
                 </div>
               </>

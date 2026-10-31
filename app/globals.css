@@ -3591,6 +3591,30 @@ a.product-card-home.is-soldout { cursor: pointer; }
   text-align: right;
 }
 
+/* 매진 전 응모 취소 — 눈에 띄되 주 버튼처럼 보이지 않게 */
+.entry-cancel-btn {
+  display: block;
+  margin: 2px 0 0 auto;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.entry-cancel-btn:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.entry-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .status-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -5396,6 +5420,194 @@ a.product-card-home.is-soldout { cursor: pointer; }
   font-size: 12px;
   color: var(--text-tertiary);
   line-height: 1.6;
+}
+
+.footer-policy-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 12px;
+}
+
+.footer-policy-links a {
+  color: var(--text-tertiary);
+  text-decoration: none;
+}
+
+.footer-policy-links a.strong {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.footer-policy-links a:hover {
+  color: var(--text);
+}
+
+/* 상품 상세 구매 버튼 아래 취소·환불 요약 */
+.refund-notice {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+  background: var(--bg-subtle);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.refund-notice-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.refund-notice-link {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.refund-notice ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.refund-notice li + li {
+  margin-top: 3px;
+}
+
+.refund-notice b {
+  color: var(--text);
+}
+
+/* 이용약관 · 개인정보처리방침 · 환불 정책 */
+.policy-doc {
+  padding-top: 32px;
+  padding-bottom: 64px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.policy-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.policy-tab {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+}
+
+.policy-tab.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.policy-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+
+.policy-date {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0 0 20px;
+}
+
+.policy-intro {
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.policy-intro p {
+  margin: 0;
+}
+
+.policy-section {
+  padding-top: 24px;
+}
+
+.policy-section h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+
+.policy-section p {
+  margin: 0 0 8px;
+}
+
+.policy-section a {
+  color: var(--accent);
+}
+
+.policy-list {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.policy-list li {
+  margin-bottom: 6px;
+}
+
+.policy-list ul {
+  margin-top: 6px;
+  padding-left: 18px;
+}
+
+.policy-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0 12px;
+  font-size: 13px;
+}
+
+.policy-table th,
+.policy-table td {
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.policy-table th {
+  color: var(--text);
+  font-weight: 700;
+  background: var(--bg-subtle);
+}
+
+@media (max-width: 600px) {
+  .policy-table th,
+  .policy-table td {
+    padding: 8px;
+  }
+}
+
+.footer-biz-row a {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .footer-biz-row span:not(:last-child)::after {
