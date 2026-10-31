@@ -106,5 +106,5 @@ export function useRaffleEntryPhases() {
     markResultChecked(raffleProductId)
   }, [])
 
-  return { items, entries, loaded, checkResult }
+  return { items, entries, loaded, checkResult, reload: load }
 }

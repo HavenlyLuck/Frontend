@@ -19,6 +19,7 @@ import StoreProductCard, {
   PayTypeIcon,
   formatStorePrice,
 } from "@/components/StoreProductCard";
+import RefundNotice from "@/components/RefundNotice";
 
 // 상점 상품 상세 — 관련 상품 섹션 때문에 목록을 받아 id로 찾는다.
 export default function ShopProductPage({
@@ -334,6 +335,8 @@ export default function ShopProductPage({
                 <span className="heart">{isLiked ? "❤️" : "🤍"}</span>
               </button>
             </div>
+
+            <RefundNotice kind={isCash ? "shop-cash" : "shop-point"} />
           </div>
         </div>
 
@@ -371,7 +374,12 @@ export default function ShopProductPage({
           </div>
 
           <div className="modal-notice">
-            구매 확정 후에는 취소 및 환불이 불가합니다.
+            {isCash
+              ? "배송 전에는 마이페이지 보관함에서 바로 취소할 수 있어요. 받은 날부터 7일 안에는 반품을 요청할 수 있지만, 상자나 포장을 개봉해 상품 가치가 떨어지면 반품이 어려워요."
+              : "쌀포인트로 교환한 상품은 교환 후 취소할 수 없어요. 받은 상품이 파손·불량이면 교환해 드려요."}{" "}
+            <a href="/refund#상점" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>
+              취소·환불 정책
+            </a>
           </div>
 
           <div className="modal-btn-row">

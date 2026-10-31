@@ -287,6 +287,16 @@ export function getMyRaffleEntries(token: string) {
   })
 }
 
+// 매진 전(추첨 시작 전) 응모 취소 — 이 상품에 내가 산 응모권 전부를 취소하고 카드 결제를 환불한다.
+// TODO(백엔드): 아직 운영 서버에 없을 수 있는 엔드포인트. 매진됐거나 마감된 응모는 서버가 거절해야 하고,
+// 취소된 칸은 다시 판매 가능해야 한다.
+export function cancelMyRaffleEntries(token: string, raffleProductId: number) {
+  return request<unknown>(`/raffles/${raffleProductId}/entries/me/cancel`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 export interface CreateRaffleProductPayload {
   product_name: string
   description?: string

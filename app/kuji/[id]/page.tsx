@@ -20,6 +20,7 @@ import KujiAvatarScene from '@/components/KujiAvatarScene'
 import { ApiError, getMyProfile } from '@/lib/api'
 import { PaymentWindowError } from '@/lib/payment'
 import { DEFAULT_AVATAR, normalizeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
+import RefundNotice from "@/components/RefundNotice";
 
 type DrawResult = { ticketId: number; grade: string; tier: KujiTier }[]
 
@@ -358,6 +359,8 @@ function KujiProductView({ product }: { product: KujiProduct }) {
           {lowerTiers.map(renderTierTile)}
         </div>
 
+        <RefundNotice kind="kuji" style={{ marginTop: 0, marginBottom: 16 }} />
+
         <div style={{ position: 'sticky', bottom: 16, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px', boxShadow: 'var(--shadow-lg)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, justifyContent: 'space-between' }}>
             <div>
@@ -471,6 +474,12 @@ function KujiProductView({ product }: { product: KujiProduct }) {
             </div>
 
             <div style={{ padding: 16, borderTop: '1px solid var(--border)' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 12, lineHeight: 1.6, color: 'var(--text-tertiary)' }}>
+                쿠지는 결제와 동시에 결과가 정해져서 <b>결제 후에는 취소·환불할 수 없어요.</b> 받은 상품이 파손·불량이면 교환해 드려요.{' '}
+                <a href="/refund#쿠지" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', color: 'inherit' }}>
+                  취소·환불 정책
+                </a>
+              </p>
               <button
                 onClick={confirmDraw}
                 disabled={selected.length !== qty || confirming}
