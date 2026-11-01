@@ -3591,6 +3591,115 @@ a.product-card-home.is-soldout { cursor: pointer; }
   text-align: right;
 }
 
+/* 마이페이지 응모 내역 — 참여했던 응모 결과별 탭 */
+.entry-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.entry-filter-tab {
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.entry-filter-tab span {
+  margin-left: 2px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+.entry-filter-tab.active {
+  border-color: var(--accent-tint-border);
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-weight: 700;
+}
+.entry-filter-tab.active span { color: var(--accent); }
+
+/* 마이페이지 구매 내역 — 검색 · 월 선택 · 월별 묶음 */
+.purchase-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.purchase-search {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 40px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+}
+.purchase-search:focus-within { border-color: var(--accent); }
+.purchase-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+.purchase-search input::-webkit-search-cancel-button { display: none; }
+.purchase-search button {
+  display: flex;
+  border: none;
+  background: none;
+  padding: 2px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.purchase-month {
+  flex-shrink: 0;
+  min-width: 140px;
+  height: 40px;
+  padding: 0 36px 0 14px;
+  line-height: 38px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 256 256'%3E%3Cpath fill='%23888' d='M213.7 101.7l-80 80a8 8 0 0 1-11.4 0l-80-80a8 8 0 0 1 11.4-11.4L128 164.7l74.3-74.4a8 8 0 0 1 11.4 11.4Z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+.purchase-result-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+.purchase-month-group .entry-list { margin-bottom: 24px; }
+.purchase-month-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 4px 8px;
+}
+.purchase-month-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.purchase-month-summary {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
 /* 매진 전 응모 취소 — 눈에 띄되 주 버튼처럼 보이지 않게 */
 .entry-cancel-btn {
   display: block;
@@ -5015,6 +5124,11 @@ a.product-card-home.is-soldout { cursor: pointer; }
   color: var(--type-store);
   border: 1px solid rgba(167, 139, 250, 0.35);
 }
+.review-type-badge.ssal {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+}
 
 .review-product {
   color: var(--text);
@@ -5280,14 +5394,26 @@ a.product-card-home.is-soldout { cursor: pointer; }
   font-size: 12px;
 }
 
-.review-file-preview {
-  margin-top: 10px;
-  width: 100%;
-  max-height: 160px;
-  object-fit: cover;
-  border-radius: 8px;
+/* 후기 사진 — 정사각형 틀 안에 사진 전체가 잘리지 않고 들어간다 (남는 곳은 배경색) */
+.review-photo-frame {
+  width: 200px;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
   border: 1px solid var(--border-strong);
+  background: var(--bg-subtle);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.review-photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.review-file-preview { margin-top: 10px; }
 
 .review-private-row {
   display: flex;

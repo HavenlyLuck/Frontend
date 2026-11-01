@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { CoinsIcon, HouseIcon, PackageIcon, TruckIcon } from '@phosphor-icons/react'
+import { ChatCircleIcon, CoinsIcon, HouseIcon, PackageIcon, TruckIcon } from '@phosphor-icons/react'
 import { verifyAdmin, ApiError } from '@/lib/api'
 import { getValidSession, clearAuth } from '@/lib/auth'
 
@@ -26,6 +26,7 @@ const NAV = [
   { href: '/admin/products', label: '상품', icon: PackageIcon, match: (p: string) => p.startsWith('/admin/products') },
   { href: '/admin/finance', label: '재고·자금', icon: CoinsIcon, match: (p: string) => p.startsWith('/admin/finance') || p.startsWith('/admin/inventory') },
   { href: '/admin/shipping', label: '배송', icon: TruckIcon, match: (p: string) => p.startsWith('/admin/shipping') },
+  { href: '/admin/inquiries', label: '문의', icon: ChatCircleIcon, match: (p: string) => p.startsWith('/admin/inquiries') },
 ]
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {

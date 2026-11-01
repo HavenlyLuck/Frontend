@@ -1,116 +1,166 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   CaretDownIcon,
   ChatCircleIcon,
   LockIcon,
   QuestionIcon,
   StarIcon,
+  TrashIcon,
+  WarningIcon,
   XIcon,
 } from '@phosphor-icons/react'
+import { ApiError } from '@/lib/api'
+import { getValidSession } from '@/lib/auth'
+import { formatKstDate } from '@/lib/date'
+import {
+  createInquiry, createReview, deleteReview, getInquiries, getReviewableItems, getReviews,
+  productBadge,
+  type InquiryResponse, type ReviewableItem, type ReviewResponse,
+} from '@/lib/reviews'
 
 type ReviewTab = '후기' | '문의'
 
-interface Review {
-  id: number
-  product: string
-  type: string
-  user: string
-  rating: number
-  content: string
-  date: string
-}
-
-interface Inquiry {
-  id: number
-  title: string
-  user: string
-  content: string
-  date: string
-  status: '답변완료' | '답변대기'
-  answer?: string
-  private?: boolean
-}
-
-const REVIEWS: Review[] = [
-  { id: 1, product: '주술회전 나오야 젠인 쿠지', type: '쿠지', user: 'user_2847', rating: 5, content: '배송도 빠르고 상품 상태도 완벽했어요! 나오야 피규어 퀄리티가 정말 기대 이상입니다. 다음에도 또 이용할게요 :)', date: '2026-08-05' },
-  { id: 2, product: '아이폰 14 Pro 256GB 스페이스 블랙', type: '응모', user: 'user_1023', rating: 5, content: '응모 당첨되고 너무 기뻤어요!! 진짜로 올 줄 몰랐는데 아이폰이 집에 왔을 때 소리질렀습니다 ㅋㅋ 천운 사랑해요', date: '2026-08-04' },
-  { id: 3, product: 'PS5 듀얼센스 무선 컨트롤러', type: '상점', user: 'user_3391', rating: 4, content: '상품 자체는 만족스러운데 포장이 살짝 아쉬웠어요. 그래도 물건은 이상 없고 잘 작동합니다.', date: '2026-08-03' },
-  { id: 4, product: '원피스 A상 루피 쿠지', type: '쿠지', user: 'user_0584', rating: 5, content: 'A상 뽑았습니다!! 쿠지판 실시간으로 보면서 두근두근했는데 진짜 재밌었어요. 퀄리티도 최고', date: '2026-08-02' },
-  { id: 5, product: '캐릭터 굿즈 스티커 세트', type: '상점', user: 'user_2210', rating: 4, content: '가격 대비 너무 만족해요! 스티커 종류가 다양하고 인쇄 품질도 좋습니다. 재구매 의사 있어요.', date: '2026-08-01' },
-  { id: 6, product: '에어팟 프로 2세대', type: '응모', user: 'user_1748', rating: 5, content: '낙첨됐는데도 쌀포인트 바로 환급되서 기분이 덜 나쁘더라고요. 시스템이 투명하고 신뢰가 가요. 다음엔 꼭 당첨되고 싶어요!', date: '2026-07-31' },
-  { id: 7, product: '귀멸의 칼날 최애의 쿠지', type: '쿠지', user: 'user_3902', rating: 3, content: '원하는 상이 안 나와서 조금 아쉽긴 한데 그건 운의 영역이니까요. 플랫폼 자체는 잘 되어있어요.', date: '2026-07-30' },
-]
-
-const INQUIRIES: Inquiry[] = [
-  {
-    id: 1, title: '응모 당첨 후 상품 수령은 어떻게 하나요?', user: 'user_4412', date: '2026-08-05',
-    content: '응모에 당첨됐는데 보관함에서 확인하면 된다고 하던데 보관함이 어디 있는지 모르겠어요. 마이페이지에 있나요?',
-    status: '답변완료',
-    answer: '안녕하세요! 마이페이지 > 보관함 메뉴에서 확인하실 수 있습니다. 당첨 후 3일 이내에 배송 주소를 등록해주세요. 추가 문의사항이 있으시면 언제든지 남겨주세요 😊',
-  },
-  {
-    id: 2, title: '응모권은 어떻게 결제하나요?', user: 'user_3317', date: '2026-08-04',
-    content: '포인트 충전 메뉴가 안 보이는데 응모권은 어떻게 사는 건지 궁금합니다.',
-    status: '답변완료',
-    answer: '응모권, 쿠지, 일반 상점 상품은 충전 없이 구매할 때 바로 카드로 결제하시면 됩니다. 응모 상세에서 수량을 고른 뒤 "결제하기"를 눌러주세요.',
-  },
-  {
-    id: 3, title: '쿠지 라스트원 상 조기 마감 기준이 궁금해요', user: 'user_1902', date: '2026-08-04',
-    content: '가이드 페이지에서 라스트 원 상만 남으면 조기 마감될 수 있다고 했는데, 언제 마감되는지 기준이 있나요?',
-    status: '답변대기',
-  },
-  {
-    id: 4, title: '응모 제한 시간 초과 시 환급이 얼마나 걸리나요?', user: 'user_0773', date: '2026-08-03',
-    content: '응모가 시간 초과로 사라졌을 때 응모권 결제가 자동으로 환불된다고 했는데 보통 얼마나 걸리나요?',
-    status: '답변완료',
-    answer: '응모가 취소되면 바로 카드 결제 취소가 요청됩니다. 실제로 카드에 환불이 반영되는 시점은 카드사마다 다를 수 있습니다.',
-  },
-  {
-    id: 5, title: '같은 응모에 여러 장 구매 가능한가요?', user: 'user_2984', date: '2026-08-02',
-    content: '응모권을 한 응모에 여러 장 살 수 있다고 하던데 최대 몇 장까지 가능한가요? 제한이 있는지 궁금합니다.',
-    status: '답변대기',
-  },
-  {
-    id: 6, title: '비공개 문의드립니다', user: 'user_1188', date: '2026-08-06',
-    content: '개인 계정 관련하여 따로 문의드리고 싶습니다.',
-    status: '답변대기',
-    private: true,
-  },
-]
-
-const TYPE_CLASS: Record<string, string> = { '응모': 'eungmo', '쿠지': 'kuji', '상점': 'shop' }
-
 function Stars({ rating }: { rating: number }) {
   return (
-    <span className="review-stars">
+    <span className="review-stars" aria-label={`별점 ${rating}점`}>
       {'★'.repeat(rating)}{'☆'.repeat(5 - rating)}
     </span>
   )
 }
 
+const EMPTY_REVIEW = { storageItemId: 0, title: '', content: '', rating: 5, imgPreview: '', imgFile: null as File | null }
+const EMPTY_INQUIRY = { title: '', content: '', isPrivate: false }
+
 export default function ReviewPage() {
+  const router = useRouter()
   const [tab, setTab] = useState<ReviewTab>('후기')
   const [openId, setOpenId] = useState<number | null>(null)
 
+  const [token, setToken] = useState<string | null>(null)
+  const [reviews, setReviews] = useState<ReviewResponse[] | null>(null)
+  const [inquiries, setInquiries] = useState<InquiryResponse[] | null>(null)
+  const [loadError, setLoadError] = useState(false)
+
   const [showModal, setShowModal] = useState(false)
-  const [reviewForm, setReviewForm] = useState({ title: '', content: '', rating: 5, imgPreview: '' })
-  const [inquiryForm, setInquiryForm] = useState({ title: '', content: '', isPrivate: false })
+  const [reviewable, setReviewable] = useState<ReviewableItem[] | null>(null)
+  const [reviewForm, setReviewForm] = useState(EMPTY_REVIEW)
+  const [inquiryForm, setInquiryForm] = useState(EMPTY_INQUIRY)
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  // 로그인했으면 토큰을 붙여서 받는다 — 내 비공개 문의 내용과 "내 후기" 삭제 버튼을 보기 위해
+  const load = async (t: string | null) => {
+    try {
+      const [r, q] = await Promise.all([getReviews(t), getInquiries(t)])
+      setReviews(r)
+      setInquiries(q)
+      setLoadError(false)
+    } catch {
+      setLoadError(true)
+      setReviews(prev => prev ?? [])
+      setInquiries(prev => prev ?? [])
+    }
+  }
+
+  useEffect(() => {
+    getValidSession().then((session) => {
+      const t = session?.token ?? null
+      setToken(t)
+      load(t)
+    })
+  }, [])
 
   function handleImgChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = ev => setReviewForm(f => ({ ...f, imgPreview: ev.target?.result as string }))
+    reader.onload = ev => setReviewForm(f => ({ ...f, imgPreview: ev.target?.result as string, imgFile: file }))
     reader.readAsDataURL(file)
   }
 
-  function closeModal() {
-    setShowModal(false)
-    setReviewForm({ title: '', content: '', rating: 5, imgPreview: '' })
-    setInquiryForm({ title: '', content: '', isPrivate: false })
+  async function openModal() {
+    const session = await getValidSession()
+    if (!session) {
+      router.push('/login')
+      return
+    }
+    setToken(session.token)
+    setFormError(null)
+    setShowModal(true)
+    if (tab === '후기') {
+      setReviewable(null)
+      getReviewableItems(session.token)
+        .then((items) => {
+          setReviewable(items)
+          setReviewForm(f => ({ ...f, storageItemId: items[0]?.storage_item_id ?? 0 }))
+        })
+        .catch(() => setReviewable([]))
+    }
   }
+
+  function closeModal() {
+    if (submitting) return
+    setShowModal(false)
+    setFormError(null)
+    setReviewForm(EMPTY_REVIEW)
+    setInquiryForm(EMPTY_INQUIRY)
+  }
+
+  async function submit() {
+    if (!token || submitting) return
+    setFormError(null)
+    if (tab === '후기') {
+      if (!reviewForm.storageItemId) return setFormError('후기를 쓸 상품을 골라주세요.')
+      if (!reviewForm.title.trim() || !reviewForm.content.trim()) return setFormError('제목과 내용을 모두 입력해주세요.')
+    } else if (!inquiryForm.title.trim() || !inquiryForm.content.trim()) {
+      return setFormError('제목과 내용을 모두 입력해주세요.')
+    }
+    setSubmitting(true)
+    try {
+      if (tab === '후기') {
+        const created = await createReview(token, {
+          storage_item_id: reviewForm.storageItemId,
+          rating: reviewForm.rating,
+          title: reviewForm.title.trim(),
+          content: reviewForm.content.trim(),
+          image: reviewForm.imgFile,
+        })
+        setReviews(prev => [created, ...(prev ?? [])])
+      } else {
+        const created = await createInquiry(token, {
+          title: inquiryForm.title.trim(),
+          content: inquiryForm.content.trim(),
+          is_private: inquiryForm.isPrivate,
+        })
+        setInquiries(prev => [created, ...(prev ?? [])])
+        setOpenId(created.inquiry_id)
+      }
+      setSubmitting(false)
+      setShowModal(false)
+      setReviewForm(EMPTY_REVIEW)
+      setInquiryForm(EMPTY_INQUIRY)
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : '올리지 못했어요. 잠시 후 다시 시도해 주세요.')
+      setSubmitting(false)
+    }
+  }
+
+  async function removeReview(review: ReviewResponse) {
+    if (!token || !confirm('이 후기를 지울까요? 지우면 같은 상품에 다시 쓸 수 있어요.')) return
+    try {
+      await deleteReview(token, review.review_id)
+      setReviews(prev => prev?.filter(r => r.review_id !== review.review_id) ?? prev)
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : '후기를 지우지 못했어요.')
+    }
+  }
+
+  const selectedItem = reviewable?.find(i => i.storage_item_id === reviewForm.storageItemId)
+  const noReviewable = tab === '후기' && reviewable !== null && reviewable.length === 0
 
   return (
     <div>
@@ -123,7 +173,7 @@ export default function ReviewPage() {
 
         {/* 액션 버튼(왼쪽) + 탭(오른쪽) */}
         <div className="review-toolbar">
-          <button className="review-write-btn" onClick={() => setShowModal(true)}>
+          <button className="review-write-btn" onClick={openModal}>
             {tab === '후기' ? '후기 올리기' : '문의하기'}
           </button>
           <div className="review-tabs">
@@ -141,42 +191,82 @@ export default function ReviewPage() {
         </div>
 
         {/* 후기 탭 */}
-        {tab === '후기' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {REVIEWS.map(r => (
-              <div key={r.id} className="review-card">
-                <div className="review-card-head">
-                  <div className={`review-type-badge ${TYPE_CLASS[r.type]}`}>{r.type}</div>
-                  <div className="review-product">{r.product}</div>
-                  <Stars rating={r.rating} />
-                </div>
-                <p className="review-content">{r.content}</p>
-                <div className="review-meta">
-                  <span>{r.user}</span>
-                  <span>{r.date}</span>
-                </div>
-              </div>
-            ))}
+        {loadError && (
+          <div className="coming-soon-box" style={{ marginBottom: 14 }}>
+            <div className="desc">목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>
           </div>
         )}
 
+        {tab === '후기' && reviews !== null && (
+          reviews.length === 0 ? (
+            !loadError && (
+              <div className="coming-soon-box">
+                <div className="desc">아직 후기가 없어요. 받은 상품의 첫 후기를 남겨주세요!</div>
+              </div>
+            )
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {reviews.map(r => (
+                <div key={r.review_id} className="review-card">
+                  <div className="review-card-head">
+                    {r.product_type && (() => {
+                      const badge = productBadge(r.product_type, r.pay_type)
+                      return <div className={`review-type-badge ${badge.className}`}>{badge.label}</div>
+                    })()}
+                    <div className="review-product">{r.product_name ?? '상품'}</div>
+                    <Stars rating={r.rating} />
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', margin: '2px 0 6px' }}>{r.title}</div>
+                  <p className="review-content" style={{ whiteSpace: 'pre-line' }}>{r.content}</p>
+                  {r.image_url && (
+                    <a href={r.image_url} target="_blank" rel="noopener noreferrer" className="review-photo-frame" style={{ marginBottom: 10 }}>
+                      <img src={r.image_url} alt="후기 사진" />
+                    </a>
+                  )}
+                  <div className="review-meta">
+                    <span>{r.nickname}{r.is_mine && ' (나)'}</span>
+                    <span>{formatKstDate(r.created_at)}</span>
+                    {r.is_mine && (
+                      <button
+                        type="button"
+                        onClick={() => removeReview(r)}
+                        style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 3, border: 'none', background: 'none', color: 'var(--text-tertiary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
+                      >
+                        <TrashIcon size={12} /> 삭제
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
         {/* 문의 탭 */}
-        {tab === '문의' && (
+        {tab === '문의' && inquiries !== null && inquiries.length === 0 && !loadError && (
+          <div className="coming-soon-box">
+            <div className="desc">아직 문의가 없어요. 궁금한 점을 남겨주세요!</div>
+          </div>
+        )}
+
+        {tab === '문의' && inquiries !== null && inquiries.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {INQUIRIES.map(q => {
-              const isOpen = openId === q.id
+            {inquiries.map(q => {
+              const isOpen = openId === q.inquiry_id
+              // 비공개 문의를 남이 보면 서버가 내용을 비워서 보낸다
+              const hidden = q.is_private && q.content === null
               return (
-                <div key={q.id} className={`inquiry-card${isOpen ? ' open' : ''}`}>
+                <div key={q.inquiry_id} className={`inquiry-card${isOpen ? ' open' : ''}`}>
                   {/* 헤더 */}
-                  <button className="inquiry-head" onClick={() => setOpenId(isOpen ? null : q.id)}>
-                    <div className={`status-badge ${q.status === '답변완료' ? 'win' : 'waiting'}`}>{q.status}</div>
+                  <button className="inquiry-head" onClick={() => setOpenId(isOpen ? null : q.inquiry_id)}>
+                    <div className={`status-badge ${q.answered ? 'win' : 'waiting'}`}>{q.answered ? '답변완료' : '답변대기'}</div>
                     <div className="inquiry-title">
-                      {q.private && <LockIcon size={13} />}
+                      {q.is_private && <LockIcon size={13} />}
                       {q.title}
                     </div>
                     <div className="inquiry-meta">
-                      <span>{q.user}</span>
-                      <span>{q.date}</span>
+                      <span>{q.nickname}{q.is_mine && ' (나)'}</span>
+                      <span>{formatKstDate(q.created_at)}</span>
                     </div>
                     <span className={`inquiry-caret${isOpen ? ' open' : ''}`}><CaretDownIcon size={16} /></span>
                   </button>
@@ -186,18 +276,18 @@ export default function ReviewPage() {
                     <div className="inquiry-body">
                       <div className="inquiry-question-box">
                         <div className="inquiry-box-label"><QuestionIcon size={13} /> 문의 내용</div>
-                        {q.private
+                        {hidden
                           ? <p className="inquiry-box-text" style={{ color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 5 }}><LockIcon size={13} /> 비공개 문의입니다.</p>
-                          : <p className="inquiry-box-text">{q.content}</p>
+                          : <p className="inquiry-box-text" style={{ whiteSpace: 'pre-line' }}>{q.content}</p>
                         }
                       </div>
                       {q.answer && (
                         <div className="inquiry-answer-box">
                           <div className="inquiry-box-label"><ChatCircleIcon size={13} weight="fill" /> 답변</div>
-                          <p className="inquiry-box-text">{q.answer}</p>
+                          <p className="inquiry-box-text" style={{ whiteSpace: 'pre-line' }}>{q.answer}</p>
                         </div>
                       )}
-                      {!q.answer && (
+                      {!q.answered && (
                         <div className="inquiry-pending-note">답변을 준비 중입니다. 조금만 기다려주세요 🙏</div>
                       )}
                     </div>
@@ -224,8 +314,45 @@ export default function ReviewPage() {
             </div>
 
             {/* 후기 폼 */}
-            {tab === '후기' && (
+            {tab === '후기' && reviewable === null && (
+              <div className="review-modal-form" style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '24px 0' }}>
+                후기를 쓸 수 있는 상품을 찾는 중...
+              </div>
+            )}
+
+            {noReviewable && (
+              <div className="review-modal-form" style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>후기를 쓸 수 있는 상품이 없어요</div>
+                <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
+                  응모 당첨·쿠지·상점에서 받은 상품이 보관함에 있어야 후기를 쓸 수 있어요.
+                  <br />상품마다 후기는 한 번만 쓸 수 있어요.
+                </div>
+                <Link href="/mypage/storage" style={{ display: 'inline-block', marginTop: 12, fontSize: 13, color: 'var(--accent)' }}>보관함 보러 가기 →</Link>
+              </div>
+            )}
+
+            {tab === '후기' && reviewable !== null && reviewable.length > 0 && (
               <div className="review-modal-form">
+                <div>
+                  <div className="field-label">후기 쓸 상품</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {selectedItem?.image_url && (
+                      <img src={selectedItem.image_url} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border)' }} />
+                    )}
+                    <select
+                      className="field-input"
+                      value={reviewForm.storageItemId}
+                      onChange={e => setReviewForm(f => ({ ...f, storageItemId: Number(e.target.value) }))}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {reviewable.map(i => (
+                        <option key={i.storage_item_id} value={i.storage_item_id}>
+                          [{productBadge(i.product_type, i.pay_type).label}] {i.product_name} · {formatKstDate(i.created_at)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <div>
                   <div className="field-label">별점</div>
                   <div className="review-star-picker">
@@ -267,10 +394,12 @@ export default function ReviewPage() {
                   <label className="review-file-label">
                     <div className="review-file-btn">파일 선택</div>
                     <span className="review-file-status">{reviewForm.imgPreview ? '사진이 선택되었습니다' : '선택된 파일 없음'}</span>
-                    <input type="file" accept="image/*" onChange={handleImgChange} style={{ display: 'none' }} />
+                    <input type="file" accept="image/*" onChange={handleImgChange} style={{ display: 'none' }} disabled={submitting} />
                   </label>
                   {reviewForm.imgPreview && (
-                    <img src={reviewForm.imgPreview} alt="미리보기" className="review-file-preview" />
+                    <div className="review-photo-frame review-file-preview">
+                      <img src={reviewForm.imgPreview} alt="미리보기" />
+                    </div>
                   )}
                 </div>
               </div>
@@ -313,12 +442,21 @@ export default function ReviewPage() {
               </div>
             )}
 
+            {formError && (
+              <div className="modal-notice" role="alert" style={{ margin: '0 0 12px' }}>
+                <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>{formError}</span>
+              </div>
+            )}
+
             {/* 제출 버튼 */}
             <div className="review-modal-actions">
-              <button className="review-modal-submit" onClick={closeModal}>
-                {tab === '후기' ? '후기 올리기' : '문의 제출'}
-              </button>
-              <button className="review-modal-cancel" onClick={closeModal}>취소</button>
+              {!noReviewable && !(tab === '후기' && reviewable === null) && (
+                <button className="review-modal-submit" onClick={submit} disabled={submitting}>
+                  {submitting ? '올리는 중...' : tab === '후기' ? '후기 올리기' : '문의 제출'}
+                </button>
+              )}
+              <button className="review-modal-cancel" onClick={closeModal} disabled={submitting}>{noReviewable ? '닫기' : '취소'}</button>
             </div>
           </div>
         </>

@@ -17,7 +17,7 @@ import {
   type ProductType, type KujiItem, type Product,
 } from '@/lib/adminProducts'
 import { fetchInventoryItemForProduct, fetchInventoryItems, type InventoryItem } from '@/lib/inventory'
-import { cancelRaffle, closeKuji, setStoreStock } from '@/lib/productActions'
+import { cancelRaffle, closeKuji, deleteStore, setStoreStock } from '@/lib/productActions'
 import InventoryPicker from '@/components/admin/InventoryPicker'
 
 type KujiTier = 'upper' | 'lower'
@@ -265,6 +265,21 @@ export default function AdminProductsPage() {
             }}
           >
             판매 종료
+          </button>
+        )}
+        {sp.stock === 0 && (
+          <button
+            disabled={!!actionBusy}
+            style={actionBtn(true)}
+            onClick={() => {
+              if (!confirm(`"${sp.product_name}" 상품을 삭제할까요?\n상점 목록에서 사라지고, 이미 구매한 사람의 보관함 내역은 그대로 남아요. 되돌릴 수 없어요.`)) return
+              runProductAction(`${key}-delete`, async () => {
+                await deleteStore(adminToken!, sp)
+                setStoreProducts(prev => prev.filter(s => s.store_product_id !== sp.store_product_id))
+              })
+            }}
+          >
+            {actionBusy === `${key}-delete` ? '삭제 중...' : '삭제'}
           </button>
         )}
       </>

@@ -5,6 +5,10 @@ import { CalendarIcon, ConfettiIcon, MapPinIcon, PackageIcon, ShoppingBagIcon, T
 import { useStorage } from '@/hooks/useStorage'
 import { getValidSession } from '@/lib/auth'
 import { getMyAddresses, type AddressResponse, type StorageItemResponse } from '@/lib/api'
+import { formatKstDate } from '@/lib/date'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 type ShippingStatus = 'requested' | 'shipped'
 type Filter = 'all' | ShippingStatus
@@ -23,6 +27,7 @@ function itemTitle(item: StorageItemResponse) {
 export default function ShippingHistoryPage() {
   const { items, loaded } = useStorage()
   const [filter, setFilter] = useState<Filter>('all')
+  const [page, setPage] = useState(1)
   const [addresses, setAddresses] = useState<AddressResponse[]>([])
 
   useEffect(() => {
@@ -41,6 +46,9 @@ export default function ShippingHistoryPage() {
     .filter(i => i.status !== 'ready')
     .sort((a, b) => ((a.requested_at ?? '') < (b.requested_at ?? '') ? 1 : -1))
   const visible = filter === 'all' ? shippingItems : shippingItems.filter(i => i.status === filter)
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const pageItems = visible.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const countOf = (f: Filter) => (f === 'all' ? shippingItems.length : shippingItems.filter(i => i.status === f).length)
   const addressById = new Map(addresses.map(a => [a.address_id, a]))
 
@@ -59,7 +67,7 @@ export default function ShippingHistoryPage() {
           return (
             <button
               key={f.id}
-              onClick={() => setFilter(f.id)}
+              onClick={() => { setFilter(f.id); setPage(1) }}
               style={{
                 padding: '7px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700, cursor: 'pointer',
                 border: `1px solid ${active ? 'var(--accent-tint-border)' : 'var(--border)'}`,
@@ -74,7 +82,7 @@ export default function ShippingHistoryPage() {
       </div>
 
       <div className="entry-list">
-        {visible.map(item => {
+        {pageItems.map(item => {
           const title = itemTitle(item)
           const status = item.status as ShippingStatus
           const addr = item.address_id != null ? addressById.get(item.address_id) : undefined
@@ -90,7 +98,7 @@ export default function ShippingHistoryPage() {
                     {item.source === 'store' ? <ShoppingBagIcon size={12} /> : <ConfettiIcon size={12} color="var(--gold)" />} {item.source === 'store' ? '구매' : item.source === 'kuji' ? '쿠지 당첨' : '당첨'}
                   </span>
                   {item.requested_at && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {item.requested_at.slice(0, 10)} 신청</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {formatKstDate(item.requested_at)} 신청</span>
                   )}
                   {addr && (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><MapPinIcon size={12} /> {addr.label || addr.recipient}</span>
@@ -109,6 +117,8 @@ export default function ShippingHistoryPage() {
           )
         })}
       </div>
+
+      <Pagination page={currentPage} pageCount={pageCount} onChange={setPage} label="배송 내역 페이지" />
 
       {loaded && visible.length === 0 && (
         <div className="coming-soon-box">

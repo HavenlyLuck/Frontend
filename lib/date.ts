@@ -1,3 +1,5 @@
+import { parseServerTime } from './raffle'
+
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('ko-KR', {
     year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
@@ -21,4 +23,38 @@ export function formatRelativeDate(iso: string): string {
   if (days < 7) return `${days}일 전`
   if (days < 30) return `${Math.floor(days / 7)}주일 전`
   return date.toLocaleDateString('ko-KR')
+}
+
+// ── 한국 시간 기준 날짜 (서버 시각은 끝에 Z 없는 UTC라서 parseServerTime으로 읽는다) ──
+const KST_PARTS = new Intl.DateTimeFormat('ko-KR', {
+  timeZone: 'Asia/Seoul', year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+})
+
+function kstParts(iso: string) {
+  const parts = Object.fromEntries(KST_PARTS.formatToParts(new Date(parseServerTime(iso))).map(p => [p.type, p.value]))
+  return { year: Number(parts.year), month: Number(parts.month), day: Number(parts.day), time: `${parts.hour}:${parts.minute}` }
+}
+
+// "2026-11" — 월별로 묶을 때 쓰는 키
+export function kstMonthKey(iso: string): string {
+  const { year, month } = kstParts(iso)
+  return `${year}-${String(month).padStart(2, '0')}`
+}
+
+// "2026-11" → "2026년 11월"
+export function monthLabel(key: string): string {
+  const [y, m] = key.split('-')
+  return `${y}년 ${Number(m)}월`
+}
+
+// "2026. 11. 1. 17:46"
+export function formatKstDateTime(iso: string): string {
+  const { year, month, day, time } = kstParts(iso)
+  return `${year}. ${month}. ${day}. ${time}`
+}
+
+// "2026. 11. 1."
+export function formatKstDate(iso: string): string {
+  const { year, month, day } = kstParts(iso)
+  return `${year}. ${month}. ${day}.`
 }

@@ -1,20 +1,25 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CopyIcon, DownloadSimpleIcon, PackageIcon } from '@phosphor-icons/react'
+import { CaretDownIcon, CopyIcon, DownloadSimpleIcon, MagnifyingGlassIcon, PackageIcon, XIcon } from '@phosphor-icons/react'
 import { ApiError } from '@/lib/api'
 import { AdminPageHeader, useAdminToken } from '@/components/admin/AdminShell'
 import {
   CARRIERS, boxesToCsv, downloadCsv, fetchShippingBoxes, shipBox,
   type ShippingBox, type ShippingStatus,
 } from '@/lib/adminShipping'
+import { parseServerTime } from '@/lib/raffle'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 10
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16, boxShadow: 'var(--shadow-sm)' }
 const lightInput: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text)', padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
 
 const SOURCE_LABEL = { raffle: '응모', kuji: '쿠지', store: '상점' } as const
 
-const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-')
+// 서버 시각은 끝에 Z 없는 UTC라서 parseServerTime으로 읽어야 한국 시간으로 맞게 나온다
+const fmt = (iso: string | null) => (iso ? new Date(parseServerTime(iso)).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-')
 
 // 배송 관리 — 고객이 보관함에서 배송 신청한 상품을 박스 단위로 보고, 송장번호를 넣어 발송 처리한다
 export default function AdminShippingPage() {
@@ -23,6 +28,8 @@ export default function AdminShippingPage() {
   const [boxes, setBoxes] = useState<ShippingBox[] | null>(null)
   const [counts, setCounts] = useState<Record<ShippingStatus, number>>({ requested: 0, shipped: 0 })
   const [loadError, setLoadError] = useState('')
+  const [page, setPage] = useState(1)
+  const [query, setQuery] = useState('')
 
   const load = async (token: string, s: ShippingStatus) => {
     try {
@@ -39,6 +46,14 @@ export default function AdminShippingPage() {
   useEffect(() => {
     load(adminToken, status)
   }, [adminToken, status])
+
+  // 고객 이름 검색 — 닉네임 또는 받는 사람 이름
+  const keyword = query.trim().toLowerCase()
+  const shownBoxes = boxes && keyword
+    ? boxes.filter(b => b.nickname.toLowerCase().includes(keyword) || (b.address?.recipient ?? '').toLowerCase().includes(keyword))
+    : boxes
+  const shippedPageCount = Math.max(1, Math.ceil((shownBoxes?.length ?? 0) / PAGE_SIZE))
+  const shippedPage = Math.min(page, shippedPageCount)
 
   return (
     <div>
@@ -62,34 +77,60 @@ export default function AdminShippingPage() {
             role="tab"
             aria-selected={status === key}
             className={status === key ? 'active' : ''}
-            onClick={() => { setStatus(key); setBoxes(null) }}
+            onClick={() => { setStatus(key); setBoxes(null); setPage(1) }}
           >
             {label} <span className="count">{counts[key]}</span>
           </button>
         ))}
       </div>
 
+      <label className="purchase-search" style={{ marginBottom: 16, maxWidth: 360 }}>
+        <MagnifyingGlassIcon size={15} color="var(--text-tertiary)" />
+        <input
+          type="search"
+          placeholder="고객 이름 검색 (닉네임·받는 사람)"
+          value={query}
+          onChange={e => { setQuery(e.target.value); setPage(1) }}
+        />
+        {query && (
+          <button type="button" aria-label="검색어 지우기" onClick={() => { setQuery(''); setPage(1) }}>
+            <XIcon size={14} />
+          </button>
+        )}
+      </label>
+
       {loadError && <div style={{ color: 'var(--danger)', marginBottom: 16 }}>{loadError}</div>}
 
-      {boxes === null ? (
+      {shownBoxes === null ? (
         <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '40px 0' }}>불러오는 중...</div>
-      ) : boxes.length === 0 ? (
+      ) : shownBoxes.length === 0 ? (
         <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '40px 0', border: '1px dashed var(--border-strong)', borderRadius: 12 }}>
-          {status === 'requested' ? '보낼 상품이 없어요.' : '발송한 상품이 없어요.'}
+          {keyword ? `'${query.trim()}' 고객의 ${status === 'requested' ? '배송 대기' : '발송 완료'} 상품이 없어요.` : status === 'requested' ? '보낼 상품이 없어요.' : '발송한 상품이 없어요.'}
         </div>
       ) : (
-        boxes.map(box => (
-          <ShippingBoxCard key={box.key} box={box} onShip={async (carrier, tracking) => {
-            await shipBox(adminToken, box, carrier, tracking)
-            await load(adminToken, status)
-          }} />
-        ))
+        // 발송 완료는 접어 둔 채 10개씩 나눠 본다. 배송 대기는 모두 처리해야 하므로 한 번에 다 보여준다
+        <>
+          {(status === 'shipped' ? shownBoxes.slice((shippedPage - 1) * PAGE_SIZE, shippedPage * PAGE_SIZE) : shownBoxes).map(box => (
+            <ShippingBoxCard key={box.key} box={box} collapsible={status === 'shipped'} onShip={async (carrier, tracking) => {
+              await shipBox(adminToken, box, carrier, tracking)
+              await load(adminToken, status)
+            }} />
+          ))}
+          {status === 'shipped' && (
+            <Pagination page={shippedPage} pageCount={shippedPageCount} onChange={setPage} label="발송 완료 페이지" />
+          )}
+        </>
       )}
     </div>
   )
 }
 
-function ShippingBoxCard({ box, onShip }: { box: ShippingBox; onShip: (carrier: string, tracking: string) => Promise<void> }) {
+function ShippingBoxCard({ box, onShip, collapsible = false }: {
+  box: ShippingBox
+  onShip: (carrier: string, tracking: string) => Promise<void>
+  collapsible?: boolean // 발송 완료 목록 — 한 줄로 접어 두고 눌러서 펼친다
+}) {
+  const [open, setOpen] = useState(false)
   const [carrier, setCarrier] = useState(CARRIERS[0])
   const [tracking, setTracking] = useState('')
   const [saving, setSaving] = useState(false)
@@ -119,9 +160,40 @@ function ShippingBoxCard({ box, onShip }: { box: ShippingBox; onShip: (carrier: 
     }
   }
 
+  if (collapsible && !open) {
+    const first = box.items[0]
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-expanded={false}
+        style={{ ...card, width: '100%', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', padding: '14px 20px', marginBottom: 10 }}
+      >
+        <PackageIcon size={17} weight="fill" color="var(--accent)" style={{ flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 14 }}>
+            {box.nickname}
+            <span style={{ fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 8 }}>
+              {first?.product_name}{box.items.length > 1 ? ` 외 ${box.items.length - 1}종` : ''}
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
+            {box.carrier} {box.trackingNumber} · 발송 {fmt(box.shippedAt)}
+          </div>
+        </div>
+        <CaretDownIcon size={16} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+      </button>
+    )
+  }
+
   return (
     <div style={card}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14, cursor: collapsible ? 'pointer' : undefined }}
+        onClick={collapsible ? () => setOpen(false) : undefined}
+        role={collapsible ? 'button' : undefined}
+        aria-expanded={collapsible ? true : undefined}
+      >
         <div style={{ fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <PackageIcon size={17} weight="fill" color="var(--accent)" /> {box.nickname}
           <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-tertiary)' }}>상품 {box.items.length}종</span>
@@ -131,8 +203,9 @@ function ShippingBoxCard({ box, onShip }: { box: ShippingBox; onShip: (carrier: 
             </span>
           )}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
           {shipped ? `발송 ${fmt(box.shippedAt)}` : `신청 ${fmt(box.requestedAt)}`}
+          {collapsible && <CaretDownIcon size={16} style={{ transform: 'rotate(180deg)' }} />}
         </div>
       </div>
 

@@ -2,15 +2,29 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckIcon, GearIcon } from '@phosphor-icons/react'
+import { CheckIcon, GearIcon, LockKeyIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { clearAuth, getValidSession } from '@/lib/auth'
-import { getMyProfile } from '@/lib/api'
+import { ApiError, changeMyPassword, getMyProfile } from '@/lib/api'
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: 8,
   border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text)',
   fontSize: 14, outline: 'none', boxSizing: 'border-box',
 }
+
+// 바꿀 수 없는 칸 — 회색 글자, 클릭·입력 불가
+const lockedInputStyle: React.CSSProperties = {
+  ...inputStyle, background: 'var(--bg-subtle)', color: 'var(--text-tertiary)', cursor: 'not-allowed',
+}
+
+// 회원가입과 같은 규칙 (Frontend/app/signup, Backend PASSWORD_PATTERN)
+const PASSWORD_RULES: { label: string; test: (pw: string) => boolean }[] = [
+  { label: '8~20자', test: pw => pw.length >= 8 && pw.length <= 20 },
+  { label: '영문 대문자', test: pw => /[A-Z]/.test(pw) },
+  { label: '영문 소문자', test: pw => /[a-z]/.test(pw) },
+  { label: '숫자', test: pw => /\d/.test(pw) },
+  { label: '특수문자', test: pw => /[^A-Za-z0-9\s]/.test(pw) },
+]
 
 const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }
 
@@ -27,7 +41,9 @@ export default function SettingsPage() {
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
   const [notif, setNotif] = useState({ deadline: true, win: true, marketing: false })
-  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  // 저장 결과 팝업 — 성공·실패 모두 사이트 공통 모달(.modal-overlay)로 보여준다
+  const [popup, setPopup] = useState<{ ok: boolean; title: string; message: string } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -42,9 +58,33 @@ export default function SettingsPage() {
     return () => { cancelled = true }
   }, [])
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+  const newPwValid = PASSWORD_RULES.every(rule => rule.test(newPw))
+  const pwMatches = confirmPw !== '' && newPw === confirmPw
+  const canSave = currentPw !== '' && newPwValid && pwMatches && !saving
+
+  const handleSave = async () => {
+    if (!canSave) return
+    const session = await getValidSession()
+    if (!session) {
+      setPopup({ ok: false, title: '로그인이 필요해요', message: '로그인이 만료되었어요. 다시 로그인한 뒤 시도해 주세요.' })
+      return
+    }
+    setSaving(true)
+    try {
+      await changeMyPassword(session.token, currentPw, newPw)
+      setCurrentPw('')
+      setNewPw('')
+      setConfirmPw('')
+      setPopup({ ok: true, title: '비밀번호가 변경되었습니다', message: '다음 로그인부터 새 비밀번호를 사용해 주세요.' })
+    } catch (err) {
+      setPopup({
+        ok: false,
+        title: '비밀번호를 바꾸지 못했어요',
+        message: err instanceof ApiError ? err.message : '잠시 후 다시 시도해 주세요.',
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleLogout = () => {
@@ -63,11 +103,11 @@ export default function SettingsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <div style={labelStyle}>닉네임</div>
-              <input style={inputStyle} value={nickname} onChange={e => setNickname(e.target.value)} />
+              <input style={lockedInputStyle} value={nickname} readOnly disabled tabIndex={-1} />
             </div>
             <div>
               <div style={labelStyle}>이메일</div>
-              <input style={inputStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} />
+              <input style={lockedInputStyle} type="email" value={email} readOnly disabled tabIndex={-1} />
             </div>
           </div>
         </div>
@@ -77,15 +117,25 @@ export default function SettingsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <div style={labelStyle}>현재 비밀번호</div>
-              <input style={inputStyle} type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="현재 비밀번호" />
+              <input style={inputStyle} type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="현재 비밀번호" autoComplete="current-password" />
             </div>
             <div>
               <div style={labelStyle}>새 비밀번호</div>
-              <input style={inputStyle} type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="새 비밀번호" />
+              <input style={inputStyle} type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="새 비밀번호" autoComplete="new-password" />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', marginTop: 8 }}>
+                {PASSWORD_RULES.map(rule => {
+                  const ok = rule.test(newPw)
+                  return (
+                    <span key={rule.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: ok ? 'var(--success)' : 'var(--text-tertiary)', fontWeight: ok ? 600 : 400 }}>
+                      <CheckIcon size={12} weight="bold" style={{ opacity: ok ? 1 : 0.35 }} /> {rule.label}
+                    </span>
+                  )
+                })}
+              </div>
             </div>
             <div>
               <div style={labelStyle}>새 비밀번호 확인</div>
-              <input style={inputStyle} type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="새 비밀번호 확인" />
+              <input style={inputStyle} type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="새 비밀번호 확인" autoComplete="new-password" />
               {confirmPw && (
                 <p style={{ margin: '6px 0 0', fontSize: 12, color: newPw === confirmPw ? 'var(--success)' : 'var(--danger)' }}>
                   {newPw === confirmPw ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
@@ -118,9 +168,10 @@ export default function SettingsPage() {
 
         <button
           onClick={handleSave}
-          style={{ width: '100%', padding: 14, borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          disabled={!canSave}
+          style={{ width: '100%', padding: 14, borderRadius: 10, border: 'none', background: canSave ? 'var(--accent)' : 'var(--border-strong)', color: canSave ? '#fff' : 'var(--text-tertiary)', fontSize: 15, fontWeight: 700, cursor: canSave ? 'pointer' : 'not-allowed', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
         >
-          {saved ? <><CheckIcon size={16} weight="bold" /> 저장되었습니다</> : '저장하기'}
+          {saving ? '저장 중...' : '저장하기'}
         </button>
 
         <button
@@ -129,6 +180,26 @@ export default function SettingsPage() {
         >
           로그아웃
         </button>
+
+      <div className={`modal-overlay ${popup ? 'open' : ''}`} onClick={() => setPopup(null)}>
+        {popup && (
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="settings-popup-title" style={{ margin: '0 16px' }} onClick={e => e.stopPropagation()}>
+            <div
+              className="modal-icon"
+              style={popup.ok ? undefined : { background: 'var(--danger-tint)', borderColor: 'var(--danger-tint-border)' }}
+            >
+              {popup.ok
+                ? <LockKeyIcon size={28} weight="fill" color="var(--accent)" />
+                : <WarningCircleIcon size={28} weight="fill" color="var(--danger)" />}
+            </div>
+            <div id="settings-popup-title" className="modal-title">{popup.title}</div>
+            <div className="modal-sub">{popup.message}</div>
+            <div className="modal-btn-row">
+              <button className="btn-confirm" autoFocus onClick={() => setPopup(null)}>확인</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

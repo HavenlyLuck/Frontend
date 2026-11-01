@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   ArchiveIcon,
   GearIcon,
+  GrainsIcon,
   HeartIcon,
   HouseIcon,
   PackageIcon,
@@ -30,6 +31,7 @@ function getMenuItems(ongoingCount: number, readyStorageCount: number) {
     { icon: <PaintBrushIcon size={16} weight="fill" />, label: '캐릭터 꾸미기', href: '/mypage/avatar', badge: 0 },
     { icon: <TicketIcon size={16} weight="fill" />, label: '응모 내역', href: '/mypage/entries', badge: ongoingCount },
     { icon: <ReceiptIcon size={16} weight="fill" />, label: '구매 내역', href: '/mypage/purchases', badge: 0 },
+    { icon: <GrainsIcon size={16} weight="fill" />, label: '쌀포인트 내역', href: '/mypage/points', badge: 0 },
     { icon: <ArchiveIcon size={16} weight="fill" />, label: '보관함', href: '/mypage/storage', badge: readyStorageCount },
     { icon: <PackageIcon size={16} weight="fill" />, label: '배송 내역', href: '/mypage/shipping', badge: 0 },
     { icon: <HeartIcon size={16} weight="fill" />, label: '찜한 상품', href: '/mypage/wishlist', badge: 0 },
