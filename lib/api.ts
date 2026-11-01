@@ -131,6 +131,25 @@ export interface PointsResponse {
   ssal_ticket?: number
 }
 
+// 쌀포인트 거래 내역 — 최신순. amount는 지급 +, 차감 -
+export type PointTransactionReason = 'store_purchase' | 'admin_grant' | 'raffle_consolation' | 'avatar_purchase'
+
+export interface PointTransactionResponse {
+  transaction_id: number
+  amount: number
+  balance_after: number
+  reason: PointTransactionReason
+  reference_id: number | null
+  description: string | null
+  created_at: string
+}
+
+export function getMyPointTransactions(token: string) {
+  return request<PointTransactionResponse[]>('/points/transactions', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 export function getMyPoints(token: string) {
   return request<PointsResponse>('/points/me', {
     headers: { Authorization: `Bearer ${token}` },
@@ -151,6 +170,19 @@ export function getMyProfile(token: string) {
   return request<MyProfileResponse>('/users/me', {
     headers: { Authorization: `Bearer ${token}` },
   })
+}
+
+// 비밀번호 변경 — 현재 비밀번호가 맞아야 바뀐다 (성공하면 204, 본문 없음)
+export async function changeMyPassword(token: string, currentPassword: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${API_URL}/users/me/password`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    throw new ApiError(res.status, typeof data?.detail === 'string' ? data.detail : '비밀번호를 바꾸지 못했습니다.')
+  }
 }
 
 export function updateMyAvatar(token: string, config: AvatarConfig) {
@@ -672,6 +704,18 @@ export function updateStoreProductStock(token: string, storeProductId: number, s
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ stock }),
   })
+}
+
+// 품절 상품 삭제 (재고 0일 때만) — 구매 내역은 그대로 남고 목록·상세에서만 사라진다
+export async function deleteStoreProduct(token: string, storeProductId: number): Promise<void> {
+  const res = await fetch(`${API_URL}/store-products/${storeProductId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    throw new ApiError(res.status, typeof data?.detail === 'string' ? data.detail : '상품을 삭제하지 못했습니다.')
+  }
 }
 
 export interface AddressSearchItem {

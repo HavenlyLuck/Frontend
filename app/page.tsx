@@ -142,7 +142,7 @@ export default function HomePage() {
       </section>
 
       <div className="hero-strip">
-        <span>티켓 한 장 <b>1,000P</b>부터</span>
+        <span>티켓 한 장 <b>1,000원</b>부터</span>
         <span>전량 판매 시 <b>자동 추첨</b></span>
         <span>당첨 상품은 <b>보관함</b>으로</span>
       </div>

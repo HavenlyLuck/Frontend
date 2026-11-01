@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowCounterClockwiseIcon, GrainsIcon, LightningIcon } from '@phosphor-icons/react'
+import { ArrowCounterClockwiseIcon, ConfettiIcon, GrainsIcon, LightningIcon, WarningIcon } from '@phosphor-icons/react'
 import AvatarRoom from '@/components/AvatarRoom'
 import PixelItem from '@/components/PixelItem'
 import { DEFAULT_ROOM_BACKGROUND, getRoomBackground, type RoomBackgroundId } from '@/lib/avatar/rooms'
@@ -26,6 +26,10 @@ export default function AvatarShop() {
   const [owned, setOwned] = useState<Set<string>>(new Set())
   const [busyId, setBusyId] = useState<string | null>(null)
   const [roomBg, setRoomBg] = useState<RoomBackgroundId>(DEFAULT_ROOM_BACKGROUND)
+  // 구매 팝업 — 확인 → 완료까지 사이트 공통 모달(.modal-overlay)로 보여준다
+  const [buyTarget, setBuyTarget] = useState<AvatarShopItem | null>(null)
+  const [buyError, setBuyError] = useState<string | null>(null)
+  const [buyDone, setBuyDone] = useState(false)
 
   useEffect(() => {
     setRoomBg(getRoomBackground())
@@ -49,17 +53,30 @@ export default function AvatarShop() {
 
   const priceOf = (item: AvatarShopItem) => prices[item.id] ?? item.price
 
-  const buy = async (item: AvatarShopItem) => {
-    if (!confirm(`${item.name}을(를) 쌀포인트 ${priceOf(item).toLocaleString()}P로 구매할까요?`)) return
+  const openBuy = (item: AvatarShopItem) => {
+    setBuyError(null)
+    setBuyDone(false)
+    setBuyTarget(item)
+  }
+  const closeBuy = () => {
+    if (busyId) return
+    setBuyTarget(null)
+  }
+
+  const buy = async () => {
+    const item = buyTarget
+    if (!item || busyId) return
     const session = await getValidSession()
-    if (!session) { alert('로그인 후 이용해주세요.'); return }
+    if (!session) { setBuyError('로그인이 만료되었어요. 다시 로그인한 뒤 시도해 주세요.'); return }
     setBusyId(item.id)
+    setBuyError(null)
     try {
       await purchaseAvatarItem(session.token, item.id)
       setOwned((prev) => new Set(prev).add(item.id))
       notifyPointsUpdated()
+      setBuyDone(true)
     } catch (e) {
-      alert(e instanceof ApiError ? e.message : '구매 중 오류가 발생했습니다.')
+      setBuyError(e instanceof ApiError ? e.message : '구매 중 오류가 발생했습니다.')
     } finally {
       setBusyId(null)
     }
@@ -155,7 +172,7 @@ export default function AvatarShop() {
                     구매 완료
                   </button>
                 ) : (
-                  <button type="button" className="btn-primary avatar-small-btn" disabled={busyId === item.id} onClick={() => buy(item)}>
+                  <button type="button" className="btn-primary avatar-small-btn" disabled={busyId === item.id} onClick={() => openBuy(item)}>
                     구매
                   </button>
                 )}
@@ -163,6 +180,65 @@ export default function AvatarShop() {
             </div>
           )
         })}
+      </div>
+
+      <div className={`modal-overlay ${buyTarget ? 'open' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) closeBuy() }}>
+        {buyTarget && (buyDone ? (
+          <div className="modal success-modal" role="dialog" aria-modal="true" aria-label="구매 완료" style={{ margin: '0 16px' }}>
+            <div className="modal-icon celebrate">
+              <ConfettiIcon size={28} weight="fill" color="var(--gold)" />
+            </div>
+            <div className="modal-title">구매가 완료되었습니다!</div>
+            <div className="modal-sub">
+              {buyTarget.name}을(를) 손에 넣었어요.
+              <br />
+              마이페이지 캐릭터 꾸미기에서 바로 입을 수 있어요.
+            </div>
+            <div className="modal-btn-row">
+              <button type="button" className="btn-cancel" onClick={closeBuy}>계속 둘러보기</button>
+              <Link href="/mypage/avatar" className="btn-confirm" style={{ textDecoration: 'none' }}>캐릭터 꾸미러 가기</Link>
+            </div>
+          </div>
+        ) : (
+          <div className="modal" role="dialog" aria-modal="true" aria-label="구매 확인" style={{ margin: '0 16px' }}>
+            <div className="modal-icon">
+              <GrainsIcon size={28} weight="fill" color="var(--accent)" />
+            </div>
+            <div className="modal-title">구매 확인</div>
+            <div className="modal-sub">쌀포인트로 아바타 아이템을 구매합니다.</div>
+
+            <div className="ticket-count" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ flexShrink: 0, width: 64, height: 64, borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <PixelItem slot={buyTarget.slot} index={buyTarget.index} size={56} alt={buyTarget.name} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{buyTarget.name}</div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 14, fontWeight: 700, color: 'var(--gold)' }}>
+                  <GrainsIcon size={14} weight="fill" /> {priceOf(buyTarget).toLocaleString()}P
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-notice">
+              <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span>쌀포인트로 구매한 아이템은 구매 후 취소·환불할 수 없어요.</span>
+            </div>
+
+            {buyError && (
+              <div className="modal-notice" role="alert">
+                <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span style={{ whiteSpace: 'pre-line' }}>{buyError}</span>
+              </div>
+            )}
+
+            <div className="modal-btn-row">
+              <button type="button" className="btn-cancel" onClick={closeBuy} disabled={!!busyId}>취소</button>
+              <button type="button" className="btn-confirm" onClick={buy} disabled={!!busyId}>
+                <GrainsIcon size={15} weight="fill" /> {busyId ? '구매 중...' : '구매하기'}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className={`win-overlay ${previewSeed != null ? 'open' : ''}`} onClick={() => setPreviewSeed(null)}>

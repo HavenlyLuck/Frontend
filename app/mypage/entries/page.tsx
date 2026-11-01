@@ -10,6 +10,7 @@ import {
 import { isOngoingPhase, isWinningEntry } from "@/lib/raffle";
 import { formatRelativeDate } from "@/lib/date";
 import LightningDrawScene from "@/components/LightningDrawScene";
+import Pagination from "@/components/Pagination";
 import { prefetchDrawCast } from "@/lib/raffleCast";
 import { normalizeAvatar } from "@/lib/avatar/compose";
 import { ApiError, cancelMyRaffleEntries, type RaffleCastMember } from "@/lib/api";
@@ -44,6 +45,21 @@ function DrawCountdown({ drawAt }: { drawAt: number | null }) {
     </span>
   );
 }
+
+type PastFilter = "all" | "won" | "lost" | "failed";
+const PAST_FILTERS: { id: PastFilter; label: string }[] = [
+  { id: "all", label: "전체" },
+  { id: "won", label: "당첨" },
+  { id: "lost", label: "낙첨" },
+  { id: "failed", label: "응모실패" },
+];
+const PAST_PAGE_SIZE = 10;
+const PAST_EMPTY: Record<PastFilter, string> = {
+  all: "아직 종료된 응모가 없어요.",
+  won: "아직 당첨된 응모가 없어요.",
+  lost: "낙첨된 응모가 없어요.",
+  failed: "응모실패한 응모가 없어요.",
+};
 
 export default function RaffleEntriesPage() {
   const { items, entries, checkResult, reload } = useRaffleEntryPhases();
@@ -109,6 +125,23 @@ export default function RaffleEntriesPage() {
 
   const ongoing = items.filter((e) => isOngoingPhase(e.phase));
   const past = items.filter((e) => !isOngoingPhase(e.phase));
+  // 참여했던 응모 — 결과별로 나눠 보기
+  const [pastFilter, setPastFilter] = useState<PastFilter>("all");
+  const pastCounts: Record<PastFilter, number> = {
+    all: past.length,
+    won: past.filter((e) => e.phase === "won").length,
+    lost: past.filter((e) => e.phase === "lost").length,
+    failed: past.filter((e) => e.phase === "failed").length,
+  };
+  const filteredPast =
+    pastFilter === "all" ? past : past.filter((e) => e.phase === pastFilter);
+  const [pastPage, setPastPage] = useState(1);
+  const pastPageCount = Math.max(1, Math.ceil(filteredPast.length / PAST_PAGE_SIZE));
+  const currentPastPage = Math.min(pastPage, pastPageCount);
+  const pagedPast = filteredPast.slice(
+    (currentPastPage - 1) * PAST_PAGE_SIZE,
+    currentPastPage * PAST_PAGE_SIZE,
+  );
   const participationCount = entries.filter(
     (e) => e.status !== "cancelled",
   ).length;
@@ -272,13 +305,30 @@ export default function RaffleEntriesPage() {
       >
         참여했던 응모 ({past.length})
       </div>
-      {past.length === 0 ? (
+      <div className="entry-filter-tabs" role="tablist" aria-label="참여했던 응모 결과별 보기">
+        {PAST_FILTERS.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            role="tab"
+            aria-selected={pastFilter === f.id}
+            className={`entry-filter-tab${pastFilter === f.id ? " active" : ""}`}
+            onClick={() => {
+              setPastFilter(f.id);
+              setPastPage(1);
+            }}
+          >
+            {f.label} <span>{pastCounts[f.id]}</span>
+          </button>
+        ))}
+      </div>
+      {filteredPast.length === 0 ? (
         <div className="coming-soon-box">
-          <div className="desc">아직 종료된 응모가 없어요.</div>
+          <div className="desc">{PAST_EMPTY[pastFilter]}</div>
         </div>
       ) : (
         <div className="entry-list">
-          {past.map((item) => (
+          {pagedPast.map((item) => (
             <div
               key={item.raffle_product_id}
               className="entry-item"
@@ -348,6 +398,7 @@ export default function RaffleEntriesPage() {
           ))}
         </div>
       )}
+      <Pagination page={currentPastPage} pageCount={pastPageCount} onChange={setPastPage} label="참여했던 응모 페이지" />
 
       <div
         className={`win-overlay ${resultItem ? "open" : ""}`}

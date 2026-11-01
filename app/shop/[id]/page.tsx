@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -20,6 +20,7 @@ import StoreProductCard, {
   formatStorePrice,
 } from "@/components/StoreProductCard";
 import RefundNotice from "@/components/RefundNotice";
+import { ConfettiIcon, WarningIcon } from "@phosphor-icons/react";
 
 // 상점 상품 상세 — 관련 상품 섹션 때문에 목록을 받아 id로 찾는다.
 export default function ShopProductPage({
@@ -52,22 +53,9 @@ export default function ShopProductPage({
   const [qty, setQty] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
-  const [toast, setToast] = useState("");
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    },
-    [],
-  );
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 3000);
-  };
-
+  // 구매 팝업 안에서 보여줄 결과 — 실패 문구, 또는 완료 카드(산 개수·금액)
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [purchaseDone, setPurchaseDone] = useState<{ quantity: number; amount: number } | null>(null);
   if (failed || (products && !product)) {
     return (
       <div className="container">
@@ -117,6 +105,7 @@ export default function ShopProductPage({
       return;
     }
     setPurchasing(true);
+    setPurchaseError(null);
     try {
       // 일반 상점은 카드 결제 후 서버가 지급, 쌀포인트 상점은 쌀포인트 차감
       let res;
@@ -127,7 +116,7 @@ export default function ShopProductPage({
           quantity: qty,
         });
         if (paid.status !== "paid" || !paid.store_purchase) {
-          showToast(paid.status === "conflict" ? "구매할 수 없습니다." : paymentFailureMessage(paid));
+          setPurchaseError(paid.status === "conflict" ? "구매할 수 없습니다." : paymentFailureMessage(paid));
           return;
         }
         res = paid.store_purchase;
@@ -142,20 +131,29 @@ export default function ShopProductPage({
               : p,
           ) ?? prev,
       );
+      setPurchaseDone({ quantity: res.quantity, amount: res.amount_spent });
       setQty(1);
       notifyPointsUpdated();
       notifyStorageUpdated();
-      showToast("🎉 구매가 완료되었습니다! 보관함에서 확인해주세요!");
     } catch (err) {
-      showToast(
+      setPurchaseError(
         err instanceof ApiError || err instanceof PaymentWindowError
           ? err.message
           : "구매 처리 중 오류가 발생했습니다.",
       );
     } finally {
       setPurchasing(false);
-      setModalOpen(false);
     }
+  };
+
+  const openPurchaseModal = () => {
+    setPurchaseError(null);
+    setPurchaseDone(null);
+    setModalOpen(true);
+  };
+  const closePurchaseModal = () => {
+    if (purchasing) return;
+    setModalOpen(false);
   };
 
   return (
@@ -313,7 +311,7 @@ export default function ShopProductPage({
               <button
                 className="btn-raffle"
                 disabled={soldOut}
-                onClick={() => setModalOpen(true)}
+                onClick={openPurchaseModal}
               >
                 {soldOut ? "품절" : "구매하기"}
               </button>
@@ -354,50 +352,103 @@ export default function ShopProductPage({
         )}
       </div>
 
+      {/* 구매 팝업 — 확인 → (결제) → 완료 카드까지 같은 배경 위에서 이어진다. 결제 중에는 닫히지 않는다 */}
       <div
         className={`modal-overlay ${modalOpen ? "open" : ""}`}
         onClick={(e) => {
-          if (e.target === e.currentTarget) setModalOpen(false);
+          if (e.target === e.currentTarget) closePurchaseModal();
         }}
       >
-        <div className="modal">
-          <div className="modal-icon">{isCash ? "💳" : "🌾"}</div>
-          <div className="modal-title">구매 확인</div>
-          <div className="modal-sub">
-            {product.product_name}
-            <br />
-            {qty}개 · 총{" "}
-            <strong style={{ color: "var(--text)" }}>
-              {formatStorePrice(product.pay_type, product.price * qty)}
-            </strong>
-            {isCash ? "을 카드로 결제합니다." : "가 차감됩니다."}
+        {purchaseDone ? (
+          <div className="modal success-modal" role="dialog" aria-modal="true" aria-label="구매 완료" style={{ margin: "0 16px" }}>
+            <div className="modal-icon celebrate">
+              <ConfettiIcon size={28} weight="fill" color="var(--gold)" />
+            </div>
+            <div className="modal-title">구매가 완료되었습니다!</div>
+            <div className="modal-sub">
+              {product.product_name} · {purchaseDone.quantity}개
+              <br />
+              <strong style={{ color: "var(--text)" }}>
+                {formatStorePrice(product.pay_type, purchaseDone.amount)}
+              </strong>
+              {isCash ? " 결제 완료" : " 차감"}
+              <br />
+              구매한 상품은 보관함에서 확인할 수 있어요.
+            </div>
+            <div className="modal-btn-row">
+              <button className="btn-cancel" onClick={closePurchaseModal}>
+                계속 둘러보기
+              </button>
+              <button className="btn-confirm" onClick={() => router.push("/mypage/storage")}>
+                보관함으로 가기
+              </button>
+            </div>
           </div>
+        ) : (
+          <div className="modal" role="dialog" aria-modal="true" aria-label="구매 확인" style={{ margin: "0 16px" }}>
+            <div className="modal-icon">
+              <span style={{ display: "flex", color: "var(--accent)" }}>
+                <PayTypeIcon type={product.pay_type} size={28} />
+              </span>
+            </div>
+            <div className="modal-title">구매 확인</div>
+            <div className="modal-sub">
+              {product.product_name}
+              <br />
+              {isCash ? "카드로 결제합니다." : "쌀포인트가 차감됩니다."}
+            </div>
 
-          <div className="modal-notice">
-            {isCash
-              ? "배송 전에는 마이페이지 보관함에서 바로 취소할 수 있어요. 받은 날부터 7일 안에는 반품을 요청할 수 있지만, 상자나 포장을 개봉해 상품 가치가 떨어지면 반품이 어려워요."
-              : "쌀포인트로 교환한 상품은 교환 후 취소할 수 없어요. 받은 상품이 파손·불량이면 교환해 드려요."}{" "}
-            <a href="/refund#상점" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>
-              취소·환불 정책
-            </a>
-          </div>
+            <div className="ticket-count">
+              <div className="ticket-label">구매 수량</div>
+              <div className="ticket-selector">
+                <button className="ticket-btn" onClick={() => changeQty(-1)} disabled={purchasing || qty <= 1} aria-label="수량 줄이기">
+                  −
+                </button>
+                <div className="ticket-num">{qty}</div>
+                <button className="ticket-btn" onClick={() => changeQty(1)} disabled={purchasing || qty >= product.stock} aria-label="수량 늘리기">
+                  +
+                </button>
+              </div>
+              <div className="ticket-info">
+                <span>남은 수량 {product.stock.toLocaleString()}개</span>
+                <span className="total">
+                  총 {formatStorePrice(product.pay_type, product.price * qty)}
+                </span>
+              </div>
+            </div>
 
-          <div className="modal-btn-row">
-            <button className="btn-cancel" onClick={() => setModalOpen(false)}>
-              취소
-            </button>
-            <button
-              className="btn-confirm"
-              onClick={confirmPurchase}
-              disabled={purchasing}
-            >
-              {purchasing ? "처리 중..." : isCash ? "결제하기" : "구매하기"}
-            </button>
+            <div className="modal-notice">
+              <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: "2px" }} />
+              <span>
+                {isCash
+                  ? "배송 전에는 마이페이지 보관함에서 바로 취소할 수 있어요. 받은 날부터 7일 안에는 반품을 요청할 수 있지만, 상자나 포장을 개봉해 상품 가치가 떨어지면 반품이 어려워요."
+                  : "쌀포인트로 교환한 상품은 교환 후 취소할 수 없어요. 받은 상품이 파손·불량이면 교환해 드려요."}{" "}
+                <a href="/refund#상점" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>
+                  취소·환불 정책
+                </a>
+              </span>
+            </div>
+
+            {purchaseError && (
+              <div className="modal-notice" role="alert">
+                <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: "2px" }} />
+                <span style={{ whiteSpace: "pre-line" }}>{purchaseError}</span>
+              </div>
+            )}
+
+            <div className="modal-btn-row">
+              <button className="btn-cancel" onClick={closePurchaseModal} disabled={purchasing}>
+                취소
+              </button>
+              <button className="btn-confirm" onClick={confirmPurchase} disabled={purchasing}>
+                <PayTypeIcon type={product.pay_type} size={15} />{" "}
+                {purchasing ? "처리 중..." : isCash ? "결제하기" : "구매하기"}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      <div className={`toast ${toast ? "show" : ""}`}>{toast || " "}</div>
     </div>
   );
 }

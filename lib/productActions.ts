@@ -1,5 +1,5 @@
 import {
-  cancelRaffleProduct, closeKujiSet, updateStoreProductStock,
+  cancelRaffleProduct, closeKujiSet, deleteStoreProduct, updateStoreProductStock,
   type KujiSetAdminResponse, type RaffleProductResponse, type StoreProductResponse,
 } from './api'
 
@@ -9,6 +9,7 @@ import {
  *   응모 취소     : 매진 전에만. 산 사람 전원 전액 환불(카드 결제 취소) + 물건 1개 재고로
  *   쿠지 판매 종료: 이미 뽑힌 제비는 그대로, 아직 안 뽑힌 상품·라스트원상은 재고로
  *   상점 수량 조정: 줄이면 줄인 만큼 재고로, 늘리면 재고에서 더 가져옴 (0 = 판매 종료)
+ *   상점 상품 삭제: 품절(수량 0)일 때만. 구매 내역은 남고 목록에서만 사라짐
  */
 
 export function cancelRaffle(token: string, raffle: RaffleProductResponse): Promise<RaffleProductResponse> {
@@ -21,4 +22,8 @@ export function closeKuji(token: string, kuji: KujiSetAdminResponse): Promise<Ku
 
 export function setStoreStock(token: string, product: StoreProductResponse, stock: number): Promise<StoreProductResponse> {
   return updateStoreProductStock(token, product.store_product_id, stock)
+}
+
+export function deleteStore(token: string, product: StoreProductResponse): Promise<void> {
+  return deleteStoreProduct(token, product.store_product_id)
 }
