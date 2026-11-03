@@ -334,6 +334,7 @@ export interface MyRaffleEntryResponse {
   ends_at: string
   sold_out_at: string | null
   winner_entry_number: number | null
+  result_checked_at?: string | null  // 당첨결과를 확인한 시각 (없으면 아직 안 봄)
 }
 
 export function getMyRaffleEntries(token: string) {
@@ -355,6 +356,14 @@ export interface RaffleEntryCancelResponse {
 }
 
 // ticketCount장만 취소 (최근에 산 응모권부터). 생략하면 전부 취소
+// 당첨결과 확인 기록 — 한 번 본 결과는 어느 기기에서 들어가도 다시 '참여 중'으로 뜨지 않는다
+export function markRaffleResultChecked(token: string, raffleProductId: number) {
+  return request<null>(`/raffles/${raffleProductId}/result-checked`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 export function cancelMyRaffleEntries(token: string, raffleProductId: number, ticketCount?: number) {
   return request<RaffleEntryCancelResponse>(`/raffles/${raffleProductId}/entries/me/cancel`, {
     method: 'POST',
