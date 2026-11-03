@@ -7,7 +7,11 @@ import {
   useRaffleEntryPhases,
   type PhasedRaffleEntry,
 } from "@/hooks/useRaffleEntryPhases";
-import { isOngoingPhase, isWinningEntry } from "@/lib/raffle";
+import {
+  fundingLockedTicketCount,
+  isOngoingPhase,
+  isWinningEntry,
+} from "@/lib/raffle";
 import { formatRelativeDate } from "@/lib/date";
 import LightningDrawScene from "@/components/LightningDrawScene";
 import Pagination from "@/components/Pagination";
@@ -61,6 +65,16 @@ const PAST_EMPTY: Record<PastFilter, string> = {
   failed: "응모실패한 응모가 없어요.",
 };
 
+// 취소할 장수 한 칸 이동 — 상점에서 전환된 응모는 "전환 후에 산 장수까지" 또는 "전부"만 고를 수 있다
+function stepCancelQty(item: PhasedRaffleEntry, q: number, delta: number): number {
+  const total = item.totalTicketCount;
+  const free = total - fundingLockedTicketCount(item); // 제재 없이 취소할 수 있는 장수 (전환 후에 산 것)
+  if (fundingLockedTicketCount(item) === 0) return Math.min(total, Math.max(1, q + delta));
+  if (delta > 0) return q >= free ? total : q + 1;
+  if (q === total) return free > 0 ? free : total;
+  return Math.max(1, q - 1);
+}
+
 // 취소 미리보기 — 서버와 같은 순서(최근 응모부터)로 count장을 취소했을 때 카드 환불 금액과 보관함으로 돌아갈 무료 응모권 수
 function cancelPreview(item: PhasedRaffleEntry, count: number): { refund: number; returned: number } {
   const parts = [...item.parts].sort((a, b) =>
@@ -92,7 +106,9 @@ export default function RaffleEntriesPage() {
   function openCancel(item: PhasedRaffleEntry) {
     if (cancelingId != null) return;
     setCancelTarget(item);
-    setCancelQty(item.totalTicketCount);
+    // 전환 후 모금 응모권까지 취소하면 제재가 있으므로, 전환 후에 산 응모권이 있으면 그 장수를 기본으로 둔다
+    const locked = fundingLockedTicketCount(item);
+    setCancelQty(locked > 0 && item.totalTicketCount > locked ? item.totalTicketCount - locked : item.totalTicketCount);
     setCancelError(null);
     setCancelDone(null);
   }
@@ -286,7 +302,9 @@ export default function RaffleEntriesPage() {
                     <span className="status-badge ongoing">추첨 대기 중</span>
                   ) : (
                     <>
-                      <span className="status-badge waiting">대기 중</span>
+                      <span className="status-badge waiting">
+                        {item.status === "funding" ? "전환 모금 중" : "대기 중"}
+                      </span>
                       <button
                         type="button"
                         className="entry-cancel-btn"
@@ -309,7 +327,12 @@ export default function RaffleEntriesPage() {
             return item.phase === "waiting" ? (
               <Link
                 key={item.raffle_product_id}
-                href={`/eungmo/${item.raffle_product_id}`}
+                href={
+                  // 응모 전환 모금 중이면 아직 응모 목록에 없으므로 상점 상세에서 현황을 보여준다
+                  item.status === "funding" && item.fundingStoreProductId != null
+                    ? `/shop/${item.fundingStoreProductId}`
+                    : `/eungmo/${item.raffle_product_id}`
+                }
                 className="entry-item"
               >
                 {body}
@@ -565,6 +588,12 @@ export default function RaffleEntriesPage() {
               {cancelTarget.product_name}
               <br />
               지금 응모권 {cancelTarget.totalTicketCount}장을 갖고 있어요.
+              {fundingLockedTicketCount(cancelTarget) > 0 && (
+                <>
+                  <br />
+                  그중 {fundingLockedTicketCount(cancelTarget)}장은 응모 상품으로 전환되기 전에 산 응모권이에요.
+                </>
+              )}
             </div>
 
             <div className="ticket-count">
@@ -572,8 +601,8 @@ export default function RaffleEntriesPage() {
               <div className="ticket-selector">
                 <button
                   className="ticket-btn"
-                  onClick={() => setCancelQty((q) => Math.max(1, q - 1))}
-                  disabled={cancelingId != null || cancelQty <= 1}
+                  onClick={() => setCancelQty((q) => stepCancelQty(cancelTarget, q, -1))}
+                  disabled={cancelingId != null || stepCancelQty(cancelTarget, cancelQty, -1) === cancelQty}
                   aria-label="취소할 장수 줄이기"
                 >
                   −
@@ -581,8 +610,8 @@ export default function RaffleEntriesPage() {
                 <div className="ticket-num">{cancelQty}</div>
                 <button
                   className="ticket-btn"
-                  onClick={() => setCancelQty((q) => Math.min(cancelTarget.totalTicketCount, q + 1))}
-                  disabled={cancelingId != null || cancelQty >= cancelTarget.totalTicketCount}
+                  onClick={() => setCancelQty((q) => stepCancelQty(cancelTarget, q, 1))}
+                  disabled={cancelingId != null || stepCancelQty(cancelTarget, cancelQty, 1) === cancelQty}
                   aria-label="취소할 장수 늘리기"
                 >
                   +
@@ -612,6 +641,18 @@ export default function RaffleEntriesPage() {
                 카드 결제는 취소한 만큼 환불되고(반영까지 며칠 걸릴 수 있어요), 무료 응모권으로 응모한 장수는 보관함으로 돌아가요.
               </span>
             </div>
+
+            {/* 전환 후 모금 응모권까지 취소하면 — 전부 함께 취소되고 3일 동안 전환 응모권 구매 제한 */}
+            {fundingLockedTicketCount(cancelTarget) > 0 &&
+              cancelQty > cancelTarget.totalTicketCount - fundingLockedTicketCount(cancelTarget) && (
+                <div className="modal-notice" role="alert">
+                  <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: "2px" }} />
+                  <span>
+                    전환 전에 산 응모권 {fundingLockedTicketCount(cancelTarget)}장도 함께 취소돼요.{" "}
+                    <b>취소하면 3일 동안 상점 상품의 응모 전환 응모권을 살 수 없어요.</b>
+                  </span>
+                </div>
+              )}
 
             {cancelError && (
               <div className="modal-notice" role="alert">

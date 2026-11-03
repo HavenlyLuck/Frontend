@@ -235,7 +235,8 @@ export interface RaffleProductResponse {
   total_slots: number
   sold_slots: number
   image_url: string | null
-  status: 'open' | 'completed' | 'cancelled'
+  // funding: 상점 상품의 응모 전환 모금 중 (응모 목록에는 전환된 뒤에 나온다)
+  status: 'funding' | 'open' | 'completed' | 'cancelled'
   starts_at: string
   ends_at: string
   drawn_at: string | null
@@ -300,7 +301,8 @@ export function getMyRaffleEntriesForProduct(token: string, raffleProductId: num
 
 // 마이페이지 구매 내역 1건 — 카드 결제 1건 (응모권 · 쿠지 · 결제 상점)
 // status: paid(결제 완료) / refunded(환불됨 — 응모 취소·구매 취소 등). 부분 취소 후엔 quantity·amount가 남은 만큼
-export type PaymentOrderType = 'raffle_entry' | 'kuji_draw' | 'store_purchase'
+// store_funding: 상점 상품의 응모 전환 모금 응모권
+export type PaymentOrderType = 'raffle_entry' | 'kuji_draw' | 'store_purchase' | 'store_funding'
 
 export interface MyPaymentResponse {
   payment_id: string
@@ -330,11 +332,13 @@ export interface MyRaffleEntryResponse {
   product_name: string
   image_url: string | null
   price_krw: number
-  status: 'open' | 'completed' | 'cancelled'
+  status: 'funding' | 'open' | 'completed' | 'cancelled'
   ends_at: string
   sold_out_at: string | null
   winner_entry_number: number | null
   result_checked_at?: string | null  // 당첨결과를 확인한 시각 (없으면 아직 안 봄)
+  funding_store_product_id?: number | null  // 응모 전환 모금 중이면 그 상점 상품
+  bought_in_funding?: boolean  // 전환 모금 때 산 응모권 — 응모 상품으로 전환된 뒤에는 취소할 수 없다
 }
 
 export function getMyRaffleEntries(token: string) {
@@ -419,8 +423,29 @@ export function getStoreProducts(payType?: StorePayType) {
   return request<StoreProductResponse[]>(`/store-products${query}`)
 }
 
-export function getStoreProduct(storeProductId: number) {
-  return request<StoreProductResponse>(`/store-products/${storeProductId}`)
+// 상점 상품의 응모 전환 모금 현황 — 응모권(가격 ÷ 응모권 가격)의 1/3(threshold)이 팔리면 응모 상품으로 전환된다
+export interface StoreFundingStatus {
+  available: boolean               // 지금 응모권을 사서 모금에 참여(또는 새로 시작)할 수 있는지
+  raffle_product_id: number | null // 진행 중인 모금 (없으면 아직 아무도 시작하지 않음)
+  sold_slots: number
+  threshold: number
+  total_slots: number
+  ticket_price: number
+  ends_at: string | null           // 모금 마감 (UTC) — 이때까지 못 모으면 전부 환불
+  duration_days: number            // 새 모금의 기간
+  // 로그인한 사람이 전환 응모권을 살 수 없는 기한 (UTC) — 전환 후 모금 응모권을 취소하면 3일
+  banned_until?: string | null
+}
+
+export interface StoreProductDetailResponse extends StoreProductResponse {
+  funding?: StoreFundingStatus | null  // 결제 상점 상품만
+}
+
+// 로그인했으면 token을 넘긴다 — 전환 응모권 구매 제한(funding.banned_until)이 내 기준으로 내려온다
+export function getStoreProduct(storeProductId: number, token?: string) {
+  return request<StoreProductDetailResponse>(`/store-products/${storeProductId}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
 }
 
 export interface StorePurchaseResponse {
@@ -995,6 +1020,7 @@ export type PaymentOrder =
   | { order_type: 'raffle_entry'; target_id: number; quantity: number }
   | { order_type: 'kuji_draw'; target_id: number; ticket_numbers: number[] }
   | { order_type: 'store_purchase'; target_id: number; quantity: number }
+  | { order_type: 'store_funding'; target_id: number; quantity: number }  // target_id = 상점 상품
 
 export interface PaymentPrepareResponse {
   // 없으면 결제창을 열지 않는다 — 쿠지에서 고른 제비가 이미 나간 경우

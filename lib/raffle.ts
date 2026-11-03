@@ -1,15 +1,19 @@
-import { getRaffleProducts, type MyRaffleEntryResponse, type RaffleProductResponse } from './api'
+import {
+  getRaffleProducts,
+  type MyRaffleEntryResponse,
+  type RaffleProductResponse,
+} from "./api";
 
 // 백엔드 시각은 UTC인데 끝에 Z가 없어서("2026-10-03T02:51:35") 그대로 파싱하면 로컬 시각으로 읽힌다
 export function parseServerTime(iso: string): number {
-  return Date.parse(/(Z|[+-]\d\d:?\d\d)$/i.test(iso) ? iso : `${iso}Z`)
+  return Date.parse(/(Z|[+-]\d\d:?\d\d)$/i.test(iso) ? iso : `${iso}Z`);
 }
 
 // 매진(추첨 끝난) 카드를 목록에 블러로 남겨두는 기간
-export const SOLD_OUT_VISIBLE_MS = 24 * 60 * 60 * 1000
+export const SOLD_OUT_VISIBLE_MS = 24 * 60 * 60 * 1000;
 
 export function isSoldOutRaffle(p: RaffleProductResponse): boolean {
-  return p.status === 'completed' || p.remaining_slots <= 0
+  return p.status === "completed" || p.remaining_slots <= 0;
 }
 
 /*
@@ -19,53 +23,84 @@ export function isSoldOutRaffle(p: RaffleProductResponse): boolean {
  */
 export async function getListedRaffles(): Promise<RaffleProductResponse[]> {
   const [open, completed] = await Promise.all([
-    getRaffleProducts('open'),
-    getRaffleProducts('completed').catch(() => [] as RaffleProductResponse[]),
-  ])
-  const recent = completed.filter(p => p.drawn_at && isWithinSoldOutWindow(p))
-  return [...open, ...recent].sort((a, b) => Number(isSoldOutRaffle(a)) - Number(isSoldOutRaffle(b)))
+    getRaffleProducts("open"),
+    getRaffleProducts("completed").catch(() => [] as RaffleProductResponse[]),
+  ]);
+  const recent = completed.filter(
+    (p) => p.drawn_at && isWithinSoldOutWindow(p),
+  );
+  return [...open, ...recent].sort(
+    (a, b) => Number(isSoldOutRaffle(a)) - Number(isSoldOutRaffle(b)),
+  );
 }
 
-export function isWithinSoldOutWindow(p: RaffleProductResponse, now = Date.now()): boolean {
-  return p.drawn_at != null && now - parseServerTime(p.drawn_at) < SOLD_OUT_VISIBLE_MS
+export function isWithinSoldOutWindow(
+  p: RaffleProductResponse,
+  now = Date.now(),
+): boolean {
+  return (
+    p.drawn_at != null &&
+    now - parseServerTime(p.drawn_at) < SOLD_OUT_VISIBLE_MS
+  );
 }
 
 // 목록에서 계속 보여줄지: 진행 중이면 마감 전까지, 추첨이 끝났으면 추첨 후 하루까지
-export function isListedRaffleVisible(p: RaffleProductResponse, remainingSeconds: number, now = Date.now()): boolean {
-  if (p.status === 'completed') return isWithinSoldOutWindow(p, now)
-  return remainingSeconds > 0
+export function isListedRaffleVisible(
+  p: RaffleProductResponse,
+  remainingSeconds: number,
+  now = Date.now(),
+): boolean {
+  if (p.status === "completed") return isWithinSoldOutWindow(p, now);
+  return remainingSeconds > 0;
 }
 
 export interface GroupedRaffleEntry {
-  raffle_product_id: number
-  product_name: string
-  image_url: string | null
-  status: 'open' | 'completed' | 'cancelled'
-  ends_at: string
-  soldOutAt: string | null
-  totalTicketCount: number
-  totalAmountPaid: number  // 결제 금액 합계(원) — 무료 응모권으로 응모한 장수는 0원
-  parts: { entryId: number; ticketCount: number; amountPaid: number; createdAt: string }[]  // 응모 1건씩 (취소 미리보기용)
-  lastEnteredAt: string
-  entryNumber: number
-  entryNumbers: number[]
-  winnerEntryNumber: number | null
-  resultChecked: boolean  // 서버에 당첨결과 확인 기록이 있는지
+  raffle_product_id: number;
+  product_name: string;
+  image_url: string | null;
+  status: "funding" | "open" | "completed" | "cancelled";
+  ends_at: string;
+  soldOutAt: string | null;
+  fundingStoreProductId: number | null; // 응모 전환 모금 중이면 그 상점 상품
+  totalTicketCount: number;
+  totalAmountPaid: number; // 결제 금액 합계(원) — 무료 응모권으로 응모한 장수는 0원
+  parts: {
+    entryId: number;
+    ticketCount: number;
+    amountPaid: number;
+    createdAt: string;
+    boughtInFunding: boolean; // 전환 모금 때 산 응모권 (응모 상품으로 전환된 뒤에는 취소 불가)
+  }[]; // 응모 1건씩 (취소 미리보기용)
+  lastEnteredAt: string;
+  entryNumber: number;
+  entryNumbers: number[];
+  winnerEntryNumber: number | null;
+  resultChecked: boolean; // 서버에 당첨결과 확인 기록이 있는지
 }
 
 // 같은 상품에 여러 번 응모한 경우, 상품 하나당 한 줄로 합쳐서 총 응모권 수를 보여주기 위한 집계
-export function groupEntriesByProduct(entries: MyRaffleEntryResponse[]): GroupedRaffleEntry[] {
-  const map = new Map<number, GroupedRaffleEntry>()
+export function groupEntriesByProduct(
+  entries: MyRaffleEntryResponse[],
+): GroupedRaffleEntry[] {
+  const map = new Map<number, GroupedRaffleEntry>();
 
   for (const entry of entries) {
-    const existing = map.get(entry.raffle_product_id)
+    const existing = map.get(entry.raffle_product_id);
     if (existing) {
-      existing.totalTicketCount += entry.ticket_count
-      existing.totalAmountPaid += entry.amount_paid
-      existing.parts.push({ entryId: entry.entry_id, ticketCount: entry.ticket_count, amountPaid: entry.amount_paid, createdAt: entry.created_at })
-      if (!existing.entryNumbers.includes(entry.entry_number)) existing.entryNumbers.push(entry.entry_number)
-      if (entry.created_at > existing.lastEnteredAt) existing.lastEnteredAt = entry.created_at
-      if (entry.result_checked_at) existing.resultChecked = true
+      existing.totalTicketCount += entry.ticket_count;
+      existing.totalAmountPaid += entry.amount_paid;
+      existing.parts.push({
+        entryId: entry.entry_id,
+        ticketCount: entry.ticket_count,
+        amountPaid: entry.amount_paid,
+        createdAt: entry.created_at,
+        boughtInFunding: !!entry.bought_in_funding,
+      });
+      if (!existing.entryNumbers.includes(entry.entry_number))
+        existing.entryNumbers.push(entry.entry_number);
+      if (entry.created_at > existing.lastEnteredAt)
+        existing.lastEnteredAt = entry.created_at;
+      if (entry.result_checked_at) existing.resultChecked = true;
     } else {
       map.set(entry.raffle_product_id, {
         raffle_product_id: entry.raffle_product_id,
@@ -74,23 +109,49 @@ export function groupEntriesByProduct(entries: MyRaffleEntryResponse[]): Grouped
         status: entry.status,
         ends_at: entry.ends_at,
         soldOutAt: entry.sold_out_at,
+        fundingStoreProductId: entry.funding_store_product_id ?? null,
         totalTicketCount: entry.ticket_count,
         totalAmountPaid: entry.amount_paid,
-        parts: [{ entryId: entry.entry_id, ticketCount: entry.ticket_count, amountPaid: entry.amount_paid, createdAt: entry.created_at }],
+        parts: [
+          {
+            entryId: entry.entry_id,
+            ticketCount: entry.ticket_count,
+            amountPaid: entry.amount_paid,
+            createdAt: entry.created_at,
+            boughtInFunding: !!entry.bought_in_funding,
+          },
+        ],
         lastEnteredAt: entry.created_at,
         entryNumber: entry.entry_number,
         entryNumbers: [entry.entry_number],
         winnerEntryNumber: entry.winner_entry_number,
         resultChecked: !!entry.result_checked_at,
-      })
+      });
     }
   }
 
-  return Array.from(map.values()).sort((a, b) => (a.lastEnteredAt < b.lastEnteredAt ? 1 : -1))
+  return Array.from(map.values()).sort((a, b) =>
+    a.lastEnteredAt < b.lastEnteredAt ? 1 : -1,
+  );
+}
+
+// 상점에서 응모 상품으로 전환된 뒤, 전환 모금 때 산 응모권 수 (전환 전이거나 일반 응모면 0)
+// 이 응모권까지 취소하려면 전부 함께 취소해야 하고, 3일 동안 전환 응모권을 살 수 없다.
+// 취소는 최근에 산 것부터라서 "전환 후에 산 장수(전체 − 이 값)"까지는 제재 없이 취소할 수 있다
+export function fundingLockedTicketCount(item: GroupedRaffleEntry): number {
+  const converted =
+    item.fundingStoreProductId != null && item.status !== "funding";
+  if (!converted) return 0;
+  return item.parts
+    .filter((p) => p.boughtInFunding)
+    .reduce((sum, p) => sum + p.ticketCount, 0);
 }
 
 export function isWinningEntry(item: GroupedRaffleEntry): boolean {
-  return item.winnerEntryNumber != null && item.entryNumbers.includes(item.winnerEntryNumber)
+  return (
+    item.winnerEntryNumber != null &&
+    item.entryNumbers.includes(item.winnerEntryNumber)
+  );
 }
 
 /*
@@ -101,66 +162,79 @@ export function isWinningEntry(item: GroupedRaffleEntry): boolean {
  *  won / lost   — 결과 확인함 (참여했던 · 당첨 / 낙첨)
  *  failed       — 시간 내에 못 채움 (참여했던 · 응모실패)
  */
-export type EntryPhase = 'waiting' | 'drawPending' | 'resultReady' | 'won' | 'lost' | 'failed'
+export type EntryPhase =
+  | "waiting"
+  | "drawPending"
+  | "resultReady"
+  | "won"
+  | "lost"
+  | "failed";
 
 export function getEntryPhase(
   item: GroupedRaffleEntry,
   product: RaffleProductResponse | undefined,
   resultChecked: boolean,
 ): EntryPhase {
-  if (item.status === 'cancelled') return 'failed'
-  if (item.status === 'completed') {
-    if (item.winnerEntryNumber == null) return 'drawPending'
-    if (!resultChecked) return 'resultReady'
-    return isWinningEntry(item) ? 'won' : 'lost'
+  if (item.status === "cancelled") return "failed";
+  if (item.status === "completed") {
+    if (item.winnerEntryNumber == null) return "drawPending";
+    if (!resultChecked) return "resultReady";
+    return isWinningEntry(item) ? "won" : "lost";
   }
-  if (item.soldOutAt) return 'drawPending'
+  if (item.soldOutAt) return "drawPending";
   if (product) {
-    if (product.remaining_slots <= 0) return 'drawPending'
+    if (product.remaining_slots <= 0) return "drawPending";
     // 백엔드가 다음 조회 때 cancelled로 바꾸고 환급하지만, 그 전에 화면에 남아 있는 데이터를 위한 분기
-    if (product.remaining_seconds <= 0) return 'failed'
+    if (product.remaining_seconds <= 0) return "failed";
   }
-  return 'waiting'
+  return "waiting";
 }
 
 export function isOngoingPhase(phase: EntryPhase): boolean {
-  return phase === 'waiting' || phase === 'drawPending' || phase === 'resultReady'
+  return (
+    phase === "waiting" || phase === "drawPending" || phase === "resultReady"
+  );
 }
 
 // 매진 후 추첨까지 걸리는 시간 (백엔드 RAFFLE_DRAW_DELAY_SECONDS와 같아야 한다)
-export const DRAW_DELAY_MS = 1 * 60 * 1000
+export const DRAW_DELAY_MS = 1 * 60 * 1000;
 
 // 자동 추첨 예정 시각(ms) — 서버가 기록한 매진 시각 + 1분. 아직 매진 시각을 모르면 null
 export function getDrawAt(soldOutAt: string | null | undefined): number | null {
-  return soldOutAt ? parseServerTime(soldOutAt) + DRAW_DELAY_MS : null
+  return soldOutAt ? parseServerTime(soldOutAt) + DRAW_DELAY_MS : null;
 }
 
 // TODO(backend): "결과 확인함"을 서버에 저장하는 API가 생기면 교체 — 지금은 기기(브라우저)별로만 기억된다
-const CHECKED_KEY_PREFIX = 'raffleResultChecked:'
-export const RESULT_CHECKED_EVENT = 'raffle-result-checked'
+const CHECKED_KEY_PREFIX = "raffleResultChecked:";
+export const RESULT_CHECKED_EVENT = "raffle-result-checked";
 
 function checkedKey(): string {
-  return CHECKED_KEY_PREFIX + (localStorage.getItem('userId') ?? '')
+  return CHECKED_KEY_PREFIX + (localStorage.getItem("userId") ?? "");
 }
 
 export function getCheckedResultIds(): number[] {
-  if (typeof window === 'undefined') return []
+  if (typeof window === "undefined") return [];
   try {
-    const parsed = JSON.parse(localStorage.getItem(checkedKey()) ?? '[]')
-    return Array.isArray(parsed) ? parsed.filter((v): v is number => typeof v === 'number') : []
+    const parsed = JSON.parse(localStorage.getItem(checkedKey()) ?? "[]");
+    return Array.isArray(parsed)
+      ? parsed.filter((v): v is number => typeof v === "number")
+      : [];
   } catch {
-    return []
+    return [];
   }
 }
 
 export function markResultChecked(raffleProductId: number) {
   try {
-    const ids = getCheckedResultIds()
-    if (ids.includes(raffleProductId)) return
-    localStorage.setItem(checkedKey(), JSON.stringify([...ids, raffleProductId]))
+    const ids = getCheckedResultIds();
+    if (ids.includes(raffleProductId)) return;
+    localStorage.setItem(
+      checkedKey(),
+      JSON.stringify([...ids, raffleProductId]),
+    );
   } catch {
     // 저장이 막힌 환경(시크릿 모드 등)에서는 이번 화면에서만 반영된다
   }
   // 사이드바 배지처럼 같은 화면의 다른 곳도 바로 갱신되도록 알린다
-  window.dispatchEvent(new Event(RESULT_CHECKED_EVENT))
+  window.dispatchEvent(new Event(RESULT_CHECKED_EVENT));
 }

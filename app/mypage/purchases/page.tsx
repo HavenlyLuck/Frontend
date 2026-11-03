@@ -20,6 +20,7 @@ const ORDER_KIND: Record<PaymentOrderType, { label: string; unit: string; Icon: 
   raffle_entry: { label: '응모권', unit: '장', Icon: TicketIcon },
   kuji_draw: { label: '쿠지', unit: '장', Icon: SquaresFourIcon },
   store_purchase: { label: '상점', unit: '개', Icon: ShoppingBagIcon },
+  store_funding: { label: '응모 전환', unit: '장', Icon: TicketIcon },
 }
 
 // 내 카드 결제 내역 (응모권 · 쿠지 · 결제 상점, 환불된 것 포함)
