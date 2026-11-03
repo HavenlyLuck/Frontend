@@ -16,7 +16,7 @@ import {
   TicketIcon,
 } from '@phosphor-icons/react'
 import { useStorage } from '@/hooks/useStorage'
-import { getValidSession, clearAuth } from '@/lib/auth'
+import { getValidSession, clearAuth, loginPath } from '@/lib/auth'
 import { getMyProfile, ApiError, type MyProfileResponse } from '@/lib/api'
 import { useRaffleEntryPhases } from '@/hooks/useRaffleEntryPhases'
 import { isOngoingPhase } from '@/lib/raffle'
@@ -57,7 +57,7 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
     getValidSession().then((session) => {
       if (cancelled) return
       if (!session) {
-        router.replace('/login')
+        router.replace(loginPath())
         return
       }
       // 세션이 유효하면 일단 페이지를 보여준다. 프로필 조회는 별도로 시도하고,
@@ -71,7 +71,7 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
           if (cancelled) return
           if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
             clearAuth()
-            router.replace('/login')
+            router.replace(loginPath())
           }
         })
     })

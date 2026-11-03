@@ -14,7 +14,7 @@ import {
 import { fetchKujiProduct, type KujiLastOne, type KujiProduct, type KujiTier } from '@/lib/kujiData'
 import { confirmKujiDraw, fetchKujiBoard, type KujiBoard } from '@/lib/kujiBoard'
 import { isWished, toggleWishlist } from '@/lib/wishlist'
-import { getValidSession, isLoggedIn } from '@/lib/auth'
+import { getValidSession, isLoggedIn, loginPath } from '@/lib/auth'
 import KujiReveal from '@/components/KujiReveal'
 import KujiAvatarScene from '@/components/KujiAvatarScene'
 import { ApiError, getMyProfile } from '@/lib/api'
@@ -35,7 +35,7 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     if (!isLoggedIn()) {
       alert('로그인 후 이용해주세요.')
-      router.replace('/login')
+      router.replace(loginPath())
     }
   }, [router])
 
@@ -233,7 +233,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
     const session = await getValidSession()
     if (!session) {
       alert('로그인 후 이용해주세요.')
-      router.replace('/login')
+      router.replace(loginPath())
       return
     }
     setConfirming(true)

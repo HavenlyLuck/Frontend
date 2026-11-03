@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { ChatCircleIcon, LockIcon, QuestionIcon } from '@phosphor-icons/react'
 import { ApiError } from '@/lib/api'
-import { AdminPageHeader, useAdminToken } from '@/components/admin/AdminShell'
+import { AdminPageHeader, useAdminToken, useRefreshAdminBadges } from '@/components/admin/AdminShell'
 import { answerInquiry, getAdminInquiries, type InquiryResponse } from '@/lib/reviews'
 import { formatKstDateTime } from '@/lib/date'
 
@@ -21,6 +21,7 @@ type Status = 'waiting' | 'answered'
 // 문의 관리 — 후기/문의 페이지에 올라온 문의에 답변을 단다 (비공개 문의도 관리자는 내용을 본다)
 export default function AdminInquiriesPage() {
   const adminToken = useAdminToken()
+  const refreshBadges = useRefreshAdminBadges()
   const [status, setStatus] = useState<Status>('waiting')
   const [list, setList] = useState<InquiryResponse[] | null>(null)
   const [loadError, setLoadError] = useState('')
@@ -51,6 +52,7 @@ export default function AdminInquiriesPage() {
     try {
       const updated = await answerInquiry(adminToken, q.inquiry_id, answer)
       setList(prev => prev?.map(x => (x.inquiry_id === q.inquiry_id ? updated : x)) ?? prev)
+      refreshBadges()
       setDrafts(prev => { const next = { ...prev }; delete next[q.inquiry_id]; return next })
       setEditing(null)
     } catch (err) {

@@ -25,7 +25,7 @@ export default function EscrowMark() {
       </form>
       <button type="button" onClick={openAuthMark} className="footer-escrow-mark" aria-label="IBK기업은행 구매안전서비스 가입 사실 확인">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={AUTHMARK_IMG} alt="IBK 안심이체 서비스 인증마크" width={70} height={70} />
+        <img src={AUTHMARK_IMG} alt="IBK 안심이체 서비스 인증마크" width={36} height={36} />
       </button>
       <p>
         고객님은 안전거래를 위해 현금 등으로 결제 시 저희 쇼핑몰에서 가입한 IBK기업은행의 구매안전서비스(에스크로)를

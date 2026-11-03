@@ -30,6 +30,18 @@ export function isLoggedIn(): boolean {
   return !!localStorage.getItem('token')
 }
 
+// 로그인 화면 주소 — 로그인 뒤 돌아올 페이지(기본: 지금 보는 페이지)를 next로 붙인다
+export function loginPath(next?: string): string {
+  const target = next ?? (typeof window === 'undefined' ? '/' : window.location.pathname + window.location.search)
+  return target && target !== '/' && !target.startsWith('/login') ? `/login?next=${encodeURIComponent(target)}` : '/login'
+}
+
+// next 값이 우리 사이트 안의 경로일 때만 쓴다 (//evil.com 같은 외부 주소로 보내지 않게)
+export function safeNextPath(next: string | null): string {
+  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return '/'
+  return next
+}
+
 export function clearAuth() {
   localStorage.removeItem('token')
   localStorage.removeItem('refreshToken')

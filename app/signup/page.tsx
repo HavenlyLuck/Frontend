@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signup, checkDuplicate, ApiError, DuplCheckField } from '@/lib/api'
@@ -36,7 +36,13 @@ function StatusMsg({ state, message }: { state: CheckState; message: string }) {
 
 export default function SignupPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ nickname: '', userId: '', password: '', confirm: '', email: '', phone: '' })
+  const [form, setForm] = useState({ nickname: '', userId: '', password: '', confirm: '', email: '', phone: '', referral: '' })
+
+  // 추천 링크(/signup?ref=코드)로 들어오면 추천인 코드를 미리 채워 둔다
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref')
+    if (ref) setForm(prev => ({ ...prev, referral: ref.toUpperCase() }))
+  }, [])
   const [checks, setChecks] = useState<{ nickname: CheckState; userId: CheckState; email: CheckState; phone: CheckState }>({
     nickname: 'idle', userId: 'idle', email: 'idle', phone: 'idle',
   })
@@ -93,6 +99,7 @@ export default function SignupPage() {
         email: form.email,
         password: form.password,
         phone: form.phone,
+        referral_code: form.referral.trim() || null,
       })
       alert('회원가입이 완료되었습니다. 로그인해주세요.')
       router.push('/login')
@@ -249,6 +256,23 @@ export default function SignupPage() {
                 </button>
               </div>
               <StatusMsg state={checks.phone} message={checkMessages.phone} />
+            </div>
+
+            {/* 추천인 코드 (선택) */}
+            <div className="field">
+              <input
+                id="signup-referral"
+                name="referral"
+                type="text"
+                placeholder="추천인 코드 (선택)"
+                value={form.referral}
+                onChange={handleChange}
+                className="field-input"
+                autoComplete="off"
+                maxLength={12}
+                style={{ textTransform: 'uppercase' }}
+              />
+              <p className="field-hint">추천인 코드를 넣고 첫 응모권을 사면, 나와 추천인 모두 무료 응모권 1장을 받아요.</p>
             </div>
 
             <button type="submit" disabled={submitting} className="auth-submit">

@@ -43,6 +43,7 @@ export interface SignupPayload {
   email: string
   password: string
   phone: string  // 테스트 버전: 본인인증 없이 번호 중복확인만 한다
+  referral_code?: string | null  // 추천인 코드 (선택)
 }
 
 export interface SignupResponse {
@@ -297,6 +298,28 @@ export function getMyRaffleEntriesForProduct(token: string, raffleProductId: num
   })
 }
 
+// 마이페이지 구매 내역 1건 — 카드 결제 1건 (응모권 · 쿠지 · 결제 상점)
+// status: paid(결제 완료) / refunded(환불됨 — 응모 취소·구매 취소 등). 부분 취소 후엔 quantity·amount가 남은 만큼
+export type PaymentOrderType = 'raffle_entry' | 'kuji_draw' | 'store_purchase'
+
+export interface MyPaymentResponse {
+  payment_id: string
+  order_type: PaymentOrderType
+  target_id: number
+  product_name: string
+  image_url: string | null
+  quantity: number
+  amount: number
+  status: 'paid' | 'refunded'
+  paid_at: string
+}
+
+export function getMyPayments(token: string) {
+  return request<MyPaymentResponse[]>('/payments/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 export interface MyRaffleEntryResponse {
   entry_id: number
   raffle_product_id: number
@@ -322,10 +345,21 @@ export function getMyRaffleEntries(token: string) {
 // 매진 전(추첨 시작 전) 응모 취소 — 이 상품에 내가 산 응모권 전부를 취소하고 카드 결제를 환불한다.
 // TODO(백엔드): 아직 운영 서버에 없을 수 있는 엔드포인트. 매진됐거나 마감된 응모는 서버가 거절해야 하고,
 // 취소된 칸은 다시 판매 가능해야 한다.
-export function cancelMyRaffleEntries(token: string, raffleProductId: number) {
-  return request<unknown>(`/raffles/${raffleProductId}/entries/me/cancel`, {
+// 내 응모 취소 결과 — refunded가 false면 카드 환불 요청이 잠시 실패해 서버가 자동으로 다시 시도하는 중
+export interface RaffleEntryCancelResponse {
+  raffle_product_id: number
+  cancelled_tickets: number
+  remaining_tickets: number
+  returned_free_tickets: number  // 무료 응모권으로 응모한 장수 중 보관함으로 돌려준 수
+  refunded: boolean
+}
+
+// ticketCount장만 취소 (최근에 산 응모권부터). 생략하면 전부 취소
+export function cancelMyRaffleEntries(token: string, raffleProductId: number, ticketCount?: number) {
+  return request<RaffleEntryCancelResponse>(`/raffles/${raffleProductId}/entries/me/cancel`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ ticket_count: ticketCount ?? null }),
   })
 }
 
@@ -419,6 +453,7 @@ export interface StorageItemResponse {
   carrier: string | null
   tracking_number: string | null
   shipped_at: string | null
+  delivered_at?: string | null  // 있으면 배송 완료, 없으면(발송 후) 배송중
 }
 
 export function getMyStorage(token: string) {
@@ -984,5 +1019,72 @@ export function completePayment(token: string, paymentId: string) {
   return request<PaymentCompleteResponse>(`/payments/${encodeURIComponent(paymentId)}/complete`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// ── 배송 조회 (스마트택배) — 내 배송 내역에 있는 송장만 조회된다 ──
+// level: 1 배송준비 · 2 집화완료 · 3 배송중 · 4 지점 도착 · 5 배송출발 · 6 배송완료
+export interface TrackingDetail {
+  time: string
+  where: string
+  kind: string
+  level: number | null
+}
+
+export interface TrackingResponse {
+  carrier: string
+  tracking_number: string
+  complete: boolean
+  level: number | null
+  estimate: string | null
+  details: TrackingDetail[]  // 최신순
+}
+
+export function trackMyParcel(token: string, carrier: string, trackingNumber: string) {
+  const q = new URLSearchParams({ carrier, tracking_number: trackingNumber })
+  return request<TrackingResponse>(`/storage/tracking?${q}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// ── 추천인 코드 · 보관함 무료 응모권 ──
+export interface ReferralSummaryResponse {
+  referral_code: string              // 내 추천인 코드
+  referred_by_nickname: string | null // 내가 등록한 추천인
+  can_register: boolean               // 지금 추천인을 등록할 수 있는지 (추천인 없음 + 응모권 구매 전)
+  invited_count: number               // 내 코드로 등록한 사람 수
+  rewarded_count: number              // 그중 첫 구매까지 해서 받은 추천 응모권 수
+}
+
+export function getMyReferral(token: string) {
+  return request<ReferralSummaryResponse>('/referrals/me', { headers: { Authorization: `Bearer ${token}` } })
+}
+
+export function registerReferral(token: string, referralCode: string) {
+  return request<ReferralSummaryResponse>('/referrals/register', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ referral_code: referralCode }),
+  })
+}
+
+// first_purchase: 첫 구매 선물 응모권(related = 나를 추천한 사람), referral: 추천 응모권(related = 내가 추천한 사람)
+export interface FreeTicketResponse {
+  free_ticket_id: number
+  kind: 'first_purchase' | 'referral'
+  related_nickname: string | null
+  created_at: string
+}
+
+export function getMyFreeTickets(token: string) {
+  return request<FreeTicketResponse[]>('/referrals/tickets', { headers: { Authorization: `Bearer ${token}` } })
+}
+
+// 보관함 무료 응모권으로 결제 없이 응모
+export function enterRaffleWithFreeTickets(token: string, raffleProductId: number, ticketCount: number) {
+  return request<RaffleEntryCreateResponse>(`/raffles/${raffleProductId}/entries/free`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ ticket_count: ticketCount }),
   })
 }
