@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { CheckIcon, GearIcon, LockKeyIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { clearAuth, getValidSession } from '@/lib/auth'
 import { ApiError, changeMyPassword, getMyProfile } from '@/lib/api'
+import ReferralCard from '@/components/ReferralCard'
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: 8,
@@ -111,6 +112,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        <ReferralCard />
 
         <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>비밀번호 변경</div>

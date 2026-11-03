@@ -34,7 +34,8 @@ export default function StoreProductCard({ product: p }: { product: StoreProduct
         <div className="card-title" style={soldOut ? { color: 'var(--text-tertiary)' } : undefined}>{p.product_name}</div>
         <div className="card-price" style={{ color: soldOut ? 'var(--text-tertiary)' : undefined, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <span>{formatStorePrice(p.pay_type, p.price)}</span>
-          {p.stock > 0 && p.stock <= 3 && (
+          {/* 마지막 1개일 때만 알린다 */}
+          {p.stock === 1 && (
             <span style={{ background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, flexShrink: 0 }}>
               재고 {p.stock}개 남음
             </span>

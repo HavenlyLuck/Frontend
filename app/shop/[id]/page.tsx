@@ -13,7 +13,7 @@ import { notifyStorageUpdated } from "@/lib/storage";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
 import { payWithCard, paymentFailureMessage, PaymentWindowError } from "@/lib/payment";
 import { isWished, toggleWishlist } from "@/lib/wishlist";
-import { getValidSession } from "@/lib/auth";
+import { getValidSession, loginPath } from "@/lib/auth";
 import StoreProductCard, {
   STORE_LABEL,
   PayTypeIcon,
@@ -101,7 +101,7 @@ export default function ShopProductPage({
     if (purchasing) return;
     const session = await getValidSession();
     if (!session) {
-      router.replace("/login");
+      router.replace(loginPath());
       return;
     }
     setPurchasing(true);
@@ -209,11 +209,12 @@ export default function ShopProductPage({
             <div className="price">
               {formatStorePrice(product.pay_type, product.price)}
             </div>
-            <div className="price-sub">
-              {soldOut
-                ? "현재 품절된 상품입니다"
-                : `재고 ${product.stock}개 남음`}
-            </div>
+            {/* 품절이거나 마지막 1개일 때만 알린다 */}
+            {(soldOut || product.stock === 1) && (
+              <div className="price-sub">
+                {soldOut ? "현재 품절된 상품입니다" : "재고 1개 남음"}
+              </div>
+            )}
 
             {product.description && (
               <>

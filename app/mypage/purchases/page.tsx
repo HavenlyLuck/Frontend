@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { MagnifyingGlassIcon, ReceiptIcon, TicketIcon, XIcon } from '@phosphor-icons/react'
-import type { MyRaffleEntryResponse } from '@/lib/api'
-import { useMyRaffleEntries } from '@/hooks/useMyRaffleEntries'
+import { useEffect, useMemo, useState } from 'react'
+import { MagnifyingGlassIcon, ReceiptIcon, ShoppingBagIcon, SquaresFourIcon, TicketIcon, XIcon } from '@phosphor-icons/react'
+import { getMyPayments, type MyPaymentResponse, type PaymentOrderType } from '@/lib/api'
+import { getValidSession } from '@/lib/auth'
 import { parseServerTime } from '@/lib/raffle'
 import { formatKstDateTime, kstMonthKey as monthKey, monthLabel } from '@/lib/date'
 import Pagination from '@/components/Pagination'
@@ -12,11 +12,33 @@ const PAGE_SIZE = 10
 
 interface MonthGroup {
   key: string
-  entries: MyRaffleEntryResponse[]
+  entries: MyPaymentResponse[]
+}
+
+// 결제 종류별 표시 — 아이콘 · 이름 · 수량 단위
+const ORDER_KIND: Record<PaymentOrderType, { label: string; unit: string; Icon: typeof TicketIcon }> = {
+  raffle_entry: { label: '응모권', unit: '장', Icon: TicketIcon },
+  kuji_draw: { label: '쿠지', unit: '장', Icon: SquaresFourIcon },
+  store_purchase: { label: '상점', unit: '개', Icon: ShoppingBagIcon },
+}
+
+// 내 카드 결제 내역 (응모권 · 쿠지 · 결제 상점, 환불된 것 포함)
+function useMyPayments() {
+  const [entries, setEntries] = useState<MyPaymentResponse[]>([])
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    getValidSession().then(session => {
+      if (!session) return
+      getMyPayments(session.token)
+        .then(res => { setEntries(res); setLoaded(true) })
+        .catch(() => setLoaded(true))
+    })
+  }, [])
+  return { entries, loaded }
 }
 
 export default function PurchaseHistoryPage() {
-  const { entries, loaded } = useMyRaffleEntries()
+  const { entries, loaded } = useMyPayments()
   const [query, setQuery] = useState('')
   // 아무것도 안 고르면 이번 달만. 검색어가 있으면 고른 달과 상관없이 전체 기간에서 찾는다
   const thisMonth = useMemo(() => monthKey(new Date().toISOString()), [])
@@ -25,18 +47,18 @@ export default function PurchaseHistoryPage() {
   const month = query.trim() ? 'all' : (pickedMonth ?? thisMonth)
 
   const sorted = useMemo(
-    () => [...entries].sort((a, b) => parseServerTime(b.created_at) - parseServerTime(a.created_at)),
+    () => [...entries].sort((a, b) => parseServerTime(b.paid_at) - parseServerTime(a.paid_at)),
     [entries],
   )
   const months = useMemo(
-    () => Array.from(new Set([thisMonth, ...sorted.map(e => monthKey(e.created_at))])).sort().reverse(),
+    () => Array.from(new Set([thisMonth, ...sorted.map(e => monthKey(e.paid_at))])).sort().reverse(),
     [sorted, thisMonth],
   )
 
   const keyword = query.trim().toLowerCase()
   const filtered = useMemo(
     () => sorted.filter(e =>
-      (month === 'all' || monthKey(e.created_at) === month) &&
+      (month === 'all' || monthKey(e.paid_at) === month) &&
       (!keyword || e.product_name.toLowerCase().includes(keyword))),
     [sorted, month, keyword],
   )
@@ -44,10 +66,11 @@ export default function PurchaseHistoryPage() {
   const monthTotals = useMemo(() => {
     const map = new Map<string, { count: number; total: number }>()
     for (const e of filtered) {
-      const key = monthKey(e.created_at)
+      const key = monthKey(e.paid_at)
       const t = map.get(key) ?? { count: 0, total: 0 }
       t.count += 1
-      t.total += e.amount_paid
+      // 환불된 결제는 건수에는 넣되 합계에서는 뺀다
+      if (e.status === 'paid') t.total += e.amount
       map.set(key, t)
     }
     return map
@@ -59,7 +82,7 @@ export default function PurchaseHistoryPage() {
   const groups = useMemo(() => {
     const map = new Map<string, MonthGroup>()
     for (const e of filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)) {
-      const key = monthKey(e.created_at)
+      const key = monthKey(e.paid_at)
       const group = map.get(key) ?? { key, entries: [] }
       group.entries.push(e)
       map.set(key, group)
@@ -123,23 +146,35 @@ export default function PurchaseHistoryPage() {
                   <span className="purchase-month-summary">{monthTotals.get(group.key)?.count ?? 0}건 · {(monthTotals.get(group.key)?.total ?? 0).toLocaleString()}원</span>
                 </div>
                 <div className="entry-list">
-                  {group.entries.map(entry => (
-                    <div key={entry.entry_id} className="entry-item" style={{ cursor: 'default' }}>
-                      <div className="entry-emoji">
-                        {entry.image_url ? <img src={entry.image_url} alt={entry.product_name} /> : <TicketIcon size={22} />}
-                      </div>
-                      <div className="entry-info">
-                        <div className="entry-title">{entry.product_name}</div>
-                        <div className="entry-meta">
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><TicketIcon size={12} /> {entry.ticket_count}장</span>
-                          <span>{formatKstDateTime(entry.created_at)}</span>
+                  {group.entries.map(entry => {
+                    const kind = ORDER_KIND[entry.order_type]
+                    const refunded = entry.status === 'refunded'
+                    return (
+                      <div key={entry.payment_id} className="entry-item" style={{ cursor: 'default' }}>
+                        <div className="entry-emoji">
+                          {entry.image_url ? <img src={entry.image_url} alt={entry.product_name} /> : <kind.Icon size={22} />}
+                        </div>
+                        <div className="entry-info">
+                          <div className="entry-title">{entry.product_name}</div>
+                          <div className="entry-meta">
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                              <kind.Icon size={12} /> {kind.label} {entry.quantity}{kind.unit}
+                            </span>
+                            <span>{formatKstDateTime(entry.paid_at)}</span>
+                          </div>
+                        </div>
+                        <div className="entry-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                          <span
+                            className={`status-badge ${refunded ? 'lose' : 'waiting'}`}
+                            style={refunded ? { textDecoration: 'line-through' } : undefined}
+                          >
+                            {entry.amount.toLocaleString()}원
+                          </span>
+                          {refunded && <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>환불됨</span>}
                         </div>
                       </div>
-                      <div className="entry-status">
-                        <span className="status-badge waiting">{entry.amount_paid.toLocaleString()}원</span>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </section>
             ))

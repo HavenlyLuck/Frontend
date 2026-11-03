@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { TicketIcon, CalendarIcon } from "@phosphor-icons/react";
+import { TicketIcon, CalendarIcon, CheckCircleIcon, GrainsIcon, WarningIcon } from "@phosphor-icons/react";
 import {
   useRaffleEntryPhases,
   type PhasedRaffleEntry,
@@ -61,32 +61,64 @@ const PAST_EMPTY: Record<PastFilter, string> = {
   failed: "응모실패한 응모가 없어요.",
 };
 
+// 취소 미리보기 — 서버와 같은 순서(최근 응모부터)로 count장을 취소했을 때 카드 환불 금액과 보관함으로 돌아갈 무료 응모권 수
+function cancelPreview(item: PhasedRaffleEntry, count: number): { refund: number; returned: number } {
+  const parts = [...item.parts].sort((a, b) =>
+    a.createdAt === b.createdAt ? b.entryId - a.entryId : a.createdAt < b.createdAt ? 1 : -1,
+  );
+  let left = count;
+  let refund = 0;
+  let returned = 0;
+  for (const p of parts) {
+    if (left <= 0) break;
+    const take = Math.min(p.ticketCount, left);
+    left -= take;
+    if (p.amountPaid === 0) returned += take; // 무료 응모권 응모
+    else refund += Math.round((p.amountPaid / p.ticketCount) * take);
+  }
+  return { refund, returned };
+}
+
 export default function RaffleEntriesPage() {
   const { items, entries, checkResult, reload } = useRaffleEntryPhases();
   const [cancelingId, setCancelingId] = useState<number | null>(null);
+  // 응모 취소 팝업 — 확인 → (취소 요청) → 완료까지 사이트 공통 모달(.modal-overlay) 하나로 이어진다
+  const [cancelTarget, setCancelTarget] = useState<PhasedRaffleEntry | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelDone, setCancelDone] = useState<{ tickets: number; remaining: number; returned: number; refunded: boolean } | null>(null);
+  // 취소할 응모권 장수 — 기본은 전부
+  const [cancelQty, setCancelQty] = useState(1);
+
+  function openCancel(item: PhasedRaffleEntry) {
+    if (cancelingId != null) return;
+    setCancelTarget(item);
+    setCancelQty(item.totalTicketCount);
+    setCancelError(null);
+    setCancelDone(null);
+  }
+
+  function closeCancel() {
+    if (cancelingId != null) return; // 취소 요청 중에는 닫지 않는다
+    setCancelTarget(null);
+  }
 
   // 매진 전 응모만 취소할 수 있다 — 이 상품에 산 응모권 전부를 취소하고 카드 결제를 환불한다
-  async function cancelEntries(item: PhasedRaffleEntry) {
-    if (cancelingId != null) return;
-    if (
-      !window.confirm(
-        `'${item.product_name}' 응모를 취소할까요?\n\n산 응모권 ${item.totalTicketCount}장(${item.totalAmountPaid.toLocaleString()}원)이 모두 취소되고, 카드 결제가 환불돼요. 환불이 카드에 반영되기까지 며칠 걸릴 수 있어요.`,
-      )
-    )
-      return;
+  async function confirmCancel() {
+    const item = cancelTarget;
+    if (!item || cancelingId != null) return;
     const session = await getValidSession();
-    if (!session) return;
+    if (!session) {
+      setCancelError("로그인이 만료되었어요. 다시 로그인해 주세요.");
+      return;
+    }
     setCancelingId(item.raffle_product_id);
+    setCancelError(null);
     try {
-      await cancelMyRaffleEntries(session.token, item.raffle_product_id);
+      const res = await cancelMyRaffleEntries(session.token, item.raffle_product_id, cancelQty);
+      setCancelDone({ tickets: res.cancelled_tickets, remaining: res.remaining_tickets, returned: res.returned_free_tickets, refunded: res.refunded });
       await reload();
-      alert("응모가 취소되었어요. 카드 결제가 환불될 예정이에요.");
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 404 || err.status === 405)) {
-        alert("지금은 화면에서 바로 취소할 수 없어요. 고객센터(010-9831-1138 · havenlyluck@gmail.com)로 요청해 주시면 취소해 드릴게요.");
-      } else {
-        alert(err instanceof ApiError ? err.message : "취소 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
-      }
+      setCancelError(err instanceof ApiError ? err.message : "취소 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
       await reload();
     } finally {
       setCancelingId(null);
@@ -263,7 +295,7 @@ export default function RaffleEntriesPage() {
                           // 카드 전체가 상세 페이지 링크라서 이동을 막는다
                           e.preventDefault();
                           e.stopPropagation();
-                          cancelEntries(item);
+                          openCancel(item);
                         }}
                       >
                         {cancelingId === item.raffle_product_id ? "취소 중..." : "응모 취소"}
@@ -435,6 +467,37 @@ export default function RaffleEntriesPage() {
                   <br />내 응모번호 #{resultItem.entryNumbers.join(", #")} ·
                   당첨번호 #{resultItem.winnerEntryNumber}
                 </div>
+                {!isWin && resultItem.totalAmountPaid > 0 && (
+                  // 낙첨 보상 — 서버가 추첨과 동시에 돈 내고 산 응모권만큼(= 결제 금액) 쌀포인트를 지급해 두었다. 무료 응모권은 제외
+                  <div className="consolation-card">
+                    <div className="consolation-icon">
+                      <GrainsIcon size={22} weight="fill" />
+                    </div>
+                    <div className="consolation-body">
+                      <div className="consolation-label">쌀포인트 환급 완료</div>
+                      <div className="consolation-amount">
+                        +{resultItem.totalAmountPaid.toLocaleString()}P
+                      </div>
+                      <div className="consolation-desc">
+                        응모권 {resultItem.parts.filter((p) => p.amountPaid > 0).reduce((n, p) => n + p.ticketCount, 0)}장만큼 돌려드렸어요. 쌀포인트 상점에서 사용할 수 있어요.
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {!isWin && resultItem.totalAmountPaid > 0 && (
+                  <Link
+                    className="win-close"
+                    href="/mypage/points"
+                    style={{
+                      display: "block",
+                      textAlign: "center",
+                      textDecoration: "none",
+                      marginBottom: 8,
+                    }}
+                  >
+                    쌀포인트 내역 보기 →
+                  </Link>
+                )}
                 {isWin && (
                   <Link
                     className="win-close"
@@ -459,6 +522,114 @@ export default function RaffleEntriesPage() {
             )}
           </div>
         )}
+      </div>
+
+      {/* 응모 취소 팝업 */}
+      <div
+        className={`modal-overlay ${cancelTarget ? "open" : ""}`}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) closeCancel();
+        }}
+      >
+        {cancelTarget && (cancelDone ? (
+          <div className="modal success-modal" role="dialog" aria-modal="true" aria-label="응모 취소 완료" style={{ margin: "0 16px" }}>
+            <div className="modal-icon">
+              <CheckCircleIcon size={28} weight="fill" color="var(--accent)" />
+            </div>
+            <div className="modal-title">응모가 취소되었어요</div>
+            <div className="modal-sub">
+              {cancelTarget.product_name}
+              <br />
+              응모권 <strong style={{ color: "var(--text)" }}>{cancelDone.tickets}장</strong>이 취소되었어요.
+              {cancelDone.remaining > 0 && <> 남은 응모권 {cancelDone.remaining}장으로 계속 응모 중이에요.</>}
+              <br />
+              {cancelDone.returned > 0 && <>무료 응모권 {cancelDone.returned}장은 보관함으로 돌아갔어요.<br /></>}
+              {cancelDone.tickets > cancelDone.returned &&
+                (cancelDone.refunded
+                  ? "카드 결제가 취소되었어요. 카드사에 따라 환불 반영까지 며칠 걸릴 수 있어요."
+                  : "카드 결제 취소는 잠시 뒤 자동으로 처리돼요.")}
+            </div>
+            <div className="modal-btn-row">
+              <button className="btn-confirm" autoFocus onClick={closeCancel}>
+                확인
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="modal" role="dialog" aria-modal="true" aria-label="응모 취소 확인" style={{ margin: "0 16px" }}>
+            <div className="modal-icon">
+              <TicketIcon size={28} weight="fill" color="var(--accent)" />
+            </div>
+            <div className="modal-title">응모를 취소할까요?</div>
+            <div className="modal-sub">
+              {cancelTarget.product_name}
+              <br />
+              지금 응모권 {cancelTarget.totalTicketCount}장을 갖고 있어요.
+            </div>
+
+            <div className="ticket-count">
+              <div className="ticket-label">취소할 응모권</div>
+              <div className="ticket-selector">
+                <button
+                  className="ticket-btn"
+                  onClick={() => setCancelQty((q) => Math.max(1, q - 1))}
+                  disabled={cancelingId != null || cancelQty <= 1}
+                  aria-label="취소할 장수 줄이기"
+                >
+                  −
+                </button>
+                <div className="ticket-num">{cancelQty}</div>
+                <button
+                  className="ticket-btn"
+                  onClick={() => setCancelQty((q) => Math.min(cancelTarget.totalTicketCount, q + 1))}
+                  disabled={cancelingId != null || cancelQty >= cancelTarget.totalTicketCount}
+                  aria-label="취소할 장수 늘리기"
+                >
+                  +
+                </button>
+              </div>
+              <div className="ticket-info">
+                <span>
+                  {cancelQty === cancelTarget.totalTicketCount ? "전부 취소" : `취소 후 ${cancelTarget.totalTicketCount - cancelQty}장 남음`}
+                </span>
+                <span className="total">
+                  {(() => {
+                    const { refund, returned } = cancelPreview(cancelTarget, cancelQty);
+                    return [refund > 0 || returned === 0 ? `환불 ${refund.toLocaleString()}원` : null, returned > 0 ? `응모권 ${returned}장 반환` : null]
+                      .filter(Boolean)
+                      .join(" + ");
+                  })()}
+                </span>
+              </div>
+            </div>
+
+            <div className="modal-notice">
+              <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: "2px" }} />
+              <span>
+                {cancelQty === cancelTarget.totalTicketCount
+                  ? "이 상품에 산 응모권이 모두 취소되고 응모에서 빠져요."
+                  : "최근에 산 응모권부터 취소되고, 남은 응모권으로 계속 응모돼요."}{" "}
+                카드 결제는 취소한 만큼 환불되고(반영까지 며칠 걸릴 수 있어요), 무료 응모권으로 응모한 장수는 보관함으로 돌아가요.
+              </span>
+            </div>
+
+            {cancelError && (
+              <div className="modal-notice" role="alert">
+                <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: "2px" }} />
+                <span style={{ whiteSpace: "pre-line" }}>{cancelError}</span>
+              </div>
+            )}
+
+            <div className="modal-btn-row">
+              <button className="btn-cancel" onClick={closeCancel} disabled={cancelingId != null}>
+                닫기
+              </button>
+              <button className="btn-confirm" onClick={confirmCancel} disabled={cancelingId != null}>
+                {cancelingId != null ? "취소 중..." : "응모 취소하기"}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </>
   );

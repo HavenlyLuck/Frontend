@@ -20,6 +20,10 @@ import {
   type AddressSearchItem,
   type StorageItemResponse,
 } from '@/lib/api'
+import Pagination from '@/components/Pagination'
+import FreeTicketShelf from '@/components/FreeTicketShelf'
+
+const PAGE_SIZE = 10
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: 8,
@@ -65,6 +69,7 @@ function errorMessage(err: unknown) {
 export default function StoragePage() {
   const { items, setItems, loaded } = useStorage()
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [page, setPage] = useState(1)
   const [toast, setToast] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -105,6 +110,10 @@ export default function StoragePage() {
   // 배송 신청한 상품은 배송 내역으로 옮겨가고, 보관함에는 보관 중인 것만 남는다
   const readyItems = items.filter(i => i.status === 'ready')
   const allSelected = readyItems.length > 0 && readyItems.every(i => selected.has(i.storage_item_id))
+  // 10개씩 나눠 보여준다. 선택은 페이지를 넘겨도 유지되고, 전체선택은 모든 페이지의 상품을 고른다
+  const pageCount = Math.max(1, Math.ceil(readyItems.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const pageItems = readyItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -298,6 +307,8 @@ export default function StoragePage() {
         </div>
       </div>
 
+      <FreeTicketShelf />
+
       {readyItems.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -309,7 +320,7 @@ export default function StoragePage() {
       )}
 
       <div className="entry-list">
-        {readyItems.map(item => {
+        {pageItems.map(item => {
           const isSelected = selected.has(item.storage_item_id)
           const title = itemTitle(item)
           const value = itemValue(item)
@@ -367,6 +378,8 @@ export default function StoragePage() {
           )
         })}
       </div>
+
+      <Pagination page={currentPage} pageCount={pageCount} onChange={setPage} label="보관함 페이지" />
 
       {loaded && readyItems.length === 0 && (
         <div className="coming-soon-box">

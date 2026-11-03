@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CaretDownIcon, CopyIcon, DownloadSimpleIcon, MagnifyingGlassIcon, PackageIcon, XIcon } from '@phosphor-icons/react'
 import { ApiError } from '@/lib/api'
-import { AdminPageHeader, useAdminToken } from '@/components/admin/AdminShell'
+import { AdminPageHeader, useAdminToken, useRefreshAdminBadges } from '@/components/admin/AdminShell'
 import {
   CARRIERS, boxesToCsv, downloadCsv, fetchShippingBoxes, shipBox,
   type ShippingBox, type ShippingStatus,
@@ -24,6 +24,7 @@ const fmt = (iso: string | null) => (iso ? new Date(parseServerTime(iso)).toLoca
 // 배송 관리 — 고객이 보관함에서 배송 신청한 상품을 박스 단위로 보고, 송장번호를 넣어 발송 처리한다
 export default function AdminShippingPage() {
   const adminToken = useAdminToken()
+  const refreshBadges = useRefreshAdminBadges()
   const [status, setStatus] = useState<ShippingStatus>('requested')
   const [boxes, setBoxes] = useState<ShippingBox[] | null>(null)
   const [counts, setCounts] = useState<Record<ShippingStatus, number>>({ requested: 0, shipped: 0 })
@@ -114,6 +115,7 @@ export default function AdminShippingPage() {
             <ShippingBoxCard key={box.key} box={box} collapsible={status === 'shipped'} onShip={async (carrier, tracking) => {
               await shipBox(adminToken, box, carrier, tracking)
               await load(adminToken, status)
+              refreshBadges()
             }} />
           ))}
           {status === 'shipped' && (

@@ -12,12 +12,15 @@ import {
   WarningIcon,
 } from "@phosphor-icons/react";
 import {
+  ApiError,
+  enterRaffleWithFreeTickets,
+  getMyFreeTickets,
   getRaffleProducts,
   type RaffleProductResponse,
   type RaffleEntryCreateResponse,
 } from "@/lib/api";
 import { isWished, toggleWishlist } from "@/lib/wishlist";
-import { getValidSession, isLoggedIn } from "@/lib/auth";
+import { getValidSession, isLoggedIn, loginPath } from "@/lib/auth";
 import { payWithCard, paymentFailureMessage } from "@/lib/payment";
 import RefundNotice from "@/components/RefundNotice";
 
@@ -43,7 +46,7 @@ export default function RaffleProductPage({
   useEffect(() => {
     if (!isLoggedIn()) {
       alert("로그인 후 이용해주세요.");
-      router.replace("/login");
+      router.replace(loginPath());
     }
   }, [router]);
 
@@ -59,6 +62,9 @@ export default function RaffleProductPage({
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // 보관함 무료 응모권(첫 구매 선물 · 추천 응모권) — 있으면 결제 대신 쓸 수 있다
+  const [freeTicketCount, setFreeTicketCount] = useState(0);
+  const [payMode, setPayMode] = useState<"card" | "free">("card");
 
   useEffect(() => {
     getRaffleProducts()
@@ -125,17 +131,38 @@ export default function RaffleProductPage({
       ? Math.min(100, Math.round((soldCount / product.total_slots) * 100))
       : 0;
 
+  const useFree = payMode === "free" && freeTicketCount > 0;
+  // 무료 응모권으로 낼 때는 가진 장수까지만
+  const maxTickets = useFree ? Math.min(maxPurchasable, freeTicketCount) : maxPurchasable;
+
   const changeTicket = (delta: number) =>
     setTicketCount((prev) =>
-      Math.min(Math.max(maxPurchasable, 1), Math.max(1, prev + delta)),
+      Math.min(Math.max(maxTickets, 1), Math.max(1, prev + delta)),
     );
+
+  const changePayMode = (mode: "card" | "free") => {
+    setPayMode(mode);
+    setTicketCount(1);
+    setSubmitError(null);
+  };
 
   const openModal = () => {
     setSubmitError(null);
     setTicketCount(1);
     setTearing(false);
     setPurchaseResult(null);
+    setPayMode("card");
     setModalOpen(true);
+    // 로그인했으면 보관함 무료 응모권 수를 확인해 결제 방식 선택지를 보여준다
+    getValidSession().then((session) => {
+      if (!session) return;
+      getMyFreeTickets(session.token)
+        .then((list) => {
+          setFreeTicketCount(list.length);
+          if (list.length > 0) setPayMode("free");
+        })
+        .catch(() => setFreeTicketCount(0));
+    });
   };
 
   // 응모권 카드와 성공 카드는 같은 배경(.modal-overlay) 하나를 공유한다.
@@ -152,24 +179,36 @@ export default function RaffleProductPage({
     const session = await getValidSession();
     if (!session) {
       alert("로그인 후 이용해주세요.");
-      router.replace("/login");
+      router.replace(loginPath());
       return;
     }
 
     setSubmitting(true);
     setSubmitError(null);
     try {
-      // 카드 결제 → 서버가 결제를 확인하고 응모권을 발급한다
-      const paid = await payWithCard(session.token, {
-        order_type: "raffle_entry",
-        target_id: product.raffle_product_id,
-        quantity: ticketCount,
-      });
-      if (paid.status !== "paid" || !paid.raffle_entry) {
-        setSubmitError(paid.status === "conflict" ? "응모할 수 없습니다." : paymentFailureMessage(paid));
-        return;
+      let entry: RaffleEntryCreateResponse;
+      if (useFree) {
+        // 보관함 무료 응모권 사용 — 결제 없이 바로 응모된다
+        try {
+          entry = await enterRaffleWithFreeTickets(session.token, product.raffle_product_id, ticketCount);
+        } catch (err) {
+          setSubmitError(err instanceof ApiError ? err.message : "응모권을 사용하지 못했어요.");
+          return;
+        }
+        setFreeTicketCount((n) => Math.max(0, n - ticketCount));
+      } else {
+        // 카드 결제 → 서버가 결제를 확인하고 응모권을 발급한다
+        const paid = await payWithCard(session.token, {
+          order_type: "raffle_entry",
+          target_id: product.raffle_product_id,
+          quantity: ticketCount,
+        });
+        if (paid.status !== "paid" || !paid.raffle_entry) {
+          setSubmitError(paid.status === "conflict" ? "응모할 수 없습니다." : paymentFailureMessage(paid));
+          return;
+        }
+        entry = paid.raffle_entry;
       }
-      const entry = paid.raffle_entry;
       const newSoldSlots = product.sold_slots + entry.ticket_count;
       const justSoldOut = newSoldSlots >= product.total_slots;
       setProduct((prev) =>
@@ -384,6 +423,31 @@ export default function RaffleProductPage({
               이며 추첨일에 당첨자를 발표합니다.
             </div>
 
+            {freeTicketCount > 0 && (
+              <div className="pay-mode-toggle" role="radiogroup" aria-label="응모 방법">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={payMode === "free"}
+                  className={payMode === "free" ? "active" : ""}
+                  onClick={() => changePayMode("free")}
+                  disabled={submitting}
+                >
+                  보관함 응모권 <b>{freeTicketCount}장</b>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={payMode === "card"}
+                  className={payMode === "card" ? "active" : ""}
+                  onClick={() => changePayMode("card")}
+                  disabled={submitting}
+                >
+                  카드 결제
+                </button>
+              </div>
+            )}
+
             <div className="ticket-count">
               <div className="ticket-label">응모권 수량</div>
               <div className="ticket-selector">
@@ -397,10 +461,14 @@ export default function RaffleProductPage({
               </div>
               <div className="ticket-info">
                 <span>
-                  최대 {maxPurchasable.toLocaleString()}장까지 구매 가능
+                  {useFree
+                    ? `보관함 응모권 최대 ${maxTickets.toLocaleString()}장 사용 가능`
+                    : `최대 ${maxPurchasable.toLocaleString()}장까지 구매 가능`}
                 </span>
                 <span className="total">
-                  총 {(ticketCount * product.ticket_price).toLocaleString()}원
+                  {useFree
+                    ? `응모권 ${ticketCount}장 사용 · 0원`
+                    : `총 ${(ticketCount * product.ticket_price).toLocaleString()}원`}
                 </span>
               </div>
             </div>
@@ -448,7 +516,9 @@ export default function RaffleProductPage({
               disabled={submitting || soldOut || expired}
             >
               <TicketIcon size={15} weight="fill" />{" "}
-              {submitting ? "결제 중..." : "결제하기"}
+              {submitting
+                ? useFree ? "응모 중..." : "결제 중..."
+                : useFree ? "응모권 사용하기" : "결제하기"}
             </button>
             </div>
           </div>

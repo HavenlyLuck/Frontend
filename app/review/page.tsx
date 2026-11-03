@@ -14,7 +14,7 @@ import {
   XIcon,
 } from '@phosphor-icons/react'
 import { ApiError } from '@/lib/api'
-import { getValidSession } from '@/lib/auth'
+import { getValidSession, loginPath } from '@/lib/auth'
 import { formatKstDate } from '@/lib/date'
 import {
   createInquiry, createReview, deleteReview, getInquiries, getReviewableItems, getReviews,
@@ -85,7 +85,7 @@ export default function ReviewPage() {
   async function openModal() {
     const session = await getValidSession()
     if (!session) {
-      router.push('/login')
+      router.push(loginPath())
       return
     }
     setToken(session.token)

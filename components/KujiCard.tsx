@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { GiftIcon } from '@phosphor-icons/react'
-import { isLoggedIn } from '@/lib/auth'
+import { isLoggedIn, loginPath } from '@/lib/auth'
 import CardImage from '@/components/CardImage'
 import type { KujiListItem } from '@/lib/kujiList'
 
@@ -15,7 +15,7 @@ export default function KujiCard({ item }: { item: KujiListItem }) {
     if (!isLoggedIn()) {
       e.preventDefault()
       alert('로그인 후 이용해주세요.')
-      router.push('/login')
+      router.push(loginPath(item.href))
     }
   }
 
