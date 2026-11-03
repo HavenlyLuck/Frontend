@@ -418,14 +418,20 @@ export const STORE_CATEGORIES: Record<StorePayType, { id: StoreCategory; label: 
   ],
 }
 
-export function getStoreProducts(payType?: StorePayType) {
-  const query = payType ? `?pay_type=${payType}` : ''
-  return request<StoreProductResponse[]>(`/store-products${query}`)
+// 품절 상품은 기본으로 빠진다 (응모 전환 모금 중인 상품은 재고 0이어도 나온다).
+// 관리자 화면·상품 상세처럼 품절 상품도 필요하면 includeSoldOut
+export function getStoreProducts(payType?: StorePayType, includeSoldOut = false) {
+  const params = new URLSearchParams()
+  if (payType) params.set('pay_type', payType)
+  if (includeSoldOut) params.set('include_sold_out', 'true')
+  const query = params.toString()
+  return request<StoreProductResponse[]>(`/store-products${query ? `?${query}` : ''}`)
 }
 
 // 상점 상품의 응모 전환 모금 현황 — 응모권(가격 ÷ 응모권 가격)의 1/3(threshold)이 팔리면 응모 상품으로 전환된다
 export interface StoreFundingStatus {
   available: boolean               // 지금 응모권을 사서 모금에 참여(또는 새로 시작)할 수 있는지
+  unavailable_reason?: string | null  // available이 false인 이유 (같은 상품 응모 진행 중 · 재고 없음 등)
   raffle_product_id: number | null // 진행 중인 모금 (없으면 아직 아무도 시작하지 않음)
   sold_slots: number
   threshold: number

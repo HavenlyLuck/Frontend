@@ -38,7 +38,8 @@ export default function ShopProductPage({
 
   useEffect(() => {
     let cancelled = false;
-    getStoreProducts()
+    // 품절 상품도 상세는 보여 준다 (관련 상품에서는 품절을 뺀다)
+    getStoreProducts(undefined, true)
       .then((list) => {
         if (!cancelled) setProducts(list);
       })
@@ -115,7 +116,8 @@ export default function ShopProductPage({
     .filter(
       (p) =>
         p.store_product_id !== product.store_product_id &&
-        p.pay_type === product.pay_type,
+        p.pay_type === product.pay_type &&
+        p.stock > 0,
     )
     .slice(0, 4);
 

@@ -53,7 +53,7 @@ export default function AdminProductsPage() {
   const [storeListError, setStoreListError] = useState<string | null>(null)
 
   function reloadStoreProducts() {
-    getStoreProducts()
+    getStoreProducts(undefined, true)
       .then(setStoreProducts)
       .catch((err) => setStoreListError(err instanceof ApiError ? err.message : '상점 상품 목록을 불러오지 못했습니다.'))
   }
