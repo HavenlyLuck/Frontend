@@ -145,7 +145,11 @@ export default function StoreFundingCard({ product, funding, onChanged }: Props)
         </div>
 
         <button className="funding-btn" onClick={openModal} disabled={!funding.available || bannedUntil != null}>
-          {!funding.available ? '지금은 전환할 수 없어요' : started ? '응모권 사고 전환 참여하기' : '응모 전환 시작하기'}
+          {!funding.available
+            ? funding.unavailable_reason ?? '지금은 전환할 수 없어요'
+            : started
+              ? '응모권 사고 전환 참여하기'
+              : '응모 전환 시작하기'}
         </button>
         {bannedText && (
           <div className="funding-banned" role="note">
