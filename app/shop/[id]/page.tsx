@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ApiError,
+  getStoreProduct,
   getStoreProducts,
   purchaseStoreProduct,
+  type StoreFundingStatus,
   type StoreProductResponse,
 } from "@/lib/api";
 import { notifyStorageUpdated } from "@/lib/storage";
@@ -20,6 +22,7 @@ import StoreProductCard, {
   formatStorePrice,
 } from "@/components/StoreProductCard";
 import RefundNotice from "@/components/RefundNotice";
+import StoreFundingCard from "@/components/StoreFundingCard";
 import { ConfettiIcon, WarningIcon } from "@phosphor-icons/react";
 
 // 상점 상품 상세 — 관련 상품 섹션 때문에 목록을 받아 id로 찾는다.
@@ -46,6 +49,28 @@ export default function ShopProductPage({
       cancelled = true;
     };
   }, []);
+
+  // 결제 상점 상품의 응모 전환 모금 현황 — 다른 사람이 응모권을 사면 올라가므로 주기적으로 다시 불러온다
+  const [funding, setFunding] = useState<StoreFundingStatus | null>(null);
+  const loadDetail = () =>
+    getValidSession()
+      .then((session) => getStoreProduct(productId, session?.token))
+      .then((detail) => {
+        setFunding(detail.funding ?? null);
+        setProducts(
+          (prev) =>
+            prev?.map((p) =>
+              p.store_product_id === productId ? { ...p, stock: detail.stock } : p,
+            ) ?? prev,
+        );
+      })
+      .catch(() => {});
+  useEffect(() => {
+    loadDetail();
+    const timer = setInterval(loadDetail, 30_000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId]);
 
   const product = products?.find((p) => p.store_product_id === productId);
   const wishId = `shop-${productId}`;
@@ -132,6 +157,8 @@ export default function ShopProductPage({
           ) ?? prev,
       );
       setPurchaseDone({ quantity: res.quantity, amount: res.amount_spent });
+      // 재고가 바뀌면 응모 전환 가능 여부도 바뀐다
+      loadDetail();
       setQty(1);
       notifyPointsUpdated();
       notifyStorageUpdated();
@@ -334,6 +361,10 @@ export default function ShopProductPage({
                 <span className="heart">{isLiked ? "❤️" : "🤍"}</span>
               </button>
             </div>
+
+            {isCash && funding && (
+              <StoreFundingCard product={product} funding={funding} onChanged={loadDetail} />
+            )}
 
             <RefundNotice kind={isCash ? "shop-cash" : "shop-point"} />
           </div>
