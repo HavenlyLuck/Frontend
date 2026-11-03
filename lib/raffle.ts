@@ -50,6 +50,7 @@ export interface GroupedRaffleEntry {
   entryNumber: number
   entryNumbers: number[]
   winnerEntryNumber: number | null
+  resultChecked: boolean  // 서버에 당첨결과 확인 기록이 있는지
 }
 
 // 같은 상품에 여러 번 응모한 경우, 상품 하나당 한 줄로 합쳐서 총 응모권 수를 보여주기 위한 집계
@@ -64,6 +65,7 @@ export function groupEntriesByProduct(entries: MyRaffleEntryResponse[]): Grouped
       existing.parts.push({ entryId: entry.entry_id, ticketCount: entry.ticket_count, amountPaid: entry.amount_paid, createdAt: entry.created_at })
       if (!existing.entryNumbers.includes(entry.entry_number)) existing.entryNumbers.push(entry.entry_number)
       if (entry.created_at > existing.lastEnteredAt) existing.lastEnteredAt = entry.created_at
+      if (entry.result_checked_at) existing.resultChecked = true
     } else {
       map.set(entry.raffle_product_id, {
         raffle_product_id: entry.raffle_product_id,
@@ -79,6 +81,7 @@ export function groupEntriesByProduct(entries: MyRaffleEntryResponse[]): Grouped
         entryNumber: entry.entry_number,
         entryNumbers: [entry.entry_number],
         winnerEntryNumber: entry.winner_entry_number,
+        resultChecked: !!entry.result_checked_at,
       })
     }
   }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { getMyRaffleEntries, getRaffleProducts, type MyRaffleEntryResponse, type RaffleProductResponse } from '@/lib/api'
+import { getMyRaffleEntries, getRaffleProducts, markRaffleResultChecked, type MyRaffleEntryResponse, type RaffleProductResponse } from '@/lib/api'
 import { getValidSession } from '@/lib/auth'
 import {
   getCheckedResultIds,
@@ -44,8 +44,13 @@ export function useRaffleEntryPhases() {
       ])
       setEntries(mine)
       setProducts(new Map(open.map(p => [p.raffle_product_id, p])))
-      setCheckedIds(getCheckedResultIds())
+      const localChecked = getCheckedResultIds()
+      setCheckedIds(localChecked)
       setLoaded(true)
+      // 예전에 이 브라우저에만 남겨 둔 '결과 확인함' 기록을 서버로 옮긴다 (다른 기기에서도 다시 뜨지 않게)
+      groupEntriesByProduct(mine)
+        .filter(g => g.status === 'completed' && g.winnerEntryNumber != null && !g.resultChecked && localChecked.includes(g.raffle_product_id))
+        .forEach(g => { markRaffleResultChecked(session.token, g.raffle_product_id).catch(() => {}) })
     } catch {
       // 네트워크 오류 시 이전 상태 유지
     }
@@ -64,7 +69,7 @@ export function useRaffleEntryPhases() {
 
   const items: PhasedRaffleEntry[] = groupEntriesByProduct(entries).map(item => {
     const product = products.get(item.raffle_product_id)
-    const phase = getEntryPhase(item, product, checkedIds.includes(item.raffle_product_id))
+    const phase = getEntryPhase(item, product, item.resultChecked || checkedIds.includes(item.raffle_product_id))
     return { ...item, phase, drawAt: phase === 'drawPending' ? getDrawAt(item.soldOutAt ?? product?.sold_out_at) : null }
   })
 
@@ -102,8 +107,12 @@ export function useRaffleEntryPhases() {
     }
   }, [pendingKey, load])
 
+  // 화면은 바로 바꾸고(브라우저 기록), 서버에도 남긴다
   const checkResult = useCallback((raffleProductId: number) => {
     markResultChecked(raffleProductId)
+    getValidSession().then(session => {
+      if (session) markRaffleResultChecked(session.token, raffleProductId).catch(() => {})
+    })
   }, [])
 
   return { items, entries, loaded, checkResult, reload: load }
