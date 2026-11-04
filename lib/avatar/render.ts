@@ -1,11 +1,12 @@
 // 합성한 픽셀을 PNG(data URL)로 만들고 캐싱한다.
 // 같은 설정은 한 번만 그리고, 메모리 → localStorage 순으로 재사용한다.
 
-import { AVATAR_CANVAS, avatarKey, composeAvatar, composeItem, type AvatarConfig, type WearSlot } from './compose'
+import { AVATAR_H, AVATAR_W, avatarKey, composeAvatar, type AvatarConfig } from './compose'
 
-// 16px 원본을 정수배로 키워 저장해 두면 어디에 붙여도 흐려지지 않는다
-const EXPORT_SCALE = 8
-const STORAGE_PREFIX = 'avatar-png:'
+// 원본을 정수배로 키워 저장해 두면 어디에 붙여도 흐려지지 않는다
+const EXPORT_SCALE = 6
+// 그림 형식이 바뀌면 접두어를 바꿔 예전 캐시를 안 쓰게 한다
+const STORAGE_PREFIX = 'avatar3-png:'
 const MAX_STORED = 6
 
 const memory = new Map<string, string>()
@@ -33,19 +34,15 @@ function writeStored(key: string, url: string) {
   }
 }
 
-function draw(config: AvatarConfig, background: boolean): string {
-  return toPng(composeAvatar(config, { background }), AVATAR_CANVAS)
-}
-
-function toPng(pixels: Uint8ClampedArray<ArrayBuffer>, size: number): string {
+function toPng(pixels: Uint8ClampedArray<ArrayBuffer>, w: number, h: number): string {
   const src = document.createElement('canvas')
-  src.width = size
-  src.height = size
-  src.getContext('2d')!.putImageData(new ImageData(pixels, size, size), 0, 0)
+  src.width = w
+  src.height = h
+  src.getContext('2d')!.putImageData(new ImageData(pixels, w, h), 0, 0)
 
   const out = document.createElement('canvas')
-  out.width = size * EXPORT_SCALE
-  out.height = size * EXPORT_SCALE
+  out.width = w * EXPORT_SCALE
+  out.height = h * EXPORT_SCALE
   const ctx = out.getContext('2d')!
   ctx.imageSmoothingEnabled = false
   ctx.drawImage(src, 0, 0, out.width, out.height)
@@ -53,26 +50,15 @@ function toPng(pixels: Uint8ClampedArray<ArrayBuffer>, size: number): string {
 }
 
 // persist: 프로필처럼 자주 보이는 이미지만 localStorage에 남긴다(편집 화면의 썸네일은 메모리만).
-export function avatarToDataUrl(config: AvatarConfig, { background = true, persist = false } = {}): string {
-  const key = `${avatarKey(config)}${background ? '' : '-t'}`
+export function avatarToDataUrl(config: AvatarConfig, { background = false, persist = false } = {}): string {
+  const key = `${avatarKey(config)}${background ? '-bg' : ''}`
   const cached = memory.get(key) ?? (persist ? readStored(key) : null)
   if (cached) {
     memory.set(key, cached)
     return cached
   }
-  const url = draw(config, background)
+  const url = toPng(composeAvatar(config, { background }), AVATAR_W, AVATAR_H)
   memory.set(key, url)
   if (persist) writeStored(key, url)
-  return url
-}
-
-// 상점 아이템만 그린 이미지 (배경 투명)
-export function itemToDataUrl(slot: WearSlot, index: number): string {
-  const key = `item:${slot}:${index}`
-  const cached = memory.get(key)
-  if (cached) return cached
-  const { pixels, side } = composeItem(slot, index)
-  const url = toPng(pixels, side)
-  memory.set(key, url)
   return url
 }

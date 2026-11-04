@@ -7,7 +7,6 @@ const CLOUD_MARK_PATH =
 
 // 사업자 정보는 components/PolicyDoc.tsx의 BIZ_INFO 한 곳에서 관리한다 (사업자등록증 2026-10-26 기준).
 // 개인사업자라 상호에 "(주)"를 붙이면 안 됨.
-// TODO: 통신판매업 신고번호가 나오면 "신고 진행 중"을 교체.
 export default function Footer() {
   return (
     <footer className="site-footer">
@@ -48,7 +47,7 @@ export default function Footer() {
                 [사업자정보확인]
               </a>
             </span>
-            <span>통신판매업신고 신고 진행 중</span>
+            <span>통신판매업신고 {BIZ_INFO.mailOrderNo}</span>
           </div>
           <div className="footer-biz-row">
             <span>주소 {BIZ_INFO.address}</span>

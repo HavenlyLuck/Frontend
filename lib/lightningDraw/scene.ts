@@ -4,7 +4,7 @@
  * 연출은 이미 정해진 당첨 결과를 보여주기만 한다 — 여기서 당첨자를 고르지 않는다.
  */
 
-import { avatarColors, avatarKey, buildAvatarGrid, buildOverlayGrids, OUTLINED_W, type AvatarConfig, type HeldGrid } from '@/lib/avatar/compose'
+import { AVATAR_H as AVATAR_H_PX, AVATAR_W, DEFAULT_AVATAR, avatarKey, composeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 
 export const WORLD_W = 208
 export const WORLD_H = 156
@@ -80,71 +80,37 @@ function randomLook(rng: Rng): AvatarLook {
   }
 }
 
-// 8x11 픽셀 사람 — H 머리, S 피부, E 눈, T 상의, P 하의, B 신발
-const BODY_SHORT = [
-  '..HHHH..',
-  '.HHHHHH.',
-  '.HSSSSH.',
-  '.SESSES.',
-  '..SSSS..',
-  '.TTTTTT.',
-  'STTTTTTS',
-  '..TTTT..',
-  '..PPPP..',
-  '..P..P..',
-  '.BB..BB.',
-]
-const BODY_LONG = [
-  '..HHHH..',
-  '.HHHHHH.',
-  '.HSSSSH.',
-  'HSESSESH',
-  'HHSSSSHH',
-  'HTTTTTTH',
-  'STTTTTTS',
-  '..TTTT..',
-  '..PPPP..',
-  '..P..P..',
-  '.BB..BB.',
-]
-export const AVATAR_H = 11
+// ── 캐릭터 ──
+// 마이페이지 아바타 그림(발판 포함 38×48칸)을 장면보다 3배 촘촘하게 그린다 — 그림 1칸 = 장면 1/3칸.
+// 그래서 장면 배치는 그대로인데 캐릭터는 꾸미기 화면과 같은 그림으로 보인다.
+// 장면을 그리는 캔버스는 화면 해상도이거나(쿠지) 3배 큰 캔버스여야(추첨) 그림 칸이 뭉개지지 않는다.
+export const AVATAR_SCALE = 3
+const SPRITE_W = AVATAR_W / AVATAR_SCALE
+const SPRITE_H = AVATAR_H_PX / AVATAR_SCALE
+// 발 위치(m.y) 기준 머리 꼭대기까지 높이 — 이름표·번개가 이 위로 간다
+export const AVATAR_H = 13
 
-// 바깥 1픽셀 테두리(O)를 붙여서 잔디 위에서도 실루엣이 또렷하게
-function withOutline(rows: string[]): string[] {
-  const h = rows.length + 2
-  const w = rows[0].length + 2
-  const at = (x: number, y: number) => (y >= 1 && y <= rows.length && x >= 1 && x <= rows[0].length ? rows[y - 1][x - 1] : '.')
-  const out: string[] = []
-  for (let y = 0; y < h; y++) {
-    let line = ''
-    for (let x = 0; x < w; x++) {
-      const c = at(x, y)
-      if (c !== '.') line += c
-      else line += [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].some(n => n !== '.') ? 'O' : '.'
+// 캐릭터 그림을 설정·색칠별로 한 번만 만든다 (tint: 번개 번쩍임·당첨 테두리용 단색 실루엣)
+const sprites = new Map<string, HTMLCanvasElement>()
+function avatarSprite(config: AvatarConfig, tint: string | null): HTMLCanvasElement {
+  const key = avatarKey(config) + (tint ?? '')
+  let c = sprites.get(key)
+  if (!c) {
+    c = document.createElement('canvas')
+    c.width = AVATAR_W
+    c.height = AVATAR_H_PX
+    const g = c.getContext('2d')!
+    g.putImageData(new ImageData(composeAvatar(config), AVATAR_W, AVATAR_H_PX), 0, 0)
+    if (tint) {
+      g.globalCompositeOperation = 'source-atop'
+      g.fillStyle = tint
+      g.fillRect(0, 0, AVATAR_W, AVATAR_H_PX)
     }
-    out.push(line)
+    sprites.set(key, c)
   }
-  return out
+  return c
 }
 
-const SPRITES = {
-  short: withOutline(BODY_SHORT),
-  long: withOutline(BODY_LONG),
-  shortBlink: withOutline(BODY_SHORT.map(r => r.replace(/E/g, 'S'))),
-  longBlink: withOutline(BODY_LONG.map(r => r.replace(/E/g, 'S'))),
-}
-
-const customGrids = new Map<string, string[]>()
-function customGrid(avatar: AvatarConfig, blink: boolean): string[] {
-  const key = avatarKey(avatar) + (blink ? '-b' : '')
-  let grid = customGrids.get(key)
-  if (!grid) {
-    grid = buildAvatarGrid(avatar)
-    if (blink) grid = grid.map(r => r.replace(/E/g, 'S'))
-    customGrids.set(key, grid)
-  }
-  return grid
-}
 
 export interface AvatarDrawOptions {
   lift?: number // 위로 뜬 높이 (점프, 숨쉬기)
@@ -154,75 +120,26 @@ export interface AvatarDrawOptions {
   flicker?: boolean // 손에 든 무기의 불꽃 같은 깜빡이는 색을 바꿔 칠할 차례
 }
 
-// 모자 테두리는 머리 모양에 따라 달라지므로 캐릭터 설정마다 캐싱한다
-const overlayGrids = new Map<string, HeldGrid[]>()
-function overlayGrid(avatar: AvatarConfig): HeldGrid[] {
-  if (avatar.weapon == null && avatar.hat == null && avatar.cape == null && avatar.costume == null) return []
-  const key = avatarKey(avatar)
-  let grids = overlayGrids.get(key)
-  if (!grids) {
-    grids = buildOverlayGrids(avatar)
-    overlayGrids.set(key, grids)
-  }
-  return grids
-}
 
 export function drawAvatar(ctx: CanvasRenderingContext2D, m: CastMember, opts: AvatarDrawOptions = {}) {
   const lift = Math.round(opts.lift ?? 0)
-  // 그림자는 땅에 붙어 있고, 몸만 뜬다
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'
-  ctx.fillRect(m.x - 3, m.y, 7, 1)
-  ctx.fillRect(m.x - 2, m.y + 1, 5, 1)
+  // 캐릭터를 안 꾸민 사람도 같은 그림으로 — 머리 모양만 사람마다 다르게
+  const config = m.avatar ?? { ...DEFAULT_AVATAR, hair: m.look.longHair ? 'buns' : 'short' }
+  // 발판 아래 끝이 선반(발 위치 + 2칸)에 닿게 세운다
+  const x = m.x - SPRITE_W / 2
+  const y = m.y + 2 - SPRITE_H - lift
+  const prevSmoothing = ctx.imageSmoothingEnabled
+  ctx.imageSmoothingEnabled = false
 
-  const oy = m.y - AVATAR_H - 1 - lift
-  const zapColor = opts.zap === 0 ? '#ffffff' : '#ffe66b'
-  let grid: string[]
-  let ox: number
-  let colors: Record<string, string>
-  if (m.avatar) {
-    // 마이페이지에서 꾸민 캐릭터 — 몸 비율이 같아서 그대로 세울 수 있다(양갈래 여유 1칸만큼 폭이 넓음)
-    grid = customGrid(m.avatar, !!opts.blink)
-    ox = m.x - OUTLINED_W / 2
-    // 전체 스킨은 쓰는 문자가 제각각이라, 번쩍일 때는 쓰는 색을 전부 번개색으로 바꾼다
-    const base = avatarColors(m.avatar)
-    colors = opts.zap != null
-      ? { ...Object.fromEntries(Object.keys(base).map(k => [k, zapColor])), E: '#3a2a00', O: '#fff3a0' }
-      : { ...base, O: opts.outline ?? '#16200f' }
-  } else {
-    const key = (m.look.longHair ? 'long' : 'short') + (opts.blink ? 'Blink' : '')
-    grid = SPRITES[key as keyof typeof SPRITES]
-    ox = m.x - 5
-    colors = opts.zap != null
-      ? { H: zapColor, S: zapColor, E: '#3a2a00', T: zapColor, P: zapColor, B: zapColor, O: '#fff3a0' }
-      : { H: m.look.hair, S: m.look.skin, E: '#1a1a22', T: m.look.shirt, P: m.look.pants, B: '#2a2420', O: opts.outline ?? '#16200f' }
+  // 당첨 테두리 — 같은 실루엣을 그림 1칸씩 사방으로 밀어 깐 뒤 그 위에 그린다
+  if (opts.outline && opts.zap == null) {
+    const ring = avatarSprite(config, opts.outline)
+    const d = 1 / AVATAR_SCALE
+    for (const [dx, dy] of [[-d, 0], [d, 0], [0, -d], [0, d]]) ctx.drawImage(ring, x + dx, y + dy, SPRITE_W, SPRITE_H)
   }
-
-  // 쌀포인트 상점 아이템 — 망토는 몸 뒤, 모자·무기는 몸 위에 겹쳐 그린다
-  const overlays = m.avatar ? overlayGrid(m.avatar) : []
-  const drawOverlay = (held: HeldGrid) => {
-    const heldColors = opts.zap != null
-      ? Object.fromEntries(Object.keys(held.colors).map(k => [k, k === 'o' ? '#fff3a0' : zapColor]))
-      : { ...held.colors, ...(opts.flicker ? held.flicker : undefined), o: opts.outline ?? '#16200f' }
-    held.rows.forEach((row, y) => {
-      for (let x = 0; x < row.length; x++) {
-        if (row[x] === '.') continue
-        ctx.fillStyle = heldColors[row[x]]
-        ctx.fillRect(ox + held.dx + x, oy + held.dy + y, 1, 1)
-      }
-    })
-  }
-
-  overlays.filter(o => o.behind).forEach(drawOverlay)
-  for (let y = 0; y < grid.length; y++) {
-    const row = grid[y]
-    for (let x = 0; x < row.length; x++) {
-      const c = row[x]
-      if (c === '.') continue
-      ctx.fillStyle = colors[c]
-      ctx.fillRect(ox + x, oy + y, 1, 1)
-    }
-  }
-  overlays.filter(o => !o.behind).forEach(drawOverlay)
+  const tint = opts.zap == null ? null : opts.zap === 0 ? '#ffffff' : '#ffe66b'
+  ctx.drawImage(avatarSprite(config, tint), x, y, SPRITE_W, SPRITE_H)
+  ctx.imageSmoothingEnabled = prevSmoothing
 }
 
 // ── 먹구름 ──

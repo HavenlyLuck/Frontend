@@ -198,8 +198,7 @@ export interface AvatarItemResponse {
   item_id: string
   name: string
   price: number // 쌀포인트
-  slot: 'weapon' | 'hat' | 'cape' | 'costume'
-  index: number
+  slot: 'outfit' | 'hat' | 'held'
 }
 
 export interface AvatarItemPurchaseResponse {
