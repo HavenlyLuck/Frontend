@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowCounterClockwiseIcon, ConfettiIcon, GrainsIcon, LightningIcon, WarningIcon } from '@phosphor-icons/react'
 import AvatarRoom from '@/components/AvatarRoom'
-import PixelItem from '@/components/PixelItem'
-import { DEFAULT_ROOM_BACKGROUND, getRoomBackground, type RoomBackgroundId } from '@/lib/avatar/rooms'
+import PixelAvatar from '@/components/PixelAvatar'
 import LightningDrawScene from '@/components/LightningDrawScene'
 import { getValidSession } from '@/lib/auth'
 import { notifyPointsUpdated } from '@/hooks/useMyPoints'
@@ -14,7 +13,7 @@ import { DEFAULT_AVATAR, normalizeAvatar, withItem, type AvatarConfig, type Wear
 import { AVATAR_SHOP_ITEMS, type AvatarShopItem } from '@/lib/avatar/shopItems'
 import { SAMPLE_MY_ENTRY, sampleEntrants } from '@/lib/lightningDraw/sample'
 
-type Tried = Partial<Record<WearSlot, number>>
+type Tried = Partial<Record<WearSlot, string>>
 
 // 쌀포인트 상점 "아바타" 탭 — 저장된 내 캐릭터에 아이템을 입혀 보고 추첨 화면에서 어떻게 보이는지까지 확인한다
 export default function AvatarShop() {
@@ -25,14 +24,12 @@ export default function AvatarShop() {
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [owned, setOwned] = useState<Set<string>>(new Set())
   const [busyId, setBusyId] = useState<string | null>(null)
-  const [roomBg, setRoomBg] = useState<RoomBackgroundId>(DEFAULT_ROOM_BACKGROUND)
   // 구매 팝업 — 확인 → 완료까지 사이트 공통 모달(.modal-overlay)로 보여준다
   const [buyTarget, setBuyTarget] = useState<AvatarShopItem | null>(null)
   const [buyError, setBuyError] = useState<string | null>(null)
   const [buyDone, setBuyDone] = useState(false)
 
   useEffect(() => {
-    setRoomBg(getRoomBackground())
     let cancelled = false
     getAvatarItems()
       .then((items) => { if (!cancelled) setPrices(Object.fromEntries(items.map(i => [i.item_id, i.price]))) })
@@ -83,21 +80,15 @@ export default function AvatarShop() {
   }
 
   const wearing: AvatarConfig = useMemo(
-    () => (Object.entries(tried) as [WearSlot, number][]).reduce((c, [slot, index]) => withItem(c, slot, index), base),
+    () => (Object.entries(tried) as [WearSlot, string][]).reduce((c, [slot, id]) => withItem(c, slot, id), base),
     [base, tried],
   )
-  const isWorn = (item: AvatarShopItem) => tried[item.slot] === item.index
-  // 전체 스킨과 무기·모자·망토는 같이 못 끼므로, 입어볼 때도 한쪽을 끼면 다른 쪽을 벗긴다
+  const isWorn = (item: AvatarShopItem) => tried[item.slot] === item.id
   const toggle = (item: AvatarShopItem) =>
     setTried((prev) => {
-      if (prev[item.slot] === item.index) {
-        const next = { ...prev }
-        delete next[item.slot]
-        return next
-      }
-      if (item.slot === 'costume') return { costume: item.index }
-      const next = { ...prev, [item.slot]: item.index }
-      delete next.costume
+      const next = { ...prev }
+      if (prev[item.slot] === item.id) delete next[item.slot]
+      else next[item.slot] = item.id
       return next
     })
 
@@ -122,9 +113,9 @@ export default function AvatarShop() {
   return (
     <div className="avatar-shop">
       <div className="avatar-shop-preview">
-        {/* 마이페이지 프로필과 같은 캐릭터 방(내가 고른 배경) 안에서 입어본 모습 */}
+        {/* 마이페이지 프로필과 같은 캐릭터 칸에서 입어본 모습 */}
         <div className="profile-room avatar-shop-room">
-          <AvatarRoom config={wearing} background={roomBg} label="입어본 내 캐릭터" />
+          <AvatarRoom config={wearing} label="입어본 내 캐릭터" />
         </div>
         <div className="avatar-shop-preview-label">
           {loggedIn === false ? '기본 캐릭터로 입어보는 중' : '내 캐릭터'}
@@ -151,7 +142,8 @@ export default function AvatarShop() {
           return (
             <div key={item.id} className={`avatar-shop-item${worn ? ' worn' : ''}`}>
               <div className="avatar-shop-item-thumb">
-                <PixelItem slot={item.slot} index={item.index} size={112} alt={item.name} />
+                {/* 기본 캐릭터가 이 아이템만 입은 모습 */}
+                <PixelAvatar config={withItem(DEFAULT_AVATAR, item.slot, item.id)} size={112} alt={item.name} />
               </div>
               <div className="avatar-shop-item-name">{item.name}</div>
               <div className="avatar-shop-item-desc">{item.description}</div>
@@ -209,7 +201,7 @@ export default function AvatarShop() {
 
             <div className="ticket-count" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ flexShrink: 0, width: 64, height: 64, borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                <PixelItem slot={buyTarget.slot} index={buyTarget.index} size={56} alt={buyTarget.name} />
+                <PixelAvatar config={withItem(DEFAULT_AVATAR, buyTarget.slot, buyTarget.id)} size={56} alt={buyTarget.name} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{buyTarget.name}</div>

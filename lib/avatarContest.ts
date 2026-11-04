@@ -1,5 +1,4 @@
-import { AVATAR_LIMITS, withItem, type AvatarConfig, type AvatarNumberKey } from './avatar/compose'
-import { CAPES, HATS, WEAPONS } from './avatar/parts'
+import { randomAvatar, type AvatarConfig } from './avatar/compose'
 import { mulberry32 } from './lightningDraw/scene'
 
 /*
@@ -76,17 +75,7 @@ const NICKNAMES = [
 ]
 
 function sampleAvatar(rng: () => number): AvatarConfig {
-  const pick = (k: AvatarNumberKey) => Math.floor(rng() * AVATAR_LIMITS[k])
-  let c: AvatarConfig = {
-    v: 2, gender: rng() < 0.5 ? 'm' : 'f',
-    skin: pick('skin'), hair: pick('hair'), hairColor: pick('hairColor'),
-    top: pick('top'), topColor: pick('topColor'), bottom: pick('bottom'), bottomColor: pick('bottomColor'),
-  }
-  // 대회라 다들 꾸미고 나온다 — 아이템을 몇 개씩
-  if (rng() < 0.5) c = withItem(c, 'hat', Math.floor(rng() * HATS.length))
-  if (rng() < 0.4) c = withItem(c, 'cape', Math.floor(rng() * CAPES.length))
-  if (rng() < 0.4) c = withItem(c, 'weapon', Math.floor(rng() * WEAPONS.length))
-  return c
+  return randomAvatar(rng)
 }
 
 function sampleEntries(seasonId: number, start: number): ContestEntry[] {

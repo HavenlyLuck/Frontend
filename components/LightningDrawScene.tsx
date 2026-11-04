@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
-  AVATAR_H, CLOUD_Y, WORLD_H, WORLD_W,
+  AVATAR_H, AVATAR_SCALE, CLOUD_Y, WORLD_H, WORLD_W,
   buildCloudSprites, buildScene, drawAvatar, fillPixelEllipse, hash01, plotLine, strokePixelCircle,
   type CastMember, type Scene, type SceneEntrant,
 } from '@/lib/lightningDraw/scene'
@@ -94,10 +94,14 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
     // 내가 당첨돼도 닉네임으로 보여준다 — 닉네임이 없으면(데모, 미리보기) '나' 또는 응모 번호
     const winnerName = winner.nickname ? `당첨! ${winner.nickname}` : me === winner ? '당첨! 나' : `당첨 #${winnerEntryNumber}`
 
+    // 장면은 WORLD 좌표로 그리되 캔버스는 3배로 — 캐릭터 그림(장면 1/3칸 단위)이 뭉개지지 않게.
+    // 배경·구름·번개는 3배로 늘어날 뿐 모양은 그대로다.
     const frame = document.createElement('canvas')
-    frame.width = WORLD_W
-    frame.height = WORLD_H
+    frame.width = WORLD_W * AVATAR_SCALE
+    frame.height = WORLD_H * AVATAR_SCALE
     const fctx = frame.getContext('2d')!
+    fctx.setTransform(AVATAR_SCALE, 0, 0, AVATAR_SCALE, 0, 0)
+    fctx.imageSmoothingEnabled = false
     const overlay = document.createElement('canvas')
     overlay.width = WORLD_W
     overlay.height = WORLD_H

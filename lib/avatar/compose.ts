@@ -1,304 +1,99 @@
 // 아바타 설정(JSON) → 픽셀 합성. 브라우저 API를 쓰지 않는 순수 함수라
-// 미리보기 스크립트나 추첨 화면 같은 다른 캔버스에서도 그대로 재사용할 수 있다.
+// 미리보기 스크립트나 다른 캔버스에서도 그대로 재사용할 수 있다.
+//
+// 그림은 hd.ts — 기본 캐릭터(똥머리·흰 티·잔디 발판) 위에 머리·옷·모자·손 층을 차례로 덮어 그린다.
 
-import {
-  BASE, BOTTOMS, COSTUMES, BOTTOM_COLORS, FIXED_COLORS, HAIRS, HAIR_COLORS, SKIN_TONES,
-  CAPES, HATS, HELD_OUTLINED, SPRITE_H, SPRITE_W, TOPS, TOP_COLORS, WEAPONS,
-  type Gender, type HeldItem, type Layer,
-} from './parts'
+import { HD_BASE, HD_H, HD_ITEMS, HD_PALETTE, HD_W } from './hd'
+import { AVATAR_SHOP_ITEMS, HAIRS, WEAR_SLOTS, type HairId, type WearSlot } from './shopItems'
+
+export type { HairId, WearSlot }
+export { WEAR_SLOTS }
 
 export interface AvatarConfig {
-  v: 2
-  gender: Gender
-  skin: number
-  hair: number
-  hairColor: number
-  top: number
-  topColor: number
-  bottom: number
-  bottomColor: number
-  // 쌀포인트 상점 아이템 — 손에 든 무기(WEAPONS 번호), 머리에 쓴 모자(HATS 번호), 망토(CAPES 번호). 없으면 안 그린다.
-  weapon?: number
-  hat?: number
-  cape?: number
-  // 전체 스킨(COSTUMES 번호) — 끼면 몸 전체를 스킨으로 그리고 무기·모자·망토와는 같이 못 낀다
-  costume?: number
+  v: 3
+  hair: HairId
+  // 쌀포인트 상점 아이템 id (shopItems.ts). 없으면 기본 그림 그대로
+  outfit?: string
+  hat?: string
+  held?: string
 }
 
-// 상점 아이템 칸 — 겹쳐 그리는 순서(뒤 → 앞)이기도 하다
-export const ITEM_SLOTS = { cape: CAPES, hat: HATS, weapon: WEAPONS } as const
-export type ItemSlot = keyof typeof ITEM_SLOTS
-// 상점에서 낄 수 있는 칸 — 겹쳐 끼는 아이템 + 전체 스킨
-export type WearSlot = ItemSlot | 'costume'
+export const AVATAR_W = HD_W
+export const AVATAR_H = HD_H
 
-export type AvatarNumberKey = Exclude<keyof AvatarConfig, 'v' | 'gender' | WearSlot>
+export const DEFAULT_AVATAR: AvatarConfig = { v: 3, hair: 'buns' }
 
-export const DEFAULT_AVATARS: Record<Gender, AvatarConfig> = {
-  m: { v: 2, gender: 'm', skin: 0, hair: 0, hairColor: 0, top: 0, topColor: 0, bottom: 0, bottomColor: 0 },
-  f: { v: 2, gender: 'f', skin: 0, hair: 0, hairColor: 1, top: 0, topColor: 0, bottom: 0, bottomColor: 0 },
-}
-export const DEFAULT_AVATAR = DEFAULT_AVATARS.m
+const HAIR_IDS = new Set<string>(HAIRS.map(h => h.id))
+const itemSlot = new Map(AVATAR_SHOP_ITEMS.map(i => [i.id, i.slot]))
 
-// 각 항목이 고를 수 있는 개수. 성별마다 머리·하의 종류는 달라도 개수는 같다.
-// 백엔드 검증(Backend/app/schemas/avatar.py)과 반드시 맞춰야 한다.
-export const AVATAR_LIMITS: Record<AvatarNumberKey, number> = {
-  skin: SKIN_TONES.length,
-  hair: HAIRS.m.length,
-  hairColor: HAIR_COLORS.length,
-  top: TOPS.length,
-  topColor: TOP_COLORS.length,
-  bottom: BOTTOMS.m.length,
-  bottomColor: BOTTOM_COLORS.length,
-}
-
-// 서버에서 받은 값이 비었거나 예전 형식이어도 항상 그릴 수 있는 설정으로 맞춘다.
+// 서버에서 받은 값이 비었거나 예전 형식(v2)이어도 항상 그릴 수 있는 설정으로 맞춘다.
+// 예전 캐릭터는 성별만 살린다: 남자 → 짧은 머리, 여자 → 똥머리 (예전 아이템은 그림이 없어 벗긴다).
 export function normalizeAvatar(raw: unknown): AvatarConfig {
   const src = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  const gender: Gender = src.gender === 'f' ? 'f' : 'm'
-  const out = { ...DEFAULT_AVATARS[gender] }
-  if (src.v !== 2) return out
-  for (const key of Object.keys(AVATAR_LIMITS) as AvatarNumberKey[]) {
-    const v = src[key]
-    if (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < AVATAR_LIMITS[key]) out[key] = v
-  }
-  for (const slot of Object.keys(ITEM_SLOTS) as ItemSlot[]) {
-    const v = src[slot]
-    if (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < ITEM_SLOTS[slot].length) out[slot] = v
-  }
-  const costume = src.costume
-  if (typeof costume === 'number' && Number.isInteger(costume) && costume >= 0 && costume < COSTUMES.length) {
-    return withItem(out, 'costume', costume)
+  if (src.v !== 3) return { v: 3, hair: src.gender === 'm' ? 'short' : 'buns' }
+  const out: AvatarConfig = { v: 3, hair: typeof src.hair === 'string' && HAIR_IDS.has(src.hair) ? (src.hair as HairId) : 'buns' }
+  for (const slot of WEAR_SLOTS) {
+    const id = src[slot]
+    if (typeof id === 'string' && itemSlot.get(id) === slot) out[slot] = id
   }
   return out
 }
 
-// 아이템을 끼우거나(index) 벗긴다(undefined). 전체 스킨과 무기·모자·망토는 같이 못 끼므로
-// 스킨을 끼면 다른 아이템을 벗기고, 다른 아이템을 끼면 스킨을 벗긴다.
-export function withItem(c: AvatarConfig, slot: WearSlot, index: number | undefined): AvatarConfig {
+// 아이템을 입히거나(id) 벗긴다(undefined).
+export function withItem(c: AvatarConfig, slot: WearSlot, id: string | undefined): AvatarConfig {
   const next = { ...c }
-  if (index == null) {
-    delete next[slot]
-    return next
-  }
-  if (slot === 'costume') {
-    for (const s of Object.keys(ITEM_SLOTS) as ItemSlot[]) delete next[s]
-  } else {
-    delete next.costume
-  }
-  next[slot] = index
+  if (id == null) delete next[slot]
+  else next[slot] = id
   return next
 }
 
 // 캐시 키로 쓰는 짧은 문자열. 순서가 고정이라 같은 설정이면 항상 같은 값이 나온다.
 export function avatarKey(c: AvatarConfig): string {
-  return [c.v, c.gender, c.skin, c.hair, c.hairColor, c.top, c.topColor, c.bottom, c.bottomColor, c.cape ?? 'x', c.hat ?? 'x', c.weapon ?? 'x', c.costume ?? 'x'].join('-')
+  return [c.v, c.hair, c.outfit ?? 'x', c.hat ?? 'x', c.held ?? 'x'].join('-')
 }
 
-// ───────── 스프라이트 ─────────
-
-// 외곽선까지 붙인 스프라이트 크기
-export const OUTLINED_W = SPRITE_W + 2
-export const OUTLINED_H = SPRITE_H + 2
-
-// 설정 → 외곽선 포함 문자 격자. 추첨 화면처럼 직접 칸을 칠하는 곳에서 쓴다.
-export function buildAvatarGrid(c: AvatarConfig): string[] {
-  const costume = c.costume == null ? undefined : COSTUMES[c.costume]
-  const grid: string[][] = costume
-    ? costume.rows.map(r => r.split(''))
-    : Array.from({ length: SPRITE_H }, () => Array(SPRITE_W).fill('.'))
-  const draw = (layers: Layer[]) => {
-    for (const layer of layers) {
-      layer.rows.forEach((raw, dy) => {
-        const row = raw.length === SPRITE_W ? raw : `.${raw}.`
-        for (let x = 0; x < SPRITE_W; x++) if (row[x] !== '.') grid[layer.y + dy][x] = row[x]
-      })
-    }
-  }
-  // 그리는 순서 = 겹치는 순서(뒤 → 앞). 전체 스킨은 격자를 통째로 쓴다.
-  if (!costume) {
-    draw(BASE)
-    draw(BOTTOMS[c.gender][c.bottom].layers)
-    draw(TOPS[c.top].layers)
-    draw(HAIRS[c.gender][c.hair].layers)
-  }
-
-  // 바깥 1칸 외곽선(O) — 잔디 위에서도 실루엣이 또렷하게
-  const at = (x: number, y: number) => (y >= 1 && y <= SPRITE_H && x >= 1 && x <= SPRITE_W ? grid[y - 1][x - 1] : '.')
-  const out: string[] = []
-  for (let y = 0; y < OUTLINED_H; y++) {
-    let line = ''
-    for (let x = 0; x < OUTLINED_W; x++) {
-      const ch = at(x, y)
-      line += ch !== '.' ? ch : [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].some(n => n !== '.') ? 'O' : '.'
-    }
-    out.push(line)
-  }
-  return out
+// 겹쳐 그릴 층 (뒤 → 앞)
+function layersOf(c: AvatarConfig): string[][] {
+  const ids = [HAIRS.find(h => h.id === c.hair)?.layer, c.outfit, c.hat, c.held]
+  return ids.filter((id): id is string => !!id && !!HD_ITEMS[id]).map(id => HD_ITEMS[id])
 }
 
-// 상점 아이템(모자·무기) → 외곽선(o) 포함 문자 격자. dx/dy는 외곽선 포함 캐릭터 격자의 왼쪽 위 기준.
-// 몸 격자 밖으로 나가므로 몸과 따로 만들어 몸 위에 겹쳐 그린다.
-export interface HeldGrid {
-  dx: number
-  dy: number
-  rows: string[]
-  colors: Record<string, string>
-  flicker?: Record<string, string>
-  behind?: boolean // 몸보다 먼저(뒤에) 그린다
-}
-
-// 낀 아이템들을 그리는 순서(뒤 → 앞)대로
-export function buildOverlayGrids(c: AvatarConfig): HeldGrid[] {
-  const body = buildAvatarGrid(c)
-  const onBody = (x: number, y: number) => (body[y]?.[x] ?? '.') !== '.'
-  // 전체 스킨은 다른 아이템을 같이 못 끼고, 스킨에 딸린 소품만 그린다
-  const items: HeldItem[] = c.costume != null
-    ? [COSTUMES[c.costume]?.held].filter((h): h is HeldItem => !!h)
-    : (Object.keys(ITEM_SLOTS) as ItemSlot[]).flatMap((slot) => {
-      const idx = c[slot]
-      const item = idx == null ? undefined : ITEM_SLOTS[slot][idx]
-      return item ? [item] : []
-    })
-  return items.map(item => outlineHeld(item, onBody))
-}
-
-// 아이템 격자에 외곽선(o)을 붙인다. onBody가 참인 칸은 몸이 있는 자리라, 몸 위에 테두리를 안 그리는 아이템은 건너뛴다.
-function outlineHeld(item: HeldItem, onBody: (x: number, y: number) => boolean = () => false): HeldGrid {
-  const h = item.rows.length
-  const w = Math.max(...item.rows.map(r => r.length))
-  const at = (x: number, y: number) => (y >= 0 && y < h && x >= 0 && x < w ? item.rows[y][x] ?? '.' : '.')
-  const rows: string[] = []
-  for (let y = -1; y <= h; y++) {
-    let line = ''
-    for (let x = -1; x <= w; x++) {
-      const ch = at(x, y)
-      if (ch !== '.') { line += ch; continue }
-      const edge = [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].some(n => HELD_OUTLINED.has(n))
-      // 몸 위에 테두리를 안 그리는 아이템은 맨 바깥(투명한 곳)에만 테두리를 붙인다
-      line += edge && (item.outlineOverBody || !onBody(item.dx + x, item.dy + y)) ? 'o' : '.'
-    }
-    rows.push(line)
-  }
-  return { dx: item.dx - 1, dy: item.dy - 1, rows, colors: { ...item.colors, o: FIXED_COLORS.O }, flicker: item.flicker, behind: item.behind }
-}
-
-export function avatarColors(c: AvatarConfig): Record<string, string> {
-  const costume = c.costume == null ? undefined : COSTUMES[c.costume]
-  if (costume) return { ...FIXED_COLORS, ...costume.colors }
-  return {
-    ...FIXED_COLORS,
-    S: SKIN_TONES[c.skin].color,
-    H: HAIR_COLORS[c.hairColor].color,
-    T: TOP_COLORS[c.topColor].color,
-    P: BOTTOM_COLORS[c.bottomColor].color,
-  }
-}
-
-// ───────── 프로필 이미지 ─────────
-
-// 잔디 배경 위에 캐릭터를 올린 정사각형 이미지
-export const AVATAR_CANVAS = 16
-const GRASS = ['#5f9446', '#568a3f', '#6aa150']
+// 배경을 깔 때 쓰는 색 (참고 그림의 연두색)
+export const AVATAR_BG = '#dce594'
 
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
+const RGB: Record<string, [number, number, number]> = Object.fromEntries(Object.entries(HD_PALETTE).map(([k, v]) => [k, hexToRgb(v)]))
 
-export function composeAvatar(c: AvatarConfig, { background = true } = {}): Uint8ClampedArray<ArrayBuffer> {
-  const size = AVATAR_CANVAS
-  const px = new Uint8ClampedArray(size * size * 4)
-  const put = (x: number, y: number, rgb: [number, number, number], a = 255) => {
-    const i = (y * size + x) * 4
-    const k = a / 255
-    px[i] = Math.round(rgb[0] * k + px[i] * (1 - k))
-    px[i + 1] = Math.round(rgb[1] * k + px[i + 1] * (1 - k))
-    px[i + 2] = Math.round(rgb[2] * k + px[i + 2] * (1 - k))
-    px[i + 3] = Math.max(px[i + 3], a)
+// RGBA 픽셀 (AVATAR_W × AVATAR_H). background면 연두색 배경을 깐다.
+export function composeAvatar(c: AvatarConfig, { background = false } = {}): Uint8ClampedArray<ArrayBuffer> {
+  const px = new Uint8ClampedArray(AVATAR_W * AVATAR_H * 4)
+  const set = (x: number, y: number, rgb: [number, number, number] | null) => {
+    const o = (y * AVATAR_W + x) * 4
+    if (!rgb) { px[o + 3] = 0; return }
+    px[o] = rgb[0]; px[o + 1] = rgb[1]; px[o + 2] = rgb[2]; px[o + 3] = 255
   }
-
-  const ox = Math.floor((size - OUTLINED_W) / 2)
-  const oy = 1
-  const footY = oy + OUTLINED_H
-
-  if (background) {
-    // 고정된 무늬라 같은 설정이면 항상 같은 이미지가 나온다
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const h = ((x * 73856093) ^ (y * 19349663)) >>> 0
-        const tone = h % 11 === 0 ? 1 : h % 13 === 0 ? 2 : 0
-        put(x, y, hexToRgb(GRASS[tone]))
-      }
-    }
-    // 발밑 그림자
-    const shadow: [number, number, number] = [0, 0, 0]
-    for (let x = ox + 3; x < ox + OUTLINED_W - 3; x++) put(x, footY - 1, shadow, 70)
-    for (let x = ox + 4; x < ox + OUTLINED_W - 4; x++) put(x, footY, shadow, 70)
-  }
-
-  // 상점 아이템 — 캔버스 밖으로 나가는 칸(외곽선 일부)은 잘라낸다
-  const overlays = buildOverlayGrids(c)
-  const drawOverlay = (held: HeldGrid) => {
-    held.rows.forEach((row, y) => {
-      for (let x = 0; x < row.length; x++) {
-        const px0 = ox + held.dx + x
-        const py0 = oy + held.dy + y
-        if (row[x] === '.' || px0 < 0 || py0 < 0 || px0 >= size || py0 >= size) continue
-        put(px0, py0, hexToRgb(held.colors[row[x]]))
-      }
-    })
-  }
-
-  // 망토처럼 등 뒤에 두르는 것 → 몸 → 모자·무기 순으로 겹친다
-  overlays.filter(o => o.behind).forEach(drawOverlay)
-  const colors = avatarColors(c)
-  buildAvatarGrid(c).forEach((row, y) => {
+  const paint = (rows: string[]) => rows.forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
-      if (row[x] === '.') continue
-      put(ox + x, oy + y, hexToRgb(colors[row[x]]))
+      const ch = row[x]
+      if (ch === '.') continue
+      set(x, y, ch === '-' ? null : RGB[ch])
     }
   })
-  overlays.filter(o => !o.behind).forEach(drawOverlay)
+  paint(HD_BASE)
+  layersOf(c).forEach(paint)
+  if (background) {
+    const bg = hexToRgb(AVATAR_BG)
+    for (let i = 0; i < AVATAR_W * AVATAR_H; i++) if (px[i * 4 + 3] === 0) set(i % AVATAR_W, Math.floor(i / AVATAR_W), bg)
+  }
   return px
 }
 
-// ───────── 상점 아이템 이미지 ─────────
-
-// 아이템만 단독으로 그린 정사각형 이미지(배경 투명) — 한 변이 side칸인 픽셀.
-// 무기·모자·망토는 아이템 크기에 꼭 맞는 캔버스 가운데에, 전체 스킨은 스킨 자체가 캐릭터라
-// 스킨을 입은 모습(딸린 소품 포함)을 그린다.
-export function composeItem(slot: WearSlot, index: number): { pixels: Uint8ClampedArray<ArrayBuffer>; side: number } {
-  if (slot === 'costume') {
-    return { pixels: composeAvatar(withItem(DEFAULT_AVATAR, 'costume', index), { background: false }), side: AVATAR_CANVAS }
-  }
-
-  const item = ITEM_SLOTS[slot][index]
-  if (!item) return { pixels: new Uint8ClampedArray(4), side: 1 }
-  // 몸이 없으니 테두리를 사방에 붙인다
-  const grid = outlineHeld({ ...item, outlineOverBody: true })
-  // 망토처럼 몸 뒤에 두르는 아이템은 몸이 서는 자리를 안감처럼 어둡게 칠해 펼친 모양으로 보이게 한다
-  const body = item.behind ? buildAvatarGrid(DEFAULT_AVATAR) : null
-  const w = Math.max(...grid.rows.map(r => r.length))
-  const h = grid.rows.length
-  const side = Math.max(w, h) + 2
-  const px = new Uint8ClampedArray(side * side * 4)
-  const ox = Math.floor((side - w) / 2)
-  const oy = Math.floor((side - h) / 2)
-  grid.rows.forEach((row, y) => {
-    for (let x = 0; x < row.length; x++) {
-      if (row[x] === '.') continue
-      let [r, g, b] = hexToRgb(grid.colors[row[x]])
-      if (body && row[x] !== 'o' && (body[grid.dy + y]?.[grid.dx + x] ?? '.') !== '.') {
-        r = Math.round(r * 0.45)
-        g = Math.round(g * 0.45)
-        b = Math.round(b * 0.45)
-      }
-      const i = ((oy + y) * side + ox + x) * 4
-      px[i] = r
-      px[i + 1] = g
-      px[i + 2] = b
-      px[i + 3] = 255
-    }
-  })
-  return { pixels: px, side }
+// 샘플 화면(추첨 미리보기, 대회 데모)에 세울 아무 캐릭터
+export function randomAvatar(rng: () => number): AvatarConfig {
+  let c: AvatarConfig = { v: 3, hair: rng() < 0.5 ? 'short' : 'buns' }
+  for (const item of AVATAR_SHOP_ITEMS) if (rng() < 0.35) c = withItem(c, item.slot, item.id)
+  return c
 }

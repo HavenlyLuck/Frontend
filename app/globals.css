@@ -2274,12 +2274,15 @@ a.product-card-home.is-soldout { cursor: pointer; }
 }
 /* 캐릭터 방 (마이페이지 프로필 카드 · 캐릭터 꾸미기) */
 .avatar-room {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   aspect-ratio: 1 / 1;
   image-rendering: pixelated;
   border-radius: 14px;
-  background: var(--bg-subtle);
+  /* 아바타 그림의 원래 배경색 — 발판 위 캐릭터가 공중에 뜬 듯 보이지 않게 */
+  background: #dce594;
 }
 .profile-room {
   position: relative;
@@ -3469,6 +3472,21 @@ a.product-card-home.is-soldout { cursor: pointer; }
 .avatar-style-option.selected {
   border-color: var(--accent);
   color: var(--text);
+}
+/* 아직 안 산 상점 아이템 — 입은 모습은 보여주되 흐리게, 누르면 상점으로 */
+.avatar-style-option.locked {
+  text-decoration: none;
+}
+.avatar-style-option.locked img {
+  opacity: 0.55;
+}
+.avatar-locked-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
 }
 .avatar-swatches {
   display: flex;
