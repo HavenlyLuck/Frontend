@@ -53,6 +53,10 @@ export default function SignupPage() {
   const [identity, setIdentity] = useState<{ id: string; phone: string; name: string | null } | null>(null)
   const [certifying, setCertifying] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  // 가입 동의 — 약관·만 14세는 필수, 후기 홍보 활용은 선택(안 해도 가입됨)
+  const [agree, setAgree] = useState({ terms: false, age14: false, reviewMarketing: false })
+  const [showReviewDetail, setShowReviewDetail] = useState(false)
+  const allAgreed = agree.terms && agree.age14 && agree.reviewMarketing
 
   useEffect(() => {
     // 추천 링크(/signup?ref=코드)로 들어오면 추천인 코드를 미리 채워 둔다
@@ -69,6 +73,7 @@ export default function SignupPage() {
         setForm(prev => ({ ...prev, ...draft.form }))
         setChecks(draft.checks)
         setCheckMessages(draft.checkMessages)
+        if (draft.agree) setAgree(draft.agree)
       }
       sessionStorage.removeItem(SIGNUP_DRAFT_KEY)
     } catch {}
@@ -108,6 +113,7 @@ export default function SignupPage() {
         form: { nickname: form.nickname, userId: form.userId, email: form.email, referral: form.referral },
         checks,
         checkMessages,
+        agree,
       }))
     } catch {}
     setCertifying(true)
@@ -155,6 +161,7 @@ export default function SignupPage() {
       alert('닉네임, 아이디, 이메일 중복확인을 완료해주세요.'); return
     }
     if (!identity) { alert('핸드폰 본인인증을 완료해주세요.'); return }
+    if (!agree.terms || !agree.age14) { alert('이용약관 동의와 만 14세 이상 확인은 필수예요.'); return }
 
     setSubmitting(true)
     try {
@@ -165,6 +172,10 @@ export default function SignupPage() {
         password: form.password,
         identity_verification_id: identity.id,
         referral_code: form.referral.trim() || null,
+        // 동의 기록 — 서버가 동의 여부와 동의 일시를 저장한다
+        terms_agreed: true,
+        age_14_confirmed: true,
+        review_marketing_agreed: agree.reviewMarketing,
       })
       alert('회원가입이 완료되었습니다. 로그인해주세요.')
       router.push('/login')
@@ -339,6 +350,49 @@ export default function SignupPage() {
                 style={{ textTransform: 'uppercase' }}
               />
               <p className="field-hint">추천인 코드를 넣고 첫 응모권을 사면, 나와 추천인 모두 무료 응모권 1장을 받아요.</p>
+            </div>
+
+            {/* 가입 동의 */}
+            <div className="signup-agree">
+              <label className="signup-agree-all">
+                <input
+                  type="checkbox"
+                  checked={allAgreed}
+                  onChange={(e) => setAgree({ terms: e.target.checked, age14: e.target.checked, reviewMarketing: e.target.checked })}
+                />
+                <span>전체 동의 <small>(선택 항목 포함)</small></span>
+              </label>
+              <div className="signup-agree-list">
+                <label>
+                  <input type="checkbox" checked={agree.terms} onChange={(e) => setAgree(a => ({ ...a, terms: e.target.checked }))} />
+                  <span><b>(필수)</b> 이용약관에 동의합니다</span>
+                  <a href="/terms" target="_blank" rel="noopener noreferrer">보기</a>
+                </label>
+                <label>
+                  <input type="checkbox" checked={agree.age14} onChange={(e) => setAgree(a => ({ ...a, age14: e.target.checked }))} />
+                  <span><b>(필수)</b> 만 14세 이상입니다</span>
+                </label>
+                {/* 계약 이행에 필요한 수집이라 동의 체크 없이 안내만 한다 */}
+                <div className="signup-agree-info">
+                  <span>개인정보 수집·이용 안내</span>
+                  <a href="/privacy#collect" target="_blank" rel="noopener noreferrer">보기</a>
+                </div>
+                <label>
+                  <input type="checkbox" checked={agree.reviewMarketing} onChange={(e) => setAgree(a => ({ ...a, reviewMarketing: e.target.checked }))} />
+                  <span>(선택) 후기를 천운 SNS·홈페이지 홍보에 활용하는 데 동의합니다</span>
+                  <button type="button" className="signup-agree-more" onClick={() => setShowReviewDetail(v => !v)} aria-expanded={showReviewDetail}>
+                    {showReviewDetail ? '닫기' : '보기'}
+                  </button>
+                </label>
+                {showReviewDetail && (
+                  <div className="signup-agree-detail">
+                    <p><b>수집 목적</b> 천운 공식 SNS(인스타그램 등) 및 홈페이지에 이용자 후기를 게시하여 서비스 홍보에 활용</p>
+                    <p><b>수집 항목</b> 닉네임, 후기 내용, 후기 사진</p>
+                    <p><b>보유·이용 기간</b> 동의 철회 시까지</p>
+                    <p>동의하지 않아도 회원가입과 서비스 이용에는 제한이 없어요. 동의한 뒤에도 언제든 철회할 수 있어요.</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <button type="submit" disabled={submitting} className="auth-submit">
