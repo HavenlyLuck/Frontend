@@ -36,6 +36,10 @@ const SUB_TABS: Record<StoreTab, { id: SubTab; label: string }[]> = {
 export default function ShopPage() {
   const [sort, setSort] = useState("최신순");
   const [storeTab, setStoreTab] = useState<StoreTab>("일반");
+  // /shop?tab=ssal 로 들어오면 쌀포인트 상점 탭을 연다 (쌀포인트 상품 구매 후 "계속 둘러보기")
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tab") === "ssal") setStoreTab("쌀포인트");
+  }, []);
   // 탭별로 결과를 캐싱해서, 이미 불러온 탭은 다시 눌러도 상품이 그대로 유지되고
   // storeTab이 바뀌는 렌더와 상품 데이터가 항상 같이 바뀌어 라벨이 섞이는 프레임도 생기지 않음
   const [cache, setCache] = useState<

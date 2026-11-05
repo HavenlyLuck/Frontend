@@ -42,7 +42,7 @@ export interface SignupPayload {
   nickname: string
   email: string
   password: string
-  phone: string  // 테스트 버전: 본인인증 없이 번호 중복확인만 한다
+  identity_verification_id: string  // 포트원 본인인증 ID — 이름·전화번호는 서버가 포트원에서 직접 가져온다
   referral_code?: string | null  // 추천인 코드 (선택)
 }
 

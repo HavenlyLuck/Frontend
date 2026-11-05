@@ -6521,3 +6521,11 @@ a.field-btn {
 }
 .pay-mode-toggle button.active { background: var(--surface); color: var(--accent-fg); box-shadow: var(--shadow-sm); }
 .pay-mode-toggle button:disabled { cursor: default; }
+
+/* 후기 작성자 아이디의 가린 부분 */
+.masked-id-blur {
+  display: inline-block;
+  filter: blur(3px);
+  user-select: none;
+  letter-spacing: 1px;
+}

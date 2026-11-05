@@ -14,7 +14,11 @@ export function useStorage() {
 
   const load = useCallback(async () => {
     const session = await getValidSession()
-    if (!session) return
+    // 로그아웃 상태면 이전 사람의 보관함 숫자가 남지 않게 비운다
+    if (!session) {
+      setItems([])
+      return
+    }
     try {
       setItems(await getMyStorage(session.token))
       setLoaded(true)

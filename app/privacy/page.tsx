@@ -4,7 +4,7 @@ import { BIZ_INFO, PolicyDoc, PolicySection } from "@/components/PolicyDoc";
 export const metadata: Metadata = { title: "개인정보처리방침 - 천운" };
 
 // 임시 처리방침. AI 솔루션(캐치시큐 처리방침 관리)으로 만든 정식 처리방침이 나오면 그 내용(또는 전용 URL)으로 교체할 것.
-// 수집 항목은 현재 회원가입·배송지 화면 기준. 본인인증을 다시 켜면 항목 추가 필요.
+// 수집 항목은 현재 회원가입(휴대폰 본인인증 포함)·배송지 화면 기준.
 export default function PrivacyPage() {
   return (
     <PolicyDoc
@@ -19,7 +19,8 @@ export default function PrivacyPage() {
             <tr><th>구분</th><th>수집 항목</th><th>이용 목적</th></tr>
           </thead>
           <tbody>
-            <tr><td>회원가입</td><td>아이디, 비밀번호, 닉네임, 이메일, 휴대폰 번호</td><td>회원 식별, 1인 1계정 확인, 공지·고객 응대</td></tr>
+            <tr><td>회원가입</td><td>아이디, 비밀번호, 닉네임, 이메일</td><td>회원 식별, 공지·고객 응대</td></tr>
+            <tr><td>휴대폰 본인인증</td><td>이름, 휴대폰 번호 (본인인증기관을 통해 확인)</td><td>본인 확인, 1인 1계정 확인, 결제 시 구매자 정보</td></tr>
             <tr><td>배송</td><td>수령인 이름, 연락처, 우편번호, 주소</td><td>당첨·구매 상품 배송</td></tr>
             <tr><td>결제</td><td>결제 승인번호, 결제 금액·일시 (카드번호는 결제대행사가 처리하며 회사는 저장하지 않음)</td><td>결제, 취소·환불 처리</td></tr>
             <tr><td>서비스 이용 시 자동 수집</td><td>접속 기록, 쿠키, 기기·브라우저 정보</td><td>부정 이용 방지, 서비스 개선, 이용 통계</td></tr>
@@ -41,6 +42,7 @@ export default function PrivacyPage() {
         <p>회사는 서비스 제공을 위해 아래 업무를 위탁합니다. 이 밖에 이용자의 동의 없이 개인정보를 제3자에게 제공하지 않습니다.</p>
         <ul className="policy-list">
           <li>결제 처리: 포트원 및 전자결제대행사</li>
+          <li>휴대폰 본인인증: 포트원, NHN KCP</li>
           <li>상품 배송: 택배사</li>
         </ul>
       </PolicySection>
