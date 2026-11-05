@@ -44,6 +44,11 @@ export interface SignupPayload {
   password: string
   identity_verification_id: string  // 포트원 본인인증 ID — 이름·전화번호는 서버가 포트원에서 직접 가져온다
   referral_code?: string | null  // 추천인 코드 (선택)
+  // 가입 동의 — 서버가 동의 여부와 동의 일시를 저장한다 (동의 증거)
+  // TODO(백엔드): UserSignup에 아직 없는 필드라 지금은 서버가 무시한다. 받아서 저장하도록 요청함.
+  terms_agreed?: boolean            // (필수) 이용약관 동의
+  age_14_confirmed?: boolean        // (필수) 만 14세 이상 확인
+  review_marketing_agreed?: boolean // (선택) 후기 SNS·홈페이지 홍보 활용 동의
 }
 
 export interface SignupResponse {
@@ -174,6 +179,17 @@ export function getMyProfile(token: string) {
 }
 
 // 비밀번호 변경 — 현재 비밀번호가 맞아야 바뀐다 (성공하면 204, 본문 없음)
+// 회원 탈퇴 — 본인 확인을 위해 현재 비밀번호를 같이 보낸다.
+// TODO(백엔드): DELETE /users/me 아직 없음. 비밀번호 확인 → 개인정보 삭제(법정 보존 정보는 분리 보관) → 204.
+// 진행 중인 응모·배송이 있어 바로 탈퇴할 수 없으면 400 + 이유 메시지.
+export async function deleteMyAccount(token: string, password: string): Promise<void> {
+  await request<unknown>('/users/me', {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ password }),
+  })
+}
+
 export async function changeMyPassword(token: string, currentPassword: string, newPassword: string): Promise<void> {
   const res = await fetch(`${API_URL}/users/me/password`, {
     method: 'PUT',

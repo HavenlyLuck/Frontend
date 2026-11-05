@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckIcon, GearIcon, LockKeyIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { clearAuth, getValidSession } from '@/lib/auth'
-import { ApiError, changeMyPassword, getMyProfile } from '@/lib/api'
+import { ApiError, changeMyPassword, deleteMyAccount, getMyProfile } from '@/lib/api'
+import { BIZ_INFO } from '@/components/PolicyDoc'
 import ReferralCard from '@/components/ReferralCard'
 
 const inputStyle: React.CSSProperties = {
@@ -91,6 +92,30 @@ export default function SettingsPage() {
   const handleLogout = () => {
     clearAuth()
     router.push('/')
+  }
+
+  // 회원 탈퇴 팝업
+  const [withdraw, setWithdraw] = useState<{ password: string; confirmed: boolean; error: string | null; busy: boolean } | null>(null)
+  const handleWithdraw = async () => {
+    if (!withdraw || withdraw.busy) return
+    const session = await getValidSession()
+    if (!session) {
+      setWithdraw({ ...withdraw, error: '로그인이 만료되었어요. 다시 로그인한 뒤 시도해 주세요.' })
+      return
+    }
+    setWithdraw({ ...withdraw, busy: true, error: null })
+    try {
+      await deleteMyAccount(session.token, withdraw.password)
+      clearAuth()
+      alert('탈퇴가 완료되었어요. 그동안 천운을 이용해 주셔서 감사합니다.')
+      router.push('/')
+    } catch (err) {
+      // 서버에 탈퇴 기능이 아직 없으면 고객센터로 안내한다
+      const message = err instanceof ApiError && (err.status === 404 || err.status === 405)
+        ? `지금은 화면에서 바로 탈퇴할 수 없어요. 고객센터(${BIZ_INFO.phone} · ${BIZ_INFO.email})로 요청해 주시면 처리해 드릴게요.`
+        : err instanceof ApiError ? err.message : '탈퇴 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.'
+      setWithdraw(w => w && { ...w, busy: false, error: message })
+    }
   }
 
   return (
@@ -183,6 +208,63 @@ export default function SettingsPage() {
         >
           로그아웃
         </button>
+
+        {/* 회원 탈퇴 — 가입보다 어렵지 않게, 설정 맨 아래에서 바로 할 수 있게 둔다 (개인정보보호법) */}
+        <div style={{ textAlign: 'center', marginTop: 20 }}>
+          <button
+            type="button"
+            onClick={() => { setWithdraw({ password: '', confirmed: false, error: null, busy: false }) }}
+            style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 2, cursor: 'pointer' }}
+          >
+            회원 탈퇴
+          </button>
+        </div>
+
+      <div className={`modal-overlay ${withdraw ? 'open' : ''}`} onClick={() => { if (!withdraw?.busy) setWithdraw(null) }}>
+        {withdraw && (
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="withdraw-title" style={{ margin: '0 16px', textAlign: 'left' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-icon" style={{ background: 'var(--danger-tint)', borderColor: 'var(--danger-tint-border)', margin: '0 auto 12px' }}>
+              <WarningCircleIcon size={28} weight="fill" color="var(--danger)" />
+            </div>
+            <div id="withdraw-title" className="modal-title" style={{ textAlign: 'center' }}>정말 탈퇴할까요?</div>
+            <ul style={{ margin: '12px 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.7, color: 'var(--text-secondary)' }}>
+              <li>남은 <b>쌀포인트와 쌀 응모권은 모두 사라지고</b> 되돌릴 수 없어요.</li>
+              <li>진행 중인 응모나 배송이 있으면, 처리가 끝난 뒤 탈퇴할 수 있어요.</li>
+              <li>결제·배송·분쟁 기록처럼 법에서 보관하도록 정한 정보는 정해진 기간 동안 따로 보관한 뒤 지워요.</li>
+            </ul>
+            <div style={labelStyle}>본인 확인을 위해 비밀번호를 입력해 주세요</div>
+            <input
+              style={inputStyle}
+              type="password"
+              value={withdraw.password}
+              onChange={e => setWithdraw(w => w && { ...w, password: e.target.value, error: null })}
+              placeholder="현재 비밀번호"
+              autoComplete="current-password"
+            />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={withdraw.confirmed}
+                onChange={e => setWithdraw(w => w && { ...w, confirmed: e.target.checked })}
+                style={{ width: 16, height: 16, accentColor: 'var(--danger)' }}
+              />
+              위 내용을 확인했고 탈퇴에 동의합니다
+            </label>
+            {withdraw.error && <div className="modal-notice" role="alert" style={{ marginTop: 12 }}>{withdraw.error}</div>}
+            <div className="modal-btn-row" style={{ marginTop: 16 }}>
+              <button className="btn-cancel" onClick={() => setWithdraw(null)} disabled={withdraw.busy}>취소</button>
+              <button
+                className="btn-confirm"
+                onClick={handleWithdraw}
+                disabled={!withdraw.password || !withdraw.confirmed || withdraw.busy}
+                style={{ background: 'var(--danger)' }}
+              >
+                {withdraw.busy ? '처리 중...' : '탈퇴하기'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className={`modal-overlay ${popup ? 'open' : ''}`} onClick={() => setPopup(null)}>
         {popup && (
