@@ -13,6 +13,7 @@ import {
 import { useMyPoints } from "@/hooks/useMyPoints";
 import { useStorage } from "@/hooks/useStorage";
 import { getValidSession, clearAuth } from "@/lib/auth";
+import { notifyStorageUpdated } from "@/lib/storage";
 
 const NAV_CATEGORIES = [
   { label: "응모", href: "/eungmo" },
@@ -51,6 +52,7 @@ export default function Navbar() {
 
   function handleLogout() {
     clearAuth();
+    notifyStorageUpdated();
     setIsLoggedIn(false);
     setIsAdmin(false);
     router.push("/");

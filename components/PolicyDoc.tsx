@@ -8,7 +8,7 @@ export const BIZ_INFO = {
   mailOrderNo: "제2026-서울성북-1363호",
   address: "서울특별시 성북구 삼선교로16길 35, 104동 304호 (삼선동3가, 삼선 SK VIEW 아파트)",
   phone: "010-9831-1138",
-  email: "havenlyluck@gmail.com",
+  email: "havenlyluck00@gmail.com",
 };
 
 const DOCS = [

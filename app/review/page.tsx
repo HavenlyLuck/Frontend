@@ -35,6 +35,20 @@ function Stars({ rating }: { rating: number }) {
 const EMPTY_REVIEW = { storageItemId: 0, title: '', content: '', rating: 5, imgPreview: '', imgFile: null as File | null }
 const EMPTY_INQUIRY = { title: '', content: '', isPrivate: false }
 
+// 후기 작성자 아이디 — 서버가 가운데를 * 로 가려서 보내고, 가린 부분은 흐리게 보여준다
+function MaskedId({ value }: { value: string }) {
+  // 백엔드가 아직 예전 버전이면 author가 없을 수 있다
+  const m = value?.match(/^([^*]*)(\*+)(.*)$/)
+  if (!m) return <>{value ?? ''}</>
+  return (
+    <>
+      {m[1]}
+      <span className="masked-id-blur" aria-label="가려진 글자">{m[2]}</span>
+      {m[3]}
+    </>
+  )
+}
+
 export default function ReviewPage() {
   const router = useRouter()
   const [tab, setTab] = useState<ReviewTab>('후기')
@@ -224,7 +238,7 @@ export default function ReviewPage() {
                     </a>
                   )}
                   <div className="review-meta">
-                    <span>{r.nickname}{r.is_mine && ' (나)'}</span>
+                    <span><MaskedId value={r.author} />{r.is_mine && ' (나)'}</span>
                     <span>{formatKstDate(r.created_at)}</span>
                     {r.is_mine && (
                       <button

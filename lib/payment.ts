@@ -1,7 +1,7 @@
 import * as PortOne from '@portone/browser-sdk/v2'
 import { preparePayment, completePayment, PaymentOrder, PaymentCompleteResponse } from './api'
 
-// 포트원 콘솔 > 결제 연동 > 연동 정보 의 상점 아이디와 결제 채널 키 (KG이니시스)
+// 포트원 콘솔 > 결제 연동 > 연동 정보 의 상점 아이디와 결제 채널 키 (한국결제네트웍스 KPN)
 const STORE_ID = process.env.NEXT_PUBLIC_PORTONE_STORE_ID ?? ''
 const CHANNEL_KEY = process.env.NEXT_PUBLIC_PORTONE_PAYMENT_CHANNEL_KEY ?? ''
 
@@ -34,7 +34,7 @@ export async function payWithCard(token: string, order: PaymentOrder): Promise<P
     totalAmount: prepared.amount,
     currency: 'KRW',
     payMethod: 'CARD',
-    // KG이니시스 PC 결제는 구매자 이름·전화번호·이메일이 필수
+    // 결제창에 넘기는 구매자 이름·전화번호·이메일
     customer: prepared.customer
       ? {
           fullName: prepared.customer.full_name,

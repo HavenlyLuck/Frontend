@@ -410,7 +410,8 @@ export default function ShopProductPage({
               구매한 상품은 보관함에서 확인할 수 있어요.
             </div>
             <div className="modal-btn-row">
-              <button className="btn-cancel" onClick={closePurchaseModal}>
+              {/* 구매한 상품의 상점(일반 / 쌀포인트) 목록으로 돌아간다 */}
+              <button className="btn-cancel" onClick={() => router.push(isCash ? "/shop" : "/shop?tab=ssal")}>
                 계속 둘러보기
               </button>
               <button className="btn-confirm" onClick={() => router.push("/mypage/storage")}>

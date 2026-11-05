@@ -21,7 +21,7 @@ export interface ReviewResponse {
   product_name: string | null
   product_type: ReviewProductType | null
   pay_type: StorePayType | null
-  nickname: string
+  author: string // 작성자 가입 아이디, 가운데는 * 로 가려서 온다 (ab****g)
   is_mine: boolean
   created_at: string
 }
