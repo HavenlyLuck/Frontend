@@ -179,8 +179,7 @@ export function getMyProfile(token: string) {
 }
 
 // 비밀번호 변경 — 현재 비밀번호가 맞아야 바뀐다 (성공하면 204, 본문 없음)
-// 회원 탈퇴 — 본인 확인을 위해 현재 비밀번호를 같이 보낸다.
-// TODO(백엔드): DELETE /users/me 아직 없음. 비밀번호 확인 → 개인정보 삭제(법정 보존 정보는 분리 보관) → 204.
+// 회원 탈퇴 — 본인 확인을 위해 현재 비밀번호를 같이 보낸다. 성공하면 204.
 // 진행 중인 응모·배송이 있어 바로 탈퇴할 수 없으면 400 + 이유 메시지.
 export async function deleteMyAccount(token: string, password: string): Promise<void> {
   await request<unknown>('/users/me', {

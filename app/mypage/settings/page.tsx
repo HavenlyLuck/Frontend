@@ -228,7 +228,7 @@ export default function SettingsPage() {
             </div>
             <div id="withdraw-title" className="modal-title" style={{ textAlign: 'center' }}>정말 탈퇴할까요?</div>
             <ul style={{ margin: '12px 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.7, color: 'var(--text-secondary)' }}>
-              <li>남은 <b>쌀포인트와 쌀 응모권은 모두 사라지고</b> 되돌릴 수 없어요.</li>
+              <li>남은 <b>쌀포인트·쌀 응모권과 배송 신청하지 않은 보관함 상품은 모두 사라지고</b> 되돌릴 수 없어요.</li>
               <li>진행 중인 응모나 배송이 있으면, 처리가 끝난 뒤 탈퇴할 수 있어요.</li>
               <li>결제·배송·분쟁 기록처럼 법에서 보관하도록 정한 정보는 정해진 기간 동안 따로 보관한 뒤 지워요.</li>
             </ul>
