@@ -116,6 +116,7 @@ nav {
   width: 30px;
   height: 30px;
   flex-shrink: 0;
+  object-fit: contain;
 }
 
 .search-bar {
@@ -4918,7 +4919,7 @@ a.field-btn {
     font-size: 17px;
     color: var(--text);
   }
-  .auth-card-mobile-mark svg {
+  .auth-card-mobile-mark img {
     width: 26px;
     height: 26px;
   }
@@ -5730,7 +5731,7 @@ a.field-btn {
   color: var(--text);
 }
 
-.footer-logo svg {
+.footer-logo img {
   width: 22px;
   height: 22px;
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import LogoMark from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signup, checkDuplicate, verifyIdentity, ApiError, DuplCheckField } from '@/lib/api'
@@ -23,18 +24,6 @@ const SIGNUP_DRAFT_KEY = 'signup-draft'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,20}$/
-
-const CLOUD_MARK_PATH =
-  'M6 20 C6 15.5 9.6 12.5 13.5 13.2 C14.6 9.6 19 8.3 22 11 C25.6 11.4 28 14.3 27 17.8 C29.2 19 29.2 22.4 26.5 23.3 C25.5 25.6 22.6 26.2 20.8 24.6 C19.4 26.4 16.4 26.3 15.1 24.4 C12.8 25.6 9.8 24.3 9.3 21.8 C7.4 21.9 6 21.2 6 20 Z'
-
-function CloudMark({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 32 32" aria-hidden="true">
-      <path d={CLOUD_MARK_PATH} fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinejoin="round" />
-      <circle cx="23" cy="12.5" r="1.8" fill="var(--gold)" />
-    </svg>
-  )
-}
 
 function StatusMsg({ state, message }: { state: CheckState; message: string }) {
   if (state === 'idle' || state === 'checking') return null
@@ -192,7 +181,7 @@ export default function SignupPage() {
     <div className="auth-shell">
       <div className="auth-grid">
         <div className="auth-brand">
-          <CloudMark className="auth-brand-mark" />
+          <LogoMark className="auth-brand-mark" />
           <h1>
             천원 한 장,
             <br />
@@ -207,7 +196,7 @@ export default function SignupPage() {
 
         <div className="auth-card">
           <div className="auth-card-mobile-mark">
-            <CloudMark />
+            <LogoMark />
             천운
           </div>
           <h2 className="auth-title">회원가입</h2>
