@@ -147,7 +147,7 @@ export default function ShopPage() {
             ))}
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <div className="chip-scroll" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {SORTS.map((s) => (
               <button
                 key={s}

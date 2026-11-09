@@ -87,6 +87,14 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
     return () => window.removeEventListener(AVATAR_UPDATED_EVENT, onUpdate)
   }, [])
 
+  // 휴대폰에선 메뉴가 옆으로 미는 한 줄이라, 지금 보고 있는 메뉴가 화면 안에 오도록 맞춘다
+  useEffect(() => {
+    const menu = document.querySelector<HTMLElement>('.sidebar-menu')
+    const active = menu?.querySelector<HTMLElement>('.menu-item.active')
+    if (!menu || !active || menu.scrollWidth <= menu.clientWidth) return
+    menu.scrollLeft = active.offsetLeft - (menu.clientWidth - active.offsetWidth) / 2
+  }, [pathname, authChecked])
+
   if (!authChecked) return null
 
   return (

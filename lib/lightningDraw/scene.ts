@@ -4,7 +4,7 @@
  * 연출은 이미 정해진 당첨 결과를 보여주기만 한다 — 여기서 당첨자를 고르지 않는다.
  */
 
-import { AVATAR_H as AVATAR_H_PX, AVATAR_W, DEFAULT_AVATAR, avatarKey, composeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
+import { AVATAR_FEET_ROW, AVATAR_H as AVATAR_H_PX, AVATAR_W, DEFAULT_AVATAR, avatarKey, composeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 
 export const WORLD_W = 208
 export const WORLD_H = 156
@@ -81,26 +81,29 @@ function randomLook(rng: Rng): AvatarLook {
 }
 
 // ── 캐릭터 ──
-// 마이페이지 아바타 그림(발판 포함 38×48칸)을 장면보다 3배 촘촘하게 그린다 — 그림 1칸 = 장면 1/3칸.
+// 마이페이지 아바타 그림(발판을 뗀 38×37칸)을 장면보다 3배 촘촘하게 그린다 — 그림 1칸 = 장면 1/3칸.
 // 그래서 장면 배치는 그대로인데 캐릭터는 꾸미기 화면과 같은 그림으로 보인다.
 // 장면을 그리는 캔버스는 화면 해상도이거나(쿠지) 3배 큰 캔버스여야(추첨) 그림 칸이 뭉개지지 않는다.
 export const AVATAR_SCALE = 3
 const SPRITE_W = AVATAR_W / AVATAR_SCALE
 const SPRITE_H = AVATAR_H_PX / AVATAR_SCALE
 // 발 위치(m.y) 기준 머리 꼭대기까지 높이 — 이름표·번개가 이 위로 간다
-export const AVATAR_H = 13
+export const AVATAR_H = 9
+// 발바닥(그림의 발 행 아래 끝)이 칸마다 깔린 금테 받침대 윗면(발 위치 + 1칸)에 닿게 세운다
+const FEET_FROM_TOP = (AVATAR_FEET_ROW + 1) / AVATAR_SCALE
+const PEDESTAL_TOP = 1
 
 // 캐릭터 그림을 설정·색칠별로 한 번만 만든다 (tint: 번개 번쩍임·당첨 테두리용 단색 실루엣)
 const sprites = new Map<string, HTMLCanvasElement>()
-function avatarSprite(config: AvatarConfig, tint: string | null): HTMLCanvasElement {
-  const key = avatarKey(config) + (tint ?? '')
+function avatarSprite(config: AvatarConfig, tint: string | null, blink = false): HTMLCanvasElement {
+  const key = avatarKey(config) + (tint ?? '') + (blink ? '-b' : '')
   let c = sprites.get(key)
   if (!c) {
     c = document.createElement('canvas')
     c.width = AVATAR_W
     c.height = AVATAR_H_PX
     const g = c.getContext('2d')!
-    g.putImageData(new ImageData(composeAvatar(config), AVATAR_W, AVATAR_H_PX), 0, 0)
+    g.putImageData(new ImageData(composeAvatar(config, { blink }), AVATAR_W, AVATAR_H_PX), 0, 0)
     if (tint) {
       g.globalCompositeOperation = 'source-atop'
       g.fillStyle = tint
@@ -125,11 +128,14 @@ export function drawAvatar(ctx: CanvasRenderingContext2D, m: CastMember, opts: A
   const lift = Math.round(opts.lift ?? 0)
   // 캐릭터를 안 꾸민 사람도 같은 그림으로 — 머리 모양만 사람마다 다르게
   const config = m.avatar ?? { ...DEFAULT_AVATAR, hair: m.look.longHair ? 'buns' : 'short' }
-  // 발판 아래 끝이 선반(발 위치 + 2칸)에 닿게 세운다
   const x = m.x - SPRITE_W / 2
-  const y = m.y + 2 - SPRITE_H - lift
+  const y = m.y + PEDESTAL_TOP - FEET_FROM_TOP - lift
   const prevSmoothing = ctx.imageSmoothingEnabled
   ctx.imageSmoothingEnabled = false
+
+  // 그림자는 받침대 금테에 붙어 있고, 몸만 뜬다
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
+  ctx.fillRect(m.x - 3, m.y + PEDESTAL_TOP, 6, 1)
 
   // 당첨 테두리 — 같은 실루엣을 그림 1칸씩 사방으로 밀어 깐 뒤 그 위에 그린다
   if (opts.outline && opts.zap == null) {
@@ -138,7 +144,7 @@ export function drawAvatar(ctx: CanvasRenderingContext2D, m: CastMember, opts: A
     for (const [dx, dy] of [[-d, 0], [d, 0], [0, -d], [0, d]]) ctx.drawImage(ring, x + dx, y + dy, SPRITE_W, SPRITE_H)
   }
   const tint = opts.zap == null ? null : opts.zap === 0 ? '#ffffff' : '#ffe66b'
-  ctx.drawImage(avatarSprite(config, tint), x, y, SPRITE_W, SPRITE_H)
+  ctx.drawImage(avatarSprite(config, tint, !!opts.blink && tint == null), x, y, SPRITE_W, SPRITE_H)
   ctx.imageSmoothingEnabled = prevSmoothing
 }
 

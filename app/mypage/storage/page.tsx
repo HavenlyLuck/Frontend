@@ -290,8 +290,8 @@ export default function StoragePage() {
       <div className="mypage-section-header">
         <div className="mypage-section-title"><ArchiveIcon size={17} weight="fill" color="var(--accent)" /> 보관함</div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 24 }}>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 24 }}>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, flex: '1 1 260px' }}>
           당첨되거나 구매한 상품이 보관돼요. 받고 싶은 상품을 선택해서 한 번에 택배로 받아보세요.
         </p>
         <div style={{ flexShrink: 0, display: 'flex', gap: 8 }}>

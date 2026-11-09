@@ -81,7 +81,7 @@ export default function PointHistoryPage() {
         <div className="mypage-section-title"><GrainsIcon size={17} weight="fill" color="var(--accent)" /> 쌀포인트 내역</div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
+      <div className="points-summary" style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
         <div className="summary-card" style={{ flex: 1, textAlign: 'center', cursor: 'default' }}>
           <div className="summary-value" style={{ color: 'var(--gold)' }}>{ssalPoint.toLocaleString()}<span>P</span></div>
           <div className="summary-label">보유 쌀포인트</div>

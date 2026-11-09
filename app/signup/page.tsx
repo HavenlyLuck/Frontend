@@ -308,7 +308,7 @@ export default function SignupPage() {
                 <input
                   id="signup-phone"
                   type="tel"
-                  placeholder="핸드폰 번호 (본인인증 시 자동 입력)"
+                  placeholder="휴대폰 번호"
                   value={identity?.phone ?? ''}
                   readOnly
                   className="field-input"
@@ -317,6 +317,7 @@ export default function SignupPage() {
                   {certifying ? '인증 중...' : identity ? '재인증' : '본인인증'}
                 </button>
               </div>
+              {!identity && <p className="field-hint">본인인증을 하면 자동으로 입력돼요</p>}
               {identity && (
                 <p className="field-hint ok">
                   {identity.name ? `${identity.name}님, ` : ''}본인인증이 완료되었습니다.
