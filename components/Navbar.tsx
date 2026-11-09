@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import LogoMark from "./LogoMark";
+import { Logo } from "./LogoMark";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -64,8 +64,7 @@ export default function Navbar() {
     <nav className={isNeon ? "nav-neon" : undefined}>
       <div className="nav-top-row">
         <Link className="logo" href="/">
-          <LogoMark className="logo-icon" />
-          천운
+          <Logo className="logo-full" />
         </Link>
 
         <div className="nav-actions">

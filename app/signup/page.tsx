@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import LogoMark from '@/components/LogoMark'
+import LogoMark, { Logo } from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signup, checkDuplicate, verifyIdentity, ApiError, DuplCheckField } from '@/lib/api'
@@ -196,8 +196,7 @@ export default function SignupPage() {
 
         <div className="auth-card">
           <div className="auth-card-mobile-mark">
-            <LogoMark />
-            천운
+            <Logo />
           </div>
           <h2 className="auth-title">회원가입</h2>
           <form className="auth-form" onSubmit={handleSubmit}>

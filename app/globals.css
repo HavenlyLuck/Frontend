@@ -6850,3 +6850,27 @@ a.field-btn {
     line-height: 1.45;
   }
 }
+
+/* ── 대표 로고 (2026-11 새 로고: 심볼 + "천운" 글자, 가로가 세로의 약 3배) ── */
+.logo-full {
+  display: block;
+  height: 32px;
+  width: auto;
+}
+.footer-logo img {
+  width: auto;
+  height: 28px;
+}
+.auth-brand-mark {
+  width: auto;
+  align-self: flex-start;
+}
+@media (max-width: 480px) {
+  .logo-full { height: 28px; }
+}
+@media (max-width: 760px) {
+  .auth-card-mobile-mark img {
+    width: auto;
+    height: 30px;
+  }
+}
