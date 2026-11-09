@@ -9,6 +9,7 @@ import {
   GearIcon,
   HeartIcon,
   MagnifyingGlassIcon,
+  SignOutIcon,
   UserIcon,
 } from "@phosphor-icons/react";
 import { useMyPoints } from "@/hooks/useMyPoints";
@@ -76,26 +77,29 @@ export default function Navbar() {
                   {ssalPoint.toLocaleString()}P
                 </span>
               </div>
-              <Link href="/mypage/storage" className="nav-btn">
+              {/* 좁은 화면에선 글자(nav-btn-label)를 숨기고 아이콘만 보여준다 */}
+              <Link href="/mypage/storage" className="nav-btn" aria-label="보관함">
                 <ArchiveIcon size={16} weight="bold" />
-                <span>보관함</span>
+                <span className="nav-btn-label">보관함</span>
                 {readyStorageCount > 0 && (
                   <span className="nav-btn-badge">{readyStorageCount}</span>
                 )}
               </Link>
-              <Link href="/mypage/wishlist" className="nav-btn">
+              <Link href="/mypage/wishlist" className="nav-btn" aria-label="찜한 상품">
                 <HeartIcon size={16} weight="bold" />
-                <span>찜한 상품</span>
+                <span className="nav-btn-label">찜한 상품</span>
               </Link>
               <Link
                 href="/mypage"
                 className={`nav-btn ${isMypage ? "active-nav" : ""}`}
+                aria-label="마이페이지"
               >
                 <UserIcon size={16} weight="bold" />
-                <span>마이페이지</span>
+                <span className="nav-btn-label">마이페이지</span>
               </Link>
-              <button className="nav-btn" onClick={handleLogout}>
-                로그아웃
+              <button className="nav-btn" onClick={handleLogout} aria-label="로그아웃">
+                <SignOutIcon size={16} weight="bold" className="nav-btn-mobile-icon" />
+                <span className="nav-btn-label">로그아웃</span>
               </button>
             </>
           ) : (

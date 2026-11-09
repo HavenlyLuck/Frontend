@@ -28,7 +28,7 @@ export default function KujiPage() {
             도움이 필요하다면?
           </a>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end', marginBottom: 28 }}>
+        <div className="chip-scroll" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 28 }}>
           {SORTS.map(s => (
             <button
               key={s}

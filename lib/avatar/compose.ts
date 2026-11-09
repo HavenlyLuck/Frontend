@@ -1,9 +1,10 @@
 // 아바타 설정(JSON) → 픽셀 합성. 브라우저 API를 쓰지 않는 순수 함수라
 // 미리보기 스크립트나 다른 캔버스에서도 그대로 재사용할 수 있다.
 //
-// 그림은 hd.ts — 기본 캐릭터(똥머리·흰 티·잔디 발판) 위에 머리·옷·모자·손 층을 차례로 덮어 그린다.
+// 그림은 hd.ts — 기본 캐릭터(똥머리·흰 티) 위에 머리·옷·모자·손 층을 차례로 덮어 그린다.
+// 원본 그림에는 잔디 발판이 붙어 있어서, 여기서 발판을 떼고 캐릭터만 남긴다 (stripTile).
 
-import { HD_BASE, HD_H, HD_ITEMS, HD_PALETTE, HD_W } from './hd'
+import { HD_BASE, HD_ITEMS, HD_PALETTE, HD_W } from './hd'
 import { AVATAR_SHOP_ITEMS, HAIRS, WEAR_SLOTS, type HairId, type WearSlot } from './shopItems'
 
 export type { HairId, WearSlot }
@@ -18,8 +19,11 @@ export interface AvatarConfig {
   held?: string
 }
 
+// 발판을 뗀 캐릭터 그림 크기 — 37행(0~36)까지가 캐릭터, 그 아래는 원본의 잔디 발판이라 버린다
 export const AVATAR_W = HD_W
-export const AVATAR_H = HD_H
+export const AVATAR_H = 37
+// 발 바닥 행 — 받침대·선반 위에 세울 때 기준
+export const AVATAR_FEET_ROW = 35
 
 export const DEFAULT_AVATAR: AvatarConfig = { v: 3, hair: 'buns' }
 
@@ -55,7 +59,7 @@ export function avatarKey(c: AvatarConfig): string {
 // 겹쳐 그릴 층 (뒤 → 앞)
 function layersOf(c: AvatarConfig): string[][] {
   const ids = [HAIRS.find(h => h.id === c.hair)?.layer, c.outfit, c.hat, c.held]
-  return ids.filter((id): id is string => !!id && !!HD_ITEMS[id]).map(id => HD_ITEMS[id])
+  return ids.filter((id): id is string => !!id && !!ITEMS[id]).map(id => ITEMS[id])
 }
 
 // 배경을 깔 때 쓰는 색 (참고 그림의 연두색)
@@ -67,8 +71,36 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 const RGB: Record<string, [number, number, number]> = Object.fromEntries(Object.entries(HD_PALETTE).map(([k, v]) => [k, hexToRgb(v)]))
 
-// RGBA 픽셀 (AVATAR_W × AVATAR_H). background면 연두색 배경을 깐다.
-export function composeAvatar(c: AvatarConfig, { background = false } = {}): Uint8ClampedArray<ArrayBuffer> {
+// ── 잔디 발판 떼기 ──
+// 원본 그림은 29행부터 다리와 잔디 발판이 겹친다. 다리는 가운데(14~23열)에만 있고, 발판은 초록 잔디·흙색이다.
+const LEG_ROW = 29
+const LEG_COLS: [number, number] = [14, 23]
+const ITEM_COLS: [number, number] = [13, 25] // 부츠처럼 발판 쪽으로 조금 넓게 내려오는 아이템
+const isGrass = (ch: string) => {
+  const c = RGB[ch]
+  if (!c) return false
+  const [r, g, b] = c
+  return r + g + b >= 260 && g >= r - 5 && g > b + 20
+}
+function stripTile(rows: string[], item: boolean): string[] {
+  const [c0, c1] = item ? ITEM_COLS : LEG_COLS
+  return rows.slice(0, AVATAR_H).map((row, y) => {
+    if (y < LEG_ROW || (item && y < LEG_ROW + 2)) return row // 손에 든 꽃다발처럼 옆으로 나온 건 그대로
+    if (!item && y > AVATAR_FEET_ROW) return '.'.repeat(row.length)
+    return [...row].map((ch, x) => (x >= c0 && x <= c1 && ch !== '-' && !isGrass(ch) ? ch : '.')).join('')
+  })
+}
+const BASE = stripTile(HD_BASE, false)
+const ITEMS: Record<string, string[]> = Object.fromEntries(Object.entries(HD_ITEMS).map(([id, rows]) => [id, stripTile(rows, true)]))
+
+// 눈 칸 (그림 좌표) — 양쪽 눈이 세로 4칸씩. 깜빡일 땐 위아래 칸을 피부색으로 덮고 한 줄만 남겨 감은 눈으로 만든다.
+const EYE_COLUMNS = [15, 22]
+const EYE_ROWS = [13, 14, 15, 16]
+const EYE_CLOSED_ROW = 15
+const SKIN = hexToRgb('#fde2cd')
+
+// RGBA 픽셀 (AVATAR_W × AVATAR_H). background면 연두색 배경을 깐다. blink면 눈을 감은 모습.
+export function composeAvatar(c: AvatarConfig, { background = false, blink = false } = {}): Uint8ClampedArray<ArrayBuffer> {
   const px = new Uint8ClampedArray(AVATAR_W * AVATAR_H * 4)
   const set = (x: number, y: number, rgb: [number, number, number] | null) => {
     const o = (y * AVATAR_W + x) * 4
@@ -82,8 +114,9 @@ export function composeAvatar(c: AvatarConfig, { background = false } = {}): Uin
       set(x, y, ch === '-' ? null : RGB[ch])
     }
   })
-  paint(HD_BASE)
+  paint(BASE)
   layersOf(c).forEach(paint)
+  if (blink) for (const x of EYE_COLUMNS) for (const y of EYE_ROWS) if (y !== EYE_CLOSED_ROW) set(x, y, SKIN)
   if (background) {
     const bg = hexToRgb(AVATAR_BG)
     for (let i = 0; i < AVATAR_W * AVATAR_H; i++) if (px[i * 4 + 3] === 0) set(i % AVATAR_W, Math.floor(i / AVATAR_W), bg)
