@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import LogoMark from '@/components/LogoMark'
+import LogoMark, { Logo } from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { login, ApiError } from '@/lib/api'
@@ -58,8 +58,7 @@ export default function LoginPage() {
 
         <div className="auth-card">
           <div className="auth-card-mobile-mark">
-            <LogoMark />
-            천운
+            <Logo />
           </div>
           <h2 className="auth-title">로그인</h2>
           <form className="auth-form" onSubmit={handleSubmit}>

@@ -23,13 +23,13 @@ export const metadata: Metadata = {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     locale: 'ko_KR',
-    images: [{ url: '/og-image.jpg', width: 800, height: 800, alt: '천운' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '천운 - 천원으로 응모하는 행운의 마켓' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: ['/og-image.jpg'],
+    images: ['/og-image.png'],
   },
 }
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BIZ_INFO } from "./PolicyDoc";
 import EscrowMark from "./EscrowMark";
-import LogoMark from "./LogoMark";
+import { Logo } from "./LogoMark";
 
 
 // 사업자 정보는 components/PolicyDoc.tsx의 BIZ_INFO 한 곳에서 관리한다 (사업자등록증 2026-10-26 기준).
@@ -12,8 +12,7 @@ export default function Footer() {
       <div className="footer-inner">
         <div className="footer-top">
           <div className="footer-logo">
-            <LogoMark />
-            천운
+            <Logo />
           </div>
           <div className="footer-links">
             <Link href="/guide">가이드</Link>
