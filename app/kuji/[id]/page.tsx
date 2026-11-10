@@ -7,13 +7,11 @@ import {
   CheckIcon,
   ConfettiIcon,
   GiftIcon,
-  HeartIcon,
   LockIcon,
   TicketIcon,
 } from '@phosphor-icons/react'
 import { fetchKujiProduct, type KujiLastOne, type KujiProduct, type KujiTier } from '@/lib/kujiData'
 import { confirmKujiDraw, fetchKujiBoard, type KujiBoard } from '@/lib/kujiBoard'
-import { isWished, toggleWishlist } from '@/lib/wishlist'
 import { getValidSession, isLoggedIn, loginPath } from '@/lib/auth'
 import KujiReveal from '@/components/KujiReveal'
 import KujiAvatarScene from '@/components/KujiAvatarScene'
@@ -63,10 +61,8 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
 
 function KujiProductView({ product }: { product: KujiProduct }) {
   const router = useRouter()
-  const wishId = `kuji-${product.id}`
 
   const [qty, setQty] = useState(1)
-  const [isLiked, setIsLiked] = useState(() => isWished(wishId))
   const [drawOpen, setDrawOpen] = useState(false)
   const [selected, setSelected] = useState<number[]>([])
   const [results, setResults] = useState<DrawResult | null>(null)
@@ -376,18 +372,6 @@ function KujiProductView({ product }: { product: KujiProduct }) {
                 총 {(product.pricePerTicket * qty).toLocaleString()}원 (최대 {maxQty}장)
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button
-                  className={`btn-wish ${isLiked ? 'liked' : ''}`}
-                  onClick={() => setIsLiked(toggleWishlist({
-                    id: wishId,
-                    href: `/kuji/${product.id}`,
-                    title: product.title,
-                    image: product.banner,
-                    subtitle: `${product.pricePerTicket.toLocaleString()}원 / 1장`,
-                  }))}
-                >
-                  <HeartIcon size={19} weight={isLiked ? 'fill' : 'regular'} color={isLiked ? 'var(--danger)' : 'var(--text-tertiary)'} />
-                </button>
                 <button
                   onClick={openDraw}
                   disabled={closed}

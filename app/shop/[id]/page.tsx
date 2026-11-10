@@ -14,7 +14,7 @@ import {
 import { notifyStorageUpdated } from "@/lib/storage";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
 import { payWithCard, paymentFailureMessage, PaymentWindowError } from "@/lib/payment";
-import { isWished, toggleWishlist } from "@/lib/wishlist";
+import { addToWishlist, getMyWishlist, removeFromWishlist } from "@/lib/wishlist";
 import { getValidSession, loginPath } from "@/lib/auth";
 import StoreProductCard, {
   STORE_LABEL,
@@ -23,7 +23,7 @@ import StoreProductCard, {
 } from "@/components/StoreProductCard";
 import RefundNotice from "@/components/RefundNotice";
 import StoreFundingCard from "@/components/StoreFundingCard";
-import { ConfettiIcon, WarningIcon } from "@phosphor-icons/react";
+import { ConfettiIcon, HeartIcon, WarningIcon } from "@phosphor-icons/react";
 
 // 상점 상품 상세 — 관련 상품 섹션 때문에 목록을 받아 id로 찾는다.
 export default function ShopProductPage({
@@ -74,8 +74,21 @@ export default function ShopProductPage({
   }, [productId]);
 
   const product = products?.find((p) => p.store_product_id === productId);
-  const wishId = `shop-${productId}`;
-  const [isLiked, setIsLiked] = useState(() => isWished(wishId));
+  // 찜 상태 — 로그인했을 때만 서버에서 불러온다 (일반 상점 상품만 찜할 수 있다)
+  const [isLiked, setIsLiked] = useState(false);
+  const [wishBusy, setWishBusy] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    getValidSession()
+      .then((session) => (session ? getMyWishlist(session.token) : []))
+      .then((list) => {
+        if (!cancelled) setIsLiked(list.some((i) => i.store_product_id === productId));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
   const [qty, setQty] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
@@ -120,6 +133,26 @@ export default function ShopProductPage({
         p.stock > 0,
     )
     .slice(0, 4);
+
+  const toggleWish = async () => {
+    if (wishBusy) return;
+    const session = await getValidSession();
+    if (!session) {
+      router.push(loginPath());
+      return;
+    }
+    const next = !isLiked;
+    setIsLiked(next);
+    setWishBusy(true);
+    try {
+      if (next) await addToWishlist(session.token, productId);
+      else await removeFromWishlist(session.token, productId);
+    } catch {
+      setIsLiked(!next);
+    } finally {
+      setWishBusy(false);
+    }
+  };
 
   const changeQty = (delta: number) =>
     setQty((prev) => Math.min(product.stock, Math.max(1, prev + delta)));
@@ -207,6 +240,17 @@ export default function ShopProductPage({
                 <div className="image-placeholder">
                   <PayTypeIcon type={product.pay_type} size={64} />
                 </div>
+              )}
+              {isCash && (
+                <button
+                  className={`wish-heart ${isLiked ? "liked" : ""}`}
+                  aria-label={isLiked ? "찜 해제" : "찜하기"}
+                  aria-pressed={isLiked}
+                  disabled={wishBusy}
+                  onClick={toggleWish}
+                >
+                  <HeartIcon size={20} weight={isLiked ? "fill" : "regular"} />
+                </button>
               )}
             </div>
           </div>
@@ -344,23 +388,6 @@ export default function ShopProductPage({
                 onClick={openPurchaseModal}
               >
                 {soldOut ? "품절" : "구매하기"}
-              </button>
-              <button
-                className={`btn-wish ${isLiked ? "liked" : ""}`}
-                aria-label={isLiked ? "찜 해제" : "찜하기"}
-                onClick={() =>
-                  setIsLiked(
-                    toggleWishlist({
-                      id: wishId,
-                      href: `/shop/${product.store_product_id}`,
-                      title: product.product_name,
-                      image: product.image_url,
-                      subtitle: formatStorePrice(product.pay_type, product.price),
-                    }),
-                  )
-                }
-              >
-                <span className="heart">{isLiked ? "❤️" : "🤍"}</span>
               </button>
             </div>
 

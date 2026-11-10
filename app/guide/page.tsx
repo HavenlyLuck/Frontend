@@ -18,6 +18,7 @@ import {
 // 바로가기 — id는 다른 페이지의 "도움이 필요하다면?" 링크(/guide#응모 등)가 쓰므로 바꾸지 않는다
 const SECTIONS = [
   { id: '포인트', label: '포인트', icon: CoinsIcon },
+  { id: '쌀응모권', label: '쌀 응모권', icon: TicketIcon },
   { id: '응모', label: '응모', icon: TicketIcon },
   { id: '쿠지', label: '쿠지', icon: GiftIcon },
   { id: '상점', label: '상점', icon: StorefrontIcon },
@@ -98,7 +99,7 @@ export default function GuidePage() {
               <tr><th></th><th>🌾 쌀포인트</th><th>🎫 쌀 응모권</th></tr>
             </thead>
             <tbody>
-              <tr><th>얻는 방법</th><td>응모 낙첨 시 지급</td><td>대회·이벤트 보상</td></tr>
+              <tr><th>얻는 방법</th><td>응모 낙첨 시 지급</td><td>이벤트 · 친구 추천인 등록</td></tr>
               <tr><th>쓰는 곳</th><td>쌀포인트 상점, 캐릭터 아이템</td><td>응모 (1장 = 응모권 1장)</td></tr>
               <tr><th>현금으로 돌려받기</th><td className="is-no">불가</td><td className="is-no">불가</td></tr>
               <tr><th>낙첨 시 쌀포인트</th><td>-</td><td className="is-no">지급 안 됨</td></tr>
@@ -106,6 +107,23 @@ export default function GuidePage() {
           </table>
         </div>
         <Callout>쌀 응모권은 보상으로 무료로 드리는 응모권이라, 낙첨돼도 쌀포인트가 지급되지 않아요. 돈으로는 살 수 없어요.</Callout>
+      </section>
+
+      {/* 쌀 응모권 */}
+      <section id="쌀응모권" className="guide-section">
+        <SectionTitle icon={TicketIcon} title="쌀 응모권" summary="이벤트나 친구 추천인 등록으로 받는 무료 응모권이에요. 결제 대신 응모에 쓸 수 있어요." />
+        <Rules items={[
+          <><b>얻는 방법</b> · 천운의 각종 이벤트 보상, 그리고 친구 추천인 등록으로 받아요.</>,
+          <><b>친구 추천</b> · 추천인 코드를 등록한 친구가 첫 응모권을 사면, 친구와 나 모두 쌀 응모권 1장을 받아요.</>,
+          <><b>쓰는 방법</b> · 응모 상품에서 결제 방식을 "쌀 응모권"으로 고르면 1장당 응모권 1장으로 응모돼요.</>,
+          <><b>확인하는 곳</b> · 화면 위 쌀포인트 왼쪽, 그리고 보관함에서 가진 장수를 볼 수 있어요.</>,
+          <>응모를 취소하면 쓴 쌀 응모권은 보관함으로 돌아와요.</>,
+          <>돈으로 살 수 없고, 현금으로 돌려받을 수도 없어요.</>,
+        ]} />
+        <Callout tone="warn">
+          <b>쌀 응모권으로 응모한 장수는 낙첨돼도 쌀포인트 페이백이 없어요.</b> 카드로 산 응모권만 낙첨 시 1장당 1,000 쌀포인트를 드려요.
+          <div className="guide-example">예) 카드 3장 + 쌀 응모권 2장으로 응모 → 낙첨: 3,000 쌀포인트</div>
+        </Callout>
       </section>
 
       {/* 응모 */}
@@ -120,7 +138,7 @@ export default function GuidePage() {
         <Rules items={[
           <>당첨 확률 = <b>내 응모권 수 ÷ 전체 응모권 수</b></>,
           <>당첨되면 상품은 <b>보관함</b>으로 들어가요.</>,
-          <>낙첨되면 <b>산 응모권 1장당 1,000 쌀포인트</b>를 드려요.</>,
+          <>낙첨되면 <b>산 응모권 1장당 1,000 쌀포인트</b>를 드려요. (쌀 응모권으로 응모한 장수는 제외)</>,
           <>원하는 응모는 응모권을 더 사거나 친구에게 알려서 마감 전에 빨리 채울 수 있어요.</>,
           <>사라진 응모는 나중에 로테이션으로 다시 열릴 수 있어요.</>,
         ]} />

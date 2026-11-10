@@ -132,7 +132,7 @@ export function verifyAdmin(token: string) {
 
 export interface PointsResponse {
   ssal_point: number
-  // 쌀 응모권 — 대회·이벤트 보상으로만 받는 무료 응모권(낙첨돼도 쌀포인트 환급 없음, 돈으로는 못 삼)
+  // 쌀 응모권 — 이벤트·추천인 등록 보상으로 받는 무료 응모권(보관함에서 아직 안 쓴 장수, 낙첨돼도 쌀포인트 환급 없음, 돈으로는 못 삼)
   // TODO(backend): 아직 운영 서버에 없음 — 생기기 전까지는 0장으로 표시
   ssal_ticket?: number
 }
