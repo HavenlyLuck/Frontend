@@ -43,7 +43,7 @@ export default function EungmoPage() {
             {loggedIn && (
               <span
                 className="ssal-ticket-chip"
-                title="대회·이벤트 보상으로 받은 무료 응모권이에요. 낙첨돼도 쌀포인트는 환급되지 않아요."
+                title="이벤트나 친구 추천인 등록으로 받은 응모권이에요. 낙첨돼도 쌀포인트 페이백이 없어요."
               >
                 <TicketIcon size={13} weight="fill" /> 쌀 응모권 <b>{ssalTicket.toLocaleString()}장</b>
               </span>

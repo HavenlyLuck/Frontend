@@ -19,6 +19,7 @@ import { prefetchDrawCast } from "@/lib/raffleCast";
 import { normalizeAvatar } from "@/lib/avatar/compose";
 import { ApiError, cancelMyRaffleEntries, type RaffleCastMember } from "@/lib/api";
 import { getValidSession } from "@/lib/auth";
+import { notifyPointsUpdated } from "@/hooks/useMyPoints";
 import type { SceneEntrant } from "@/lib/lightningDraw/scene";
 
 // 매진 후 추첨까지 남은 시간 — 0이 됐는데 아직 결과가 없으면(폴링 전) 기다림 문구로 바뀐다
@@ -132,6 +133,7 @@ export default function RaffleEntriesPage() {
     try {
       const res = await cancelMyRaffleEntries(session.token, item.raffle_product_id, cancelQty);
       setCancelDone({ tickets: res.cancelled_tickets, remaining: res.remaining_tickets, returned: res.returned_free_tickets, refunded: res.refunded });
+      if (res.returned_free_tickets > 0) notifyPointsUpdated();
       await reload();
     } catch (err) {
       setCancelError(err instanceof ApiError ? err.message : "취소 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
@@ -566,7 +568,7 @@ export default function RaffleEntriesPage() {
               응모권 <strong style={{ color: "var(--text)" }}>{cancelDone.tickets}장</strong>이 취소되었어요.
               {cancelDone.remaining > 0 && <> 남은 응모권 {cancelDone.remaining}장으로 계속 응모 중이에요.</>}
               <br />
-              {cancelDone.returned > 0 && <>무료 응모권 {cancelDone.returned}장은 보관함으로 돌아갔어요.<br /></>}
+              {cancelDone.returned > 0 && <>쌀 응모권 {cancelDone.returned}장은 보관함으로 돌아갔어요.<br /></>}
               {cancelDone.tickets > cancelDone.returned &&
                 (cancelDone.refunded
                   ? "카드 결제가 취소되었어요. 카드사에 따라 환불 반영까지 며칠 걸릴 수 있어요."
@@ -638,7 +640,7 @@ export default function RaffleEntriesPage() {
                 {cancelQty === cancelTarget.totalTicketCount
                   ? "이 상품에 산 응모권이 모두 취소되고 응모에서 빠져요."
                   : "최근에 산 응모권부터 취소되고, 남은 응모권으로 계속 응모돼요."}{" "}
-                카드 결제는 취소한 만큼 환불되고(반영까지 며칠 걸릴 수 있어요), 무료 응모권으로 응모한 장수는 보관함으로 돌아가요.
+                카드 결제는 취소한 만큼 환불되고(반영까지 며칠 걸릴 수 있어요), 쌀 응모권으로 응모한 장수는 보관함으로 돌아가요.
               </span>
             </div>
 

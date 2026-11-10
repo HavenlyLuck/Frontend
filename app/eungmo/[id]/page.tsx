@@ -19,10 +19,11 @@ import {
   type RaffleProductResponse,
   type RaffleEntryCreateResponse,
 } from "@/lib/api";
-import { isWished, toggleWishlist } from "@/lib/wishlist";
 import { getValidSession, isLoggedIn, loginPath } from "@/lib/auth";
 import { payWithCard, paymentFailureMessage } from "@/lib/payment";
 import RefundNotice from "@/components/RefundNotice";
+import { notifyPointsUpdated } from "@/hooks/useMyPoints";
+import { addRaffleToWishlist, getMyRaffleWishlist, removeRaffleFromWishlist } from "@/lib/wishlist";
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return "마감";
@@ -54,7 +55,6 @@ export default function RaffleProductPage({
     RaffleProductResponse | null | undefined
   >(undefined);
   const [ticketCount, setTicketCount] = useState(1);
-  const [isLiked, setIsLiked] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [purchaseResult, setPurchaseResult] =
     useState<RaffleEntryCreateResponse | null>(null);
@@ -62,7 +62,7 @@ export default function RaffleProductPage({
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  // 보관함 무료 응모권(첫 구매 선물 · 추천 응모권) — 있으면 결제 대신 쓸 수 있다
+  // 보관함 쌀 응모권(이벤트 · 추천인 보상) — 있으면 결제 대신 쓸 수 있다
   const [freeTicketCount, setFreeTicketCount] = useState(0);
   const [payMode, setPayMode] = useState<"card" | "free">("card");
 
@@ -74,7 +74,6 @@ export default function RaffleProductPage({
         setProduct(found);
         if (found) {
           setRemaining(found.remaining_seconds);
-          setIsLiked(isWished(`raffle-${found.raffle_product_id}`));
         }
       })
       .catch(() => setProduct(null));
@@ -89,6 +88,42 @@ export default function RaffleProductPage({
     return () => clearInterval(timer);
   }, [product]);
 
+
+  // 찜 상태 — 서버에 저장된 내 찜 목록에 이 응모가 있는지
+  const [isLiked, setIsLiked] = useState(false);
+  const [wishBusy, setWishBusy] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    getValidSession()
+      .then((session) => (session ? getMyRaffleWishlist(session.token) : []))
+      .then((list) => {
+        if (!cancelled) setIsLiked(list.some((p) => p.raffle_product_id === raffleId));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [raffleId]);
+
+  const toggleWish = async () => {
+    if (wishBusy) return;
+    const session = await getValidSession();
+    if (!session) {
+      router.push(loginPath());
+      return;
+    }
+    const next = !isLiked;
+    setIsLiked(next);
+    setWishBusy(true);
+    try {
+      if (next) await addRaffleToWishlist(session.token, raffleId);
+      else await removeRaffleFromWishlist(session.token, raffleId);
+    } catch {
+      setIsLiked(!next);
+    } finally {
+      setWishBusy(false);
+    }
+  };
 
   if (product === undefined) {
     return (
@@ -118,7 +153,6 @@ export default function RaffleProductPage({
   }
 
   const urgent = remaining > 0 && remaining < 3600;
-  const wishId = `raffle-${product.raffle_product_id}`;
 
   const soldCount = product.sold_slots;
   const maxPurchasable = Math.max(0, product.total_slots - soldCount);
@@ -221,6 +255,8 @@ export default function RaffleProductPage({
       setTearing(true);
       await new Promise((resolve) => setTimeout(resolve, 800));
       setPurchaseResult(entry);
+      // 쌀 응모권을 썼거나 첫 구매로 추천 보상을 받았을 수 있으니 상단 장수를 다시 불러온다
+      notifyPointsUpdated();
       if (justSoldOut) {
         alert(
           "응모권이 모두 소진되었습니다! 당첨자 추첨 기능은 아직 준비 중이라, 별도 절차 없이 응모가 그대로 진행됩니다.",
@@ -258,6 +294,15 @@ export default function RaffleProductPage({
                   <TicketIcon size={72} weight="thin" />
                 </div>
               )}
+              <button
+                className={`wish-heart ${isLiked ? "liked" : ""}`}
+                aria-label={isLiked ? "찜 해제" : "찜하기"}
+                aria-pressed={isLiked}
+                disabled={wishBusy}
+                onClick={toggleWish}
+              >
+                <HeartIcon size={20} weight={isLiked ? "fill" : "regular"} />
+              </button>
             </div>
           </div>
 
@@ -397,26 +442,6 @@ export default function RaffleProductPage({
                 <TicketIcon size={17} weight="fill" />{" "}
                 {soldOut ? "매진" : expired ? "마감" : "응모하기"}
               </button>
-              <button
-                className={`btn-wish ${isLiked ? "liked" : ""}`}
-                onClick={() =>
-                  setIsLiked(
-                    toggleWishlist({
-                      id: wishId,
-                      href: `/eungmo/${product.raffle_product_id}`,
-                      title: product.product_name,
-                      image: product.image_url,
-                      subtitle: `${product.ticket_price.toLocaleString()}원 / 장당`,
-                    }),
-                  )
-                }
-              >
-                <HeartIcon
-                  size={19}
-                  weight={isLiked ? "fill" : "regular"}
-                  color={isLiked ? "var(--danger)" : "var(--text-tertiary)"}
-                />
-              </button>
             </div>
 
             <RefundNotice kind="raffle" />
@@ -462,7 +487,7 @@ export default function RaffleProductPage({
                   onClick={() => changePayMode("free")}
                   disabled={submitting}
                 >
-                  보관함 응모권 <b>{freeTicketCount}장</b>
+                  쌀 응모권 <b>{freeTicketCount}장</b>
                 </button>
                 <button
                   type="button"
@@ -491,7 +516,7 @@ export default function RaffleProductPage({
               <div className="ticket-info">
                 <span>
                   {useFree
-                    ? `보관함 응모권 최대 ${maxTickets.toLocaleString()}장 사용 가능`
+                    ? `쌀 응모권 최대 ${maxTickets.toLocaleString()}장 사용 가능`
                     : `최대 ${maxPurchasable.toLocaleString()}장까지 구매 가능`}
                 </span>
                 <span className="total">

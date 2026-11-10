@@ -11,7 +11,7 @@ const card: React.CSSProperties = {
 }
 
 // 마이페이지 설정 — 내 추천인 코드(복사·추천 링크 공유)와 추천인 등록
-// 추천인을 등록한 사람이 첫 응모권을 사면 본인은 '첫 구매 선물', 추천인은 '추천 응모권'을 1장씩 보관함에 받는다
+// 추천인을 등록한 사람이 첫 응모권을 사면 본인과 추천인 모두 쌀 응모권을 1장씩 보관함에 받는다
 export default function ReferralCard() {
   const [info, setInfo] = useState<ReferralSummaryResponse | null>(null)
   const [code, setCode] = useState('')
@@ -44,7 +44,7 @@ export default function ReferralCard() {
     try {
       const res = await registerReferral(session.token, code.trim())
       setInfo(res)
-      setMessage({ ok: true, text: `${res.referred_by_nickname}님을 추천인으로 등록했어요. 첫 응모권을 사면 무료 응모권 1장을 드려요!` })
+      setMessage({ ok: true, text: `${res.referred_by_nickname}님을 추천인으로 등록했어요. 첫 응모권을 사면 쌀 응모권 1장을 드려요!` })
     } catch (err) {
       setMessage({ ok: false, text: err instanceof ApiError ? err.message : '추천인을 등록하지 못했어요.' })
     } finally {
@@ -60,7 +60,7 @@ export default function ReferralCard() {
         <GiftIcon size={17} weight="fill" color="var(--accent)" /> 친구 추천
       </div>
       <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
-        친구가 내 코드를 등록하고 첫 응모권을 사면, 친구는 <b>첫 구매 선물 응모권</b>, 나는 <b>추천 응모권</b>을 1장씩 보관함에 받아요.
+        친구가 내 코드를 등록하고 첫 응모권을 사면, 친구와 나 모두 <b>쌀 응모권</b>을 1장씩 보관함에 받아요.
       </p>
 
       <div className="referral-code-box">
@@ -78,7 +78,7 @@ export default function ReferralCard() {
         </div>
       </div>
       <div style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '8px 0 18px' }}>
-        내 코드로 가입한 친구 {info.invited_count}명 · 받은 추천 응모권 {info.rewarded_count}장
+        내 코드로 가입한 친구 {info.invited_count}명 · 추천으로 받은 쌀 응모권 {info.rewarded_count}장
       </div>
 
       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>나를 추천한 사람</div>

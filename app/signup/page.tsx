@@ -338,7 +338,7 @@ export default function SignupPage() {
                 maxLength={12}
                 style={{ textTransform: 'uppercase' }}
               />
-              <p className="field-hint">추천인 코드를 넣고 첫 응모권을 사면, 나와 추천인 모두 무료 응모권 1장을 받아요.</p>
+              <p className="field-hint">추천인 코드를 넣고 첫 응모권을 사면, 나와 추천인 모두 쌀 응모권 1장을 받아요.</p>
             </div>
 
             {/* 가입 동의 */}

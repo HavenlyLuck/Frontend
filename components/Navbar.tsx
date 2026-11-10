@@ -37,7 +37,7 @@ export default function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchText, setSearchText] = useState("");
 
-  const { ssalPoint } = useMyPoints();
+  const { ssalPoint, ssalTicket } = useMyPoints();
   const { readyCount: readyStorageCount } = useStorage();
 
   useEffect(() => {
@@ -70,6 +70,11 @@ export default function Navbar() {
         <div className="nav-actions">
           {isLoggedIn ? (
             <>
+              <Link href="/mypage/storage" className="nav-point-item" aria-label={`쌀 응모권 ${ssalTicket}장`} title="이벤트·친구 추천으로 받은 쌀 응모권 (낙첨돼도 쌀포인트 페이백 없음)">
+                <span aria-hidden="true">🎫</span>
+                <span className="nav-point-label">쌀 응모권</span>
+                <span className="nav-point-value">{ssalTicket.toLocaleString()}장</span>
+              </Link>
               <div className="nav-point-item">
                 <span className="nav-point-label">🌾 쌀포인트</span>
                 <span className="nav-point-value">

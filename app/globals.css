@@ -255,6 +255,14 @@ nav {
   padding: 0 12px;
 }
 
+a.nav-point-item {
+  text-decoration: none;
+  color: inherit;
+}
+a.nav-point-item:hover {
+  border-color: var(--border);
+}
+
 .nav-point-label {
   font-size: 12px;
   line-height: 1;
@@ -6874,3 +6882,30 @@ a.field-btn {
     height: 30px;
   }
 }
+
+/* 찜 하트 — 상점·응모 상품 사진 오른쪽 위 (상세 페이지 · 찜한 상품 카드) */
+.wish-heart {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+.wish-heart:hover { background: rgba(0, 0, 0, 0.6); }
+.wish-heart:active { transform: scale(0.9); }
+.wish-heart:disabled { cursor: default; opacity: 0.7; }
+.wish-heart.liked { color: var(--danger); }
+
+/* 찜한 상품 카드 — 하트 버튼을 카드 위에 띄우기 위한 감싸개 */
+.wish-card { position: relative; }
+.wish-card > .product-card-home { height: 100%; }
