@@ -54,7 +54,9 @@ export default function RaffleProductPage({
   const [product, setProduct] = useState<
     RaffleProductResponse | null | undefined
   >(undefined);
-  const [ticketCount, setTicketCount] = useState(1);
+  // 카드로 살 장수와 보관함 쌀 응모권으로 낼 장수 — 둘을 섞어 한 번에 응모할 수 있다
+  const [cardCount, setCardCount] = useState(1);
+  const [ssalCount, setSsalCount] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [purchaseResult, setPurchaseResult] =
     useState<RaffleEntryCreateResponse | null>(null);
@@ -64,7 +66,8 @@ export default function RaffleProductPage({
   const [submitError, setSubmitError] = useState<string | null>(null);
   // 보관함 쌀 응모권(이벤트 · 추천인 보상) — 있으면 결제 대신 쓸 수 있다
   const [freeTicketCount, setFreeTicketCount] = useState(0);
-  const [payMode, setPayMode] = useState<"card" | "free">("card");
+  // 카드는 결제됐지만 쌀 응모권 사용이 실패했을 때 완료 카드에 함께 보여줄 안내
+  const [partialNote, setPartialNote] = useState<string | null>(null);
 
   useEffect(() => {
     getRaffleProducts()
@@ -165,35 +168,40 @@ export default function RaffleProductPage({
       ? Math.min(100, Math.round((soldCount / product.total_slots) * 100))
       : 0;
 
-  const useFree = payMode === "free" && freeTicketCount > 0;
-  // 무료 응모권으로 낼 때는 가진 장수까지만
-  const maxTickets = useFree ? Math.min(maxPurchasable, freeTicketCount) : maxPurchasable;
+  // 쌀 응모권은 가진 장수까지, 둘을 합쳐 남은 응모권 수까지
+  const totalCount = cardCount + ssalCount;
+  const payAmount = cardCount * product.ticket_price;
+  const maxSsal = Math.min(freeTicketCount, Math.max(0, maxPurchasable - cardCount));
+  const maxCard = Math.max(0, maxPurchasable - ssalCount);
 
-  const changeTicket = (delta: number) =>
-    setTicketCount((prev) =>
-      Math.min(Math.max(maxTickets, 1), Math.max(1, prev + delta)),
-    );
-
-  const changePayMode = (mode: "card" | "free") => {
-    setPayMode(mode);
-    setTicketCount(1);
+  const changeCard = (delta: number) => {
     setSubmitError(null);
+    setCardCount((prev) => Math.min(maxCard, Math.max(0, prev + delta)));
+  };
+  const changeSsal = (delta: number) => {
+    setSubmitError(null);
+    setSsalCount((prev) => Math.min(maxSsal, Math.max(0, prev + delta)));
   };
 
   const openModal = () => {
     setSubmitError(null);
-    setTicketCount(1);
+    setPartialNote(null);
+    setCardCount(1);
+    setSsalCount(0);
     setTearing(false);
     setPurchaseResult(null);
-    setPayMode("card");
     setModalOpen(true);
-    // 로그인했으면 보관함 무료 응모권 수를 확인해 결제 방식 선택지를 보여준다
+    // 로그인했으면 보관함 쌀 응모권 수를 확인해 쌀 응모권 수량 선택을 함께 보여준다
     getValidSession().then((session) => {
       if (!session) return;
       getMyFreeTickets(session.token)
         .then((list) => {
           setFreeTicketCount(list.length);
-          if (list.length > 0) setPayMode("free");
+          // 쌀 응모권이 있으면 1장을 쌀 응모권으로 시작한다
+          if (list.length > 0) {
+            setSsalCount(1);
+            setCardCount(0);
+          }
         })
         .catch(() => setFreeTicketCount(0));
     });
@@ -220,30 +228,41 @@ export default function RaffleProductPage({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      let entry: RaffleEntryCreateResponse;
-      if (useFree) {
-        // 보관함 무료 응모권 사용 — 결제 없이 바로 응모된다
-        try {
-          entry = await enterRaffleWithFreeTickets(session.token, product.raffle_product_id, ticketCount);
-        } catch (err) {
-          setSubmitError(err instanceof ApiError ? err.message : "응모권을 사용하지 못했어요.");
-          return;
-        }
-        setFreeTicketCount((n) => Math.max(0, n - ticketCount));
-      } else {
-        // 카드 결제 → 서버가 결제를 확인하고 응모권을 발급한다
+      if (totalCount < 1) return;
+      // 카드 결제를 먼저 한다 — 결제창을 닫거나 실패하면 쌀 응모권은 쓰지 않은 채로 끝난다
+      let entry: RaffleEntryCreateResponse | null = null;
+      let added = 0;
+      if (cardCount > 0) {
         const paid = await payWithCard(session.token, {
           order_type: "raffle_entry",
           target_id: product.raffle_product_id,
-          quantity: ticketCount,
+          quantity: cardCount,
         });
         if (paid.status !== "paid" || !paid.raffle_entry) {
           setSubmitError(paid.status === "conflict" ? "응모할 수 없습니다." : paymentFailureMessage(paid));
           return;
         }
         entry = paid.raffle_entry;
+        added += cardCount;
       }
-      const newSoldSlots = product.sold_slots + entry.ticket_count;
+      // 이어서 보관함 쌀 응모권 사용 — 결제 없이 바로 응모된다
+      if (ssalCount > 0) {
+        try {
+          entry = await enterRaffleWithFreeTickets(session.token, product.raffle_product_id, ssalCount);
+          added += ssalCount;
+          setFreeTicketCount((n) => Math.max(0, n - ssalCount));
+        } catch (err) {
+          const reason = err instanceof ApiError ? err.message : "쌀 응모권을 사용하지 못했어요.";
+          if (!entry) {
+            setSubmitError(reason);
+            return;
+          }
+          // 카드 결제분은 이미 응모됐으니 완료 화면으로 넘어가고, 쌀 응모권만 못 썼다고 알린다
+          setPartialNote(`카드 결제 ${cardCount}장은 응모됐지만, 쌀 응모권 ${ssalCount}장은 사용하지 못했어요. (${reason})`);
+        }
+      }
+      if (!entry) return;
+      const newSoldSlots = product.sold_slots + added;
       const justSoldOut = newSoldSlots >= product.total_slots;
       setProduct((prev) =>
         prev ? { ...prev, sold_slots: newSoldSlots } : prev,
@@ -477,54 +496,45 @@ export default function RaffleProductPage({
               이며 추첨일에 당첨자를 발표합니다.
             </div>
 
-            {freeTicketCount > 0 && (
-              <div className="pay-mode-toggle" role="radiogroup" aria-label="응모 방법">
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={payMode === "free"}
-                  className={payMode === "free" ? "active" : ""}
-                  onClick={() => changePayMode("free")}
-                  disabled={submitting}
-                >
-                  쌀 응모권 <b>{freeTicketCount}장</b>
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={payMode === "card"}
-                  className={payMode === "card" ? "active" : ""}
-                  onClick={() => changePayMode("card")}
-                  disabled={submitting}
-                >
-                  카드 결제
-                </button>
-              </div>
-            )}
-
             <div className="ticket-count">
-              <div className="ticket-label">응모권 수량</div>
-              <div className="ticket-selector">
-                <button className="ticket-btn" onClick={() => changeTicket(-1)}>
-                  −
-                </button>
-                <div className="ticket-num">{ticketCount}</div>
-                <button className="ticket-btn" onClick={() => changeTicket(1)}>
-                  +
-                </button>
+              <div className="ticket-split-row">
+                <div className="ticket-split-label">
+                  <b>쌀 응모권</b>
+                  <span>보유 {freeTicketCount.toLocaleString()}장 · 무료</span>
+                </div>
+                <div className="ticket-selector ticket-selector-sm">
+                  <button className="ticket-btn" onClick={() => changeSsal(-1)} disabled={submitting || ssalCount <= 0} aria-label="쌀 응모권 한 장 빼기">−</button>
+                  <div className="ticket-num">{ssalCount}</div>
+                  <button className="ticket-btn" onClick={() => changeSsal(1)} disabled={submitting || ssalCount >= maxSsal} aria-label="쌀 응모권 한 장 더하기">+</button>
+                </div>
+              </div>
+              <div className="ticket-split-row">
+                <div className="ticket-split-label">
+                  <b>카드 결제</b>
+                  <span>1장 {product.ticket_price.toLocaleString()}원</span>
+                </div>
+                <div className="ticket-selector ticket-selector-sm">
+                  <button className="ticket-btn" onClick={() => changeCard(-1)} disabled={submitting || cardCount <= 0} aria-label="카드 결제 한 장 빼기">−</button>
+                  <div className="ticket-num">{cardCount}</div>
+                  <button className="ticket-btn" onClick={() => changeCard(1)} disabled={submitting || cardCount >= maxCard} aria-label="카드 결제 한 장 더하기">+</button>
+                </div>
               </div>
               <div className="ticket-info">
-                <span>
-                  {useFree
-                    ? `쌀 응모권 최대 ${maxTickets.toLocaleString()}장 사용 가능`
-                    : `최대 ${maxPurchasable.toLocaleString()}장까지 구매 가능`}
-                </span>
-                <span className="total">
-                  {useFree
-                    ? `응모권 ${ticketCount}장 사용 · 0원`
-                    : `총 ${(ticketCount * product.ticket_price).toLocaleString()}원`}
-                </span>
+                <span>최대 {maxPurchasable.toLocaleString()}장까지 응모 가능</span>
               </div>
+              <div className="ticket-summary">
+                <div>
+                  <span>총 응모권</span>
+                  <b>{totalCount.toLocaleString()}장</b>
+                </div>
+                <div>
+                  <span>결제 금액</span>
+                  <b>{payAmount.toLocaleString()}원</b>
+                </div>
+              </div>
+              {ssalCount > 0 && (
+                <div className="ticket-summary-note">쌀 응모권으로 응모한 {ssalCount}장은 낙첨돼도 쌀포인트 페이백이 없어요.</div>
+              )}
             </div>
           </div>
 
@@ -567,12 +577,12 @@ export default function RaffleProductPage({
             <button
               className="btn-confirm"
               onClick={submitRaffle}
-              disabled={submitting || soldOut || expired}
+              disabled={submitting || soldOut || expired || totalCount < 1}
             >
               <TicketIcon size={15} weight="fill" />{" "}
               {submitting
-                ? useFree ? "응모 중..." : "결제 중..."
-                : useFree ? "응모권 사용하기" : "결제하기"}
+                ? cardCount > 0 ? "결제 중..." : "응모 중..."
+                : cardCount > 0 ? `${payAmount.toLocaleString()}원 결제하기` : "쌀 응모권으로 응모하기"}
             </button>
             </div>
           </div>
@@ -599,6 +609,12 @@ export default function RaffleProductPage({
               </strong>{" "}
               응모하셨습니다.
             </div>
+            {partialNote && (
+              <div className="modal-notice" style={{ textAlign: "left" }}>
+                <WarningIcon size={13} weight="fill" style={{ flexShrink: 0, marginTop: "2px" }} />
+                <span>{partialNote}</span>
+              </div>
+            )}
             <div className="modal-btn-row">
               <button
                 className="btn-confirm"
