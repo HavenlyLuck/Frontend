@@ -261,6 +261,10 @@ export interface RaffleProductResponse {
   remaining_slots: number
   // 응모권이 매진된 시각(UTC) — 이 시각 + 1분에 서버가 자동 추첨한다
   sold_out_at: string | null
+  // drand 공개 난수 추첨 — 라운드는 매진 순간 정해지고, 난수·서명은 추첨 뒤에 채워진다
+  drand_round: number | null
+  drand_randomness: string | null
+  drand_signature: string | null
 }
 
 export function getRaffleProducts(status?: 'open' | 'completed' | 'cancelled') {
@@ -285,6 +289,8 @@ export interface RaffleDrawCastResponse {
   sold_out_at: string | null
   draw_at: string | null
   winner_entry_number: number | null
+  drand_round: number | null
+  drand_randomness: string | null
   cast: RaffleCastMember[]
 }
 

@@ -359,6 +359,35 @@ export default function RaffleProductPage({
               </div>
             )}
 
+            {product.drand_round != null && (
+              <details style={{ marginBottom: 12, fontSize: 12, color: "var(--text-secondary)" }}>
+                <summary style={{ cursor: "pointer" }}>
+                  공정성 검증 · drand 라운드 #{product.drand_round}
+                </summary>
+                <div style={{ marginTop: 6, lineHeight: 1.6, wordBreak: "break-all" }}>
+                  {product.drand_randomness ? (
+                    <>
+                      <div>난수: <code>{product.drand_randomness}</code></div>
+                      <div>
+                        당첨 칸 = 난수(16진수 정수) mod 전체 응모권 수. 응모 번호 오름차순으로 응모권
+                        수만큼 칸을 이어 붙였을 때 그 칸의 주인이 당첨돼요.
+                      </div>
+                    </>
+                  ) : (
+                    <div>매진 순간 정해진 라운드예요. 이 라운드의 난수가 나오면 그 값으로 추첨해요.</div>
+                  )}
+                  <a
+                    href={`https://api.drand.sh/52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971/public/${product.drand_round}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: "underline" }}
+                  >
+                    drand에서 직접 확인하기
+                  </a>
+                </div>
+              </details>
+            )}
+
             <div className="cta-row">
               <button
                 className="btn-raffle"
