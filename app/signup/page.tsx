@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import LogoMark, { Logo } from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { loginPath, safeNextPath, SIGNUP_NEXT_KEY } from '@/lib/auth'
 import { signup, checkDuplicate, verifyIdentity, ApiError, DuplCheckField } from '@/lib/api'
 import {
   requestIdentityVerification,
@@ -47,7 +48,21 @@ export default function SignupPage() {
   const [showReviewDetail, setShowReviewDetail] = useState(false)
   const allAgreed = agree.terms && agree.age14 && agree.reviewMarketing
 
+  // 가입·로그인 뒤 돌아갈 주소 — "회원가입이 필요해요" 창에서 넘어온 경우(/signup?next=...)
+  const [loginHref, setLoginHref] = useState('/login')
+
   useEffect(() => {
+    // 돌아갈 주소를 탭에 보관한다 (모바일 본인인증으로 페이지를 떠났다 와도 남게).
+    // next 없이 새로 들어온 가입이면 예전 값이 남아 있지 않게 지운다
+    try {
+      const qs = new URLSearchParams(window.location.search)
+      const next = qs.get('next')
+      if (next) sessionStorage.setItem(SIGNUP_NEXT_KEY, safeNextPath(next))
+      else if (!qs.get('identityVerificationId')) sessionStorage.removeItem(SIGNUP_NEXT_KEY)
+      const saved = sessionStorage.getItem(SIGNUP_NEXT_KEY)
+      if (saved) setLoginHref(loginPath(saved))
+    } catch {}
+
     // 추천 링크(/signup?ref=코드)로 들어오면 추천인 코드를 미리 채워 둔다
     const ref = new URLSearchParams(window.location.search).get('ref')
     if (ref) setForm(prev => ({ ...prev, referral: ref.toUpperCase() }))
@@ -167,7 +182,13 @@ export default function SignupPage() {
         review_marketing_agreed: agree.reviewMarketing,
       })
       alert('회원가입이 완료되었습니다. 로그인해주세요.')
-      router.push('/login')
+      // 가입 안내 창에서 넘어왔으면 로그인 뒤 보던 화면으로 돌아가게 주소를 이어 준다
+      let next: string | null = null
+      try {
+        next = sessionStorage.getItem(SIGNUP_NEXT_KEY)
+        sessionStorage.removeItem(SIGNUP_NEXT_KEY)
+      } catch {}
+      router.push(next ? loginPath(next) : '/login')
     } catch (err) {
       alert(err instanceof ApiError ? err.message : '회원가입 중 오류가 발생했습니다.')
     } finally {
@@ -389,7 +410,7 @@ export default function SignupPage() {
             </button>
           </form>
           <p className="auth-switch">
-            이미 계정이 있으신가요? <Link href="/login">로그인</Link>
+            이미 계정이 있으신가요? <Link href={loginHref}>로그인</Link>
           </p>
         </div>
       </div>

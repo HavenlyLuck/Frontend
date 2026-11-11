@@ -256,6 +256,8 @@ export interface RaffleProductResponse {
   drawn_at: string | null
   winner_entry_number: number | null
   winner_user_id: number | null
+  // 당첨자 닉네임 — 홈 당첨 소식 띠용. 아직 서버가 주지 않는다 (백엔드 요청 중). 없으면 응모 번호로 표시
+  winner_nickname?: string | null
   remaining_seconds: number
   is_open: boolean
   remaining_slots: number

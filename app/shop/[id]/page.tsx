@@ -15,7 +15,7 @@ import { notifyStorageUpdated } from "@/lib/storage";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
 import { payWithCard, paymentFailureMessage, PaymentWindowError } from "@/lib/payment";
 import { addToWishlist, getMyWishlist, removeFromWishlist } from "@/lib/wishlist";
-import { getValidSession, loginPath } from "@/lib/auth";
+import { getValidSession, isLoggedIn, loginPath, promptSignup } from "@/lib/auth";
 import StoreProductCard, {
   STORE_LABEL,
   PayTypeIcon,
@@ -138,7 +138,7 @@ export default function ShopProductPage({
     if (wishBusy) return;
     const session = await getValidSession();
     if (!session) {
-      router.push(loginPath());
+      promptSignup();
       return;
     }
     const next = !isLiked;
@@ -209,6 +209,11 @@ export default function ShopProductPage({
   };
 
   const openPurchaseModal = () => {
+    // 구경은 누구나 — 사려고 할 때만 가입을 권한다
+    if (!isLoggedIn()) {
+      promptSignup();
+      return;
+    }
     setPurchaseError(null);
     setPurchaseDone(null);
     setModalOpen(true);

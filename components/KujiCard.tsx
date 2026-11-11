@@ -1,27 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { GiftIcon } from '@phosphor-icons/react'
-import { isLoggedIn, loginPath } from '@/lib/auth'
 import CardImage from '@/components/CardImage'
 import type { KujiListItem } from '@/lib/kujiList'
 
-// 쿠지 카드 (홈 · 쿠지 목록 · 검색 결과) — 로그인 안 했으면 상세로 들어가지 않고 로그인으로 보낸다
+// 쿠지 카드 (홈 · 쿠지 목록 · 검색 결과) — 로그인 안 해도 상세까지 구경할 수 있다 (뽑기 버튼에서 가입을 권함)
 export default function KujiCard({ item }: { item: KujiListItem }) {
-  const router = useRouter()
-
-  const requireLogin = (e: React.MouseEvent) => {
-    if (!isLoggedIn()) {
-      e.preventDefault()
-      alert('로그인 후 이용해주세요.')
-      router.push(loginPath(item.href))
-    }
-  }
-
   // 매진돼도 무슨 상품이었는지 볼 수 있게 상세로는 들어간다 (상세에서 뽑기 버튼만 막힘)
   return (
-    <Link className={`product-card-home${item.soldOut ? ' is-soldout' : ''}`} href={item.href} onClick={requireLogin}>
+    <Link className={`product-card-home${item.soldOut ? ' is-soldout' : ''}`} href={item.href}>
       <div className="card-img">
         <CardImage src={item.img} alt={item.alt} />
         {item.soldOut && <div className="card-soldout-stamp"><span>SOLD OUT</span></div>}

@@ -11,6 +11,7 @@ import { getStoreProducts, type RaffleProductResponse, type StoreProductResponse
 import CardImage from "@/components/CardImage";
 import StoreProductCard from "@/components/StoreProductCard";
 import KujiCard from "@/components/KujiCard";
+import HomeHero, { WinnerTicker } from "@/components/HomeHero";
 import { fetchKujiList, type KujiListItem } from "@/lib/kujiList";
 import { getListedRaffles, isListedRaffleVisible, isSoldOutRaffle } from "@/lib/raffle";
 
@@ -88,6 +89,7 @@ export default function HomePage() {
 
   const [raffleProducts, setRaffleProducts] = useState<RaffleProductResponse[]>([]);
   const [raffleFetchedAt, setRaffleFetchedAt] = useState(0);
+  const [raffleLoaded, setRaffleLoaded] = useState(false);
   const [nowTick, setNowTick] = useState(0);
 
   useEffect(() => {
@@ -97,7 +99,8 @@ export default function HomePage() {
         setRaffleFetchedAt(Date.now());
         setNowTick(Date.now());
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setRaffleLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -112,40 +115,18 @@ export default function HomePage() {
     .filter((item) => isListedRaffleVisible(item.rp, item.remainingSeconds, nowTick || Date.now()))
     .slice(0, 4);
 
+  // 히어로에 크게 보여줄 응모 — 아직 살 수 있는 것 중 가장 많이 팔린(추첨이 가까운) 상품
+  const featuredItem = openRaffleItems
+    .filter((item) => !isSoldOutRaffle(item.rp))
+    .sort((a, b) => b.rp.sold_slots / b.rp.total_slots - a.rp.sold_slots / a.rp.total_slots)[0];
+  const featured = featuredItem
+    ? { rp: featuredItem.rp, countdown: formatRaffleCountdown(featuredItem.remainingSeconds) }
+    : null;
+
   return (
     <div>
-      {/* 히어로 — 박스아트 포스터 */}
-      <section className="hero">
-        <div className="hero-copy">
-          <h1>
-            천원 한 장,
-            <br />
-            <span>천운</span>을 뽑다.
-          </h1>
-          <p className="hero-sub">
-            모든 티켓이 팔리면 바로 추첨해요.
-            <br />
-            1,000원부터 참여할 수 있어요.
-          </p>
-          <Link className="hero-cta" href="/eungmo">응모 보러 가기</Link>
-        </div>
-        <div className="hero-box" aria-hidden="true">
-          <div className="hero-ticket">
-            <div className="hero-ticket-main">
-              <span className="hero-ticket-label">ADMIT ONE</span>
-              <span className="hero-ticket-price">1,000<small>원</small></span>
-              <span className="hero-ticket-note">한 장으로 응모</span>
-            </div>
-            <div className="hero-ticket-stub">천운</div>
-          </div>
-        </div>
-      </section>
-
-      <div className="hero-strip">
-        <span>티켓 한 장 <b>1,000원</b>부터</span>
-        <span>전량 판매 시 <b>자동 추첨</b></span>
-        <span>당첨 상품은 <b>보관함</b>으로</span>
-      </div>
+      <HomeHero featured={featured} loaded={raffleLoaded} />
+      <WinnerTicker />
 
       <div className="home-container">
         {/* 응모상품 */}
