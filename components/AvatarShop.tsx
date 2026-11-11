@@ -6,7 +6,7 @@ import { ArrowCounterClockwiseIcon, ConfettiIcon, GrainsIcon, LightningIcon, War
 import AvatarRoom from '@/components/AvatarRoom'
 import PixelAvatar from '@/components/PixelAvatar'
 import LightningDrawScene from '@/components/LightningDrawScene'
-import { getValidSession } from '@/lib/auth'
+import { getValidSession, promptSignup } from '@/lib/auth'
 import { notifyPointsUpdated } from '@/hooks/useMyPoints'
 import { ApiError, getAvatarItems, getMyAvatarItems, getMyProfile, purchaseAvatarItem } from '@/lib/api'
 import { DEFAULT_AVATAR, normalizeAvatar, withItem, type AvatarConfig, type WearSlot } from '@/lib/avatar/compose'
@@ -155,8 +155,9 @@ export default function AvatarShop() {
                   {worn ? '벗기' : '입어보기'}
                 </button>
                 {loggedIn !== true ? (
-                  <button type="button" className="btn-primary avatar-small-btn" disabled>
-                    로그인 후 구매
+                  // 로그인 안 했으면 누를 때 가입 안내 창을 띄운다 (로그인 여부 확인 중엔 잠깐 막아 둠)
+                  <button type="button" className="btn-primary avatar-small-btn" disabled={loggedIn === null} onClick={() => promptSignup()}>
+                    구매
                   </button>
                 ) : owned.has(item.id) ? (
                   // 착용은 마이페이지 캐릭터 꾸미기(보유 아이템)에서 한다

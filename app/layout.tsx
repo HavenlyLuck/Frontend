@@ -1,12 +1,21 @@
 import type { Metadata, Viewport } from 'next'
-import { Black_Han_Sans } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import NavbarWrapper from '@/components/NavbarWrapper'
 import Footer from '@/components/Footer'
 import { AuthProvider } from '@/contexts/AuthContext'
 import RaffleAlertWatcher from '@/components/RaffleAlertWatcher'
+import SignupRequiredModal from '@/components/SignupRequiredModal'
 
-const display = Black_Han_Sans({ weight: '400', subsets: ['latin'], variable: '--font-display', display: 'swap' })
+// 제목 글씨 — 로고 글씨와 같은 계열인 티머니 둥근바람 ExtraBold (무료 폰트).
+// 파일은 자주 쓰는 한글 2,350자 + 영문·숫자·기호만 남긴 것. 없는 글자는 본문 글씨(Noto Sans KR)로 나온다.
+// 굵기 범위를 넓게 선언해서, CSS가 굵기를 얼마로 주든 브라우저가 억지로 더 굵게 만들지 않게 한다.
+const display = localFont({
+  src: './fonts/TmoneyRoundWindExtraBold.woff2',
+  weight: '100 900',
+  variable: '--font-display',
+  display: 'swap',
+})
 
 const SITE_TITLE = '천운 - 천원의 행운'
 const SITE_DESCRIPTION = '천원으로 피규어와 굿즈에 응모하는 행운의 마켓, 천운'
@@ -47,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <Footer />
           <RaffleAlertWatcher />
+          <SignupRequiredModal />
         </AuthProvider>
       </body>
     </html>

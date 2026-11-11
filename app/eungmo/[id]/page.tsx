@@ -19,7 +19,7 @@ import {
   type RaffleProductResponse,
   type RaffleEntryCreateResponse,
 } from "@/lib/api";
-import { getValidSession, isLoggedIn, loginPath } from "@/lib/auth";
+import { getValidSession, isLoggedIn, loginPath, promptSignup } from "@/lib/auth";
 import { payWithCard, paymentFailureMessage } from "@/lib/payment";
 import RefundNotice from "@/components/RefundNotice";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
@@ -43,13 +43,6 @@ export default function RaffleProductPage({
 }) {
   const router = useRouter();
   const raffleId = Number(params.id);
-
-  useEffect(() => {
-    if (!isLoggedIn()) {
-      alert("로그인 후 이용해주세요.");
-      router.replace(loginPath());
-    }
-  }, [router]);
 
   const [product, setProduct] = useState<
     RaffleProductResponse | null | undefined
@@ -112,7 +105,7 @@ export default function RaffleProductPage({
     if (wishBusy) return;
     const session = await getValidSession();
     if (!session) {
-      router.push(loginPath());
+      promptSignup();
       return;
     }
     const next = !isLiked;
@@ -184,6 +177,11 @@ export default function RaffleProductPage({
   };
 
   const openModal = () => {
+    // 구경은 누구나 — 응모하려고 할 때만 가입을 권한다
+    if (!isLoggedIn()) {
+      promptSignup();
+      return;
+    }
     setSubmitError(null);
     setPartialNote(null);
     setCardCount(1);

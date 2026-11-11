@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import LogoMark, { Logo } from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { login, ApiError } from '@/lib/api'
 import { notifyPointsUpdated } from '@/hooks/useMyPoints'
-import { safeNextPath } from '@/lib/auth'
+import { safeNextPath, signupPath } from '@/lib/auth'
 import { notifyStorageUpdated } from '@/lib/storage'
 
 export default function LoginPage() {
@@ -14,6 +14,12 @@ export default function LoginPage() {
   const [form, setForm] = useState({ userId: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // 로그인 뒤 돌아갈 주소(?next=) — 회원가입으로 넘어가도 이어서 들고 간다
+  const [signupHref, setSignupHref] = useState('/signup')
+  useEffect(() => {
+    const next = new URLSearchParams(window.location.search).get('next')
+    if (next) setSignupHref(signupPath(safeNextPath(next)))
+  }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -94,7 +100,7 @@ export default function LoginPage() {
             </button>
           </form>
           <p className="auth-switch">
-            아직 계정이 없으신가요? <Link href="/signup">회원가입</Link>
+            아직 계정이 없으신가요? <Link href={signupHref}>회원가입</Link>
           </p>
         </div>
       </div>

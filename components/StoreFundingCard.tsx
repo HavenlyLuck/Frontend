@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowsClockwiseIcon, ConfettiIcon, TicketIcon, WarningIcon } from '@phosphor-icons/react'
 import { ApiError, getRaffleProduct, type StoreFundingStatus, type StoreProductResponse } from '@/lib/api'
-import { getValidSession, loginPath } from '@/lib/auth'
+import { getValidSession, isLoggedIn, loginPath, promptSignup } from '@/lib/auth'
 import { payWithCard, paymentFailureMessage, PaymentWindowError } from '@/lib/payment'
 import { parseServerTime } from '@/lib/raffle'
 
@@ -59,6 +59,11 @@ export default function StoreFundingCard({ product, funding, onChanged }: Props)
   const changeQty = (delta: number) => setQty(prev => Math.min(maxQty, Math.max(1, prev + delta)))
 
   const openModal = () => {
+    // 구경은 누구나 — 응모 전환에 참여하려고 할 때만 가입을 권한다
+    if (!isLoggedIn()) {
+      promptSignup()
+      return
+    }
     setQty(1)
     setError(null)
     setDone(null)

@@ -12,7 +12,7 @@ import {
 } from '@phosphor-icons/react'
 import { fetchKujiProduct, type KujiLastOne, type KujiProduct, type KujiTier } from '@/lib/kujiData'
 import { confirmKujiDraw, fetchKujiBoard, type KujiBoard } from '@/lib/kujiBoard'
-import { getValidSession, isLoggedIn, loginPath } from '@/lib/auth'
+import { getValidSession, isLoggedIn, loginPath, promptSignup } from '@/lib/auth'
 import KujiReveal from '@/components/KujiReveal'
 import KujiAvatarScene from '@/components/KujiAvatarScene'
 import { ApiError, getMyProfile } from '@/lib/api'
@@ -30,13 +30,6 @@ const TAKEN_FLASH_MS = 1_400
 
 export default function KujiProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  useEffect(() => {
-    if (!isLoggedIn()) {
-      alert('로그인 후 이용해주세요.')
-      router.replace(loginPath())
-    }
-  }, [router])
-
   const [product, setProduct] = useState<KujiProduct | null | undefined>(undefined)
   useEffect(() => {
     let cancelled = false
@@ -140,6 +133,11 @@ function KujiProductView({ product }: { product: KujiProduct }) {
     setQty(prev => Math.min(maxQty, Math.max(1, prev + delta)))
 
   const openDraw = () => {
+    // 구경은 누구나 — 뽑으려고 할 때만 가입을 권한다
+    if (!isLoggedIn()) {
+      promptSignup()
+      return
+    }
     setSelected([])
     setResults(null)
     setRevealed([])
