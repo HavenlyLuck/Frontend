@@ -32,7 +32,7 @@ export default function Navbar() {
   const router = useRouter();
   const isMypage = pathname === "/mypage";
   const isNeon = false;
-  const hideTabsRow = pathname === "/login" || pathname === "/signup";
+  const hideTabsRow = ["/login", "/signup", "/find-id", "/find-password"].includes(pathname);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchText, setSearchText] = useState("");
