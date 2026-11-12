@@ -4799,6 +4799,76 @@ a.field-btn {
   color: var(--accent-hover);
 }
 
+/* 로그인 아래 회원가입 | 아이디 찾기 | 비밀번호 찾기 */
+.auth-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+  margin: 20px 0 0;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.auth-links a {
+  padding: 0 12px;
+  line-height: 1;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.auth-links a + a {
+  border-left: 1px solid var(--border-strong);
+}
+.auth-links a:first-child {
+  color: var(--accent);
+  font-weight: 600;
+}
+.auth-links a:hover {
+  color: var(--text);
+}
+.auth-links a:first-child:hover {
+  color: var(--accent-hover);
+}
+
+/* 아이디·비밀번호 찾기 */
+.auth-desc {
+  margin: -6px 0 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+}
+.find-result {
+  padding: 20px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.find-result strong {
+  display: block;
+  margin: 6px 0;
+  font-size: 20px;
+  color: var(--text);
+  word-break: break-all;
+}
+.find-result small {
+  color: var(--text-tertiary);
+}
+.find-actions {
+  display: flex;
+  gap: 8px;
+}
+.find-actions > * {
+  flex: 1;
+  margin-top: 0;
+  text-align: center;
+  text-decoration: none;
+}
+a.auth-submit {
+  display: block;
+}
+
 @media (max-width: 760px) {
   .auth-grid {
     grid-template-columns: 1fr;

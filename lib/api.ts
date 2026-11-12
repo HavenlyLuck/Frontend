@@ -96,6 +96,30 @@ export function verifyIdentity(identityVerificationId: string) {
   })
 }
 
+// 아이디 찾기 — 본인인증한 사람의 아이디를 알려준다 (가입된 계정이 없으면 404)
+export function findLoginId(identityVerificationId: string) {
+  return request<{ login_id: string; joined_at: string | null }>('/users/find-id', {
+    method: 'POST',
+    body: JSON.stringify({ identity_verification_id: identityVerificationId }),
+  })
+}
+
+// 비밀번호 찾기 1단계 — 입력한 아이디의 주인과 본인인증한 사람이 같은지 확인
+export function checkPasswordReset(loginId: string, identityVerificationId: string) {
+  return request<null>('/users/reset-password/check', {
+    method: 'POST',
+    body: JSON.stringify({ login_id: loginId, identity_verification_id: identityVerificationId }),
+  })
+}
+
+// 비밀번호 찾기 2단계 — 새 비밀번호로 바꾼다 (쓴 본인인증은 다시 못 쓴다)
+export function resetPassword(loginId: string, identityVerificationId: string, newPassword: string) {
+  return request<null>('/users/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ login_id: loginId, identity_verification_id: identityVerificationId, new_password: newPassword }),
+  })
+}
+
 export function login(payload: LoginPayload) {
   return request<LoginResponse>('/users/login', {
     method: 'POST',

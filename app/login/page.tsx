@@ -17,8 +17,12 @@ export default function LoginPage() {
   // 로그인 뒤 돌아갈 주소(?next=) — 회원가입으로 넘어가도 이어서 들고 간다
   const [signupHref, setSignupHref] = useState('/signup')
   useEffect(() => {
-    const next = new URLSearchParams(window.location.search).get('next')
+    const qs = new URLSearchParams(window.location.search)
+    const next = qs.get('next')
     if (next) setSignupHref(signupPath(safeNextPath(next)))
+    // 아이디 찾기·비밀번호 재설정 후 넘어오면 아이디를 미리 채워 둔다
+    const id = qs.get('id')
+    if (id) setForm(f => ({ ...f, userId: id }))
   }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -99,9 +103,11 @@ export default function LoginPage() {
               {loading ? '로그인 중...' : '로그인'}
             </button>
           </form>
-          <p className="auth-switch">
-            아직 계정이 없으신가요? <Link href={signupHref}>회원가입</Link>
-          </p>
+          <div className="auth-links">
+            <Link href={signupHref}>회원가입</Link>
+            <Link href="/find-id">아이디 찾기</Link>
+            <Link href="/find-password">비밀번호 찾기</Link>
+          </div>
         </div>
       </div>
     </div>

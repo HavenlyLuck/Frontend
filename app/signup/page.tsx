@@ -23,7 +23,8 @@ const DUPL_CHECK_FIELDS: Record<'nickname' | 'userId' | 'email', DuplCheckField>
 // 모바일 본인인증은 페이지를 떠났다가 돌아오므로, 입력하던 값(비밀번호 제외)을 잠시 보관한다
 const SIGNUP_DRAFT_KEY = 'signup-draft'
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const USER_ID_REGEX = /^[A-Za-z0-9]{5,20}$/
+const EMAIL_REGEX =/^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,20}$/
 
 function StatusMsg({ state, message }: { state: CheckState; message: string }) {
@@ -86,7 +87,12 @@ export default function SignupPage() {
   }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const { name, value } = e.target
+    const { name } = e.target
+    // 닉네임 외에는 영어만 받는다: 아이디·추천인 코드는 영문+숫자, 비밀번호·이메일은 공백 없는 영문 키보드 문자
+    const value =
+      name === 'userId' || name === 'referral' ? e.target.value.replace(/[^A-Za-z0-9]/g, '')
+      : name === 'password' || name === 'confirm' || name === 'email' ? e.target.value.replace(/[^\x21-\x7E]/g, '')
+      : e.target.value
     setForm(prev => ({ ...prev, [name]: value }))
     if (name in checks) {
       setChecks(prev => ({ ...prev, [name]: 'idle' }))
@@ -138,6 +144,11 @@ export default function SignupPage() {
       alert('값을 입력한 뒤 중복확인을 눌러주세요.')
       return
     }
+    if (field === 'userId' && !USER_ID_REGEX.test(value)) {
+      setChecks(prev => ({ ...prev, userId: 'fail' }))
+      setCheckMessages(prev => ({ ...prev, userId: '아이디는 영문·숫자 5~20자로 입력해주세요.' }))
+      return
+    }
     if (field === 'email' && !EMAIL_REGEX.test(value)) {
       setChecks(prev => ({ ...prev, email: 'fail' }))
       setCheckMessages(prev => ({ ...prev, email: '올바른 이메일 형식이 아닙니다.' }))
@@ -156,6 +167,10 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!USER_ID_REGEX.test(form.userId)) {
+      alert('아이디는 영문·숫자 5~20자로 입력해주세요.')
+      return
+    }
     if (!PASSWORD_REGEX.test(form.password)) {
       alert('비밀번호는 영문 대문자, 소문자, 숫자, 특수문자를 모두 포함한 8~20자여야 합니다.')
       return
@@ -248,7 +263,8 @@ export default function SignupPage() {
                   id="signup-userId"
                   name="userId"
                   type="text"
-                  placeholder="아이디"
+                  placeholder="아이디 (영문·숫자 5~20자)"
+                  maxLength={20}
                   value={form.userId}
                   onChange={handleChange}
                   required
