@@ -634,6 +634,14 @@ a.nav-point-item:hover {
   color: var(--text);
 }
 
+/* 마우스를 올리면 천운 빨강으로 살짝 — 글자색과 옅은 밑줄 (터치 기기는 눌린 색이 남지 않게 제외) */
+@media (hover: hover) {
+  .nav-cat-tab:not(.active):hover {
+    color: var(--accent-fg);
+    border-bottom-color: var(--accent-tint-border);
+  }
+}
+
 .nav-cat-tab.active {
   color: var(--text);
   border-bottom-color: var(--accent);
