@@ -67,6 +67,28 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 기본 이모지 대신 쓰는 천운 아이콘 (components/EmojiIcon) — 글자 크기를 따라 이모지와 같은 자리·크기 */
+.emoji-icon {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: -0.25em;
+  object-fit: contain;
+  user-select: none;
+}
+/* 상품 사진용 img 규칙(꽉 채우기·절대 위치)이 아이콘에 걸리지 않게 — 사진 칸 대체 이미지, 응모 카드 남은 시간 배지 */
+.entry-emoji img.emoji-icon,
+.card-img img.emoji-icon {
+  position: static;
+  inset: auto;
+  filter: none;
+  transform: none;
+  width: 1.2em;
+  height: 1.2em;
+  object-fit: contain;
+  border-radius: 0;
+}
+
 .emoji {
   font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif;
 }

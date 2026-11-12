@@ -16,6 +16,7 @@ import { useMyPoints } from "@/hooks/useMyPoints";
 import { useStorage } from "@/hooks/useStorage";
 import { getValidSession, clearAuth } from "@/lib/auth";
 import { notifyStorageUpdated } from "@/lib/storage";
+import EmojiIcon from '@/components/EmojiIcon'
 
 const NAV_CATEGORIES = [
   { label: "응모", href: "/eungmo" },
@@ -71,12 +72,12 @@ export default function Navbar() {
           {isLoggedIn ? (
             <>
               <Link href="/mypage/storage" className="nav-point-item" aria-label={`쌀 응모권 ${ssalTicket}장`} title="이벤트·친구 추천으로 받은 쌀 응모권 (낙첨돼도 쌀포인트 페이백 없음)">
-                <span aria-hidden="true">🎫</span>
+                <EmojiIcon name="ssal-ticket" />
                 <span className="nav-point-label">쌀 응모권</span>
                 <span className="nav-point-value">{ssalTicket.toLocaleString()}장</span>
               </Link>
               <div className="nav-point-item">
-                <span className="nav-point-label">🌾 쌀포인트</span>
+                <span className="nav-point-label"><EmojiIcon name="rice" /> 쌀포인트</span>
                 <span className="nav-point-value">
                   {ssalPoint.toLocaleString()}P
                 </span>

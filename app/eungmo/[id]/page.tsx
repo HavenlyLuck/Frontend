@@ -24,6 +24,7 @@ import { payWithCard, paymentFailureMessage } from "@/lib/payment";
 import RefundNotice from "@/components/RefundNotice";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
 import { addRaffleToWishlist, getMyRaffleWishlist, removeRaffleFromWishlist } from "@/lib/wishlist";
+import EmojiIcon from '@/components/EmojiIcon'
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return "마감";
@@ -417,7 +418,7 @@ export default function RaffleProductPage({
                   fontWeight: 700,
                 }}
               >
-                🎉 당첨 응모 번호: #{product.winner_entry_number}
+                <EmojiIcon name="trophy" /> 당첨 응모 번호: #{product.winner_entry_number}
               </div>
             )}
 

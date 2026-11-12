@@ -8,6 +8,7 @@ import { getValidSession } from '@/lib/auth'
 import { getMyAddresses, type AddressResponse, type StorageItemResponse } from '@/lib/api'
 import { formatKstDate } from '@/lib/date'
 import Pagination from '@/components/Pagination'
+import EmojiIcon from '@/components/EmojiIcon'
 
 const PAGE_SIZE = 10
 
@@ -128,7 +129,7 @@ export default function ShippingHistoryPage() {
           return (
             <div key={parcel.key} className="entry-item" style={{ cursor: 'default' }}>
               <div className="entry-emoji" style={{ position: 'relative' }}>
-                {item.image_url != null ? <img src={item.image_url} alt={title} /> : '📦'}
+                {item.image_url != null ? <img src={item.image_url} alt={title} /> : <EmojiIcon name="box" />}
                 {grouped && <span className="parcel-count">{parcel.items.length}</span>}
               </div>
               <div className="entry-info">

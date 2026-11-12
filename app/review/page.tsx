@@ -21,6 +21,7 @@ import {
   productBadge,
   type InquiryResponse, type ReviewableItem, type ReviewResponse,
 } from '@/lib/reviews'
+import EmojiIcon from '@/components/EmojiIcon'
 
 type ReviewTab = '후기' | '문의'
 
@@ -302,7 +303,7 @@ export default function ReviewPage() {
                         </div>
                       )}
                       {!q.answered && (
-                        <div className="inquiry-pending-note">답변을 준비 중입니다. 조금만 기다려주세요 🙏</div>
+                        <div className="inquiry-pending-note">답변을 준비 중입니다. 조금만 기다려주세요 <EmojiIcon name="pending" /></div>
                       )}
                     </div>
                   )}
