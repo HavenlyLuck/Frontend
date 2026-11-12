@@ -21,6 +21,7 @@ import { ApiError, cancelMyRaffleEntries, type RaffleCastMember } from "@/lib/ap
 import { getValidSession } from "@/lib/auth";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
 import type { SceneEntrant } from "@/lib/lightningDraw/scene";
+import EmojiIcon from '@/components/EmojiIcon'
 
 // 매진 후 추첨까지 남은 시간 — 0이 됐는데 아직 결과가 없으면(폴링 전) 기다림 문구로 바뀐다
 function DrawCountdown({ drawAt }: { drawAt: number | null }) {
@@ -257,7 +258,7 @@ export default function RaffleEntriesPage() {
                   {item.image_url ? (
                     <img src={item.image_url} alt={item.product_name} />
                   ) : (
-                    "🎟"
+                    <EmojiIcon name="raffle-placeholder" />
                   )}
                 </div>
                 <div className="entry-info">
@@ -402,7 +403,7 @@ export default function RaffleEntriesPage() {
                 {item.image_url ? (
                   <img src={item.image_url} alt={item.product_name} />
                 ) : (
-                  "🎟"
+                  <EmojiIcon name="raffle-placeholder" />
                 )}
               </div>
               <div className="entry-info">

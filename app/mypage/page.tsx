@@ -13,6 +13,7 @@ import {
   NOTIFICATIONS_UPDATED_EVENT,
   type AppNotification,
 } from "@/lib/notifications";
+import EmojiIcon from '@/components/EmojiIcon'
 
 export default function MyPage() {
   const { ssalPoint } = useMyPoints();
@@ -40,7 +41,7 @@ export default function MyPage() {
 
       <div className="notif-list" style={{ display: "flex", padding: "18px 20px", marginBottom: 24 }}>
         <div style={{ flex: 1, textAlign: "center" }}>
-          <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 4 }}>🌾 쌀포인트</div>
+          <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 4 }}><EmojiIcon name="rice" /> 쌀포인트</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)" }}>{ssalPoint.toLocaleString()}P</div>
         </div>
       </div>

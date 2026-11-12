@@ -22,6 +22,7 @@ import {
 } from '@/lib/api'
 import Pagination from '@/components/Pagination'
 import FreeTicketShelf from '@/components/FreeTicketShelf'
+import EmojiIcon from '@/components/EmojiIcon'
 
 const PAGE_SIZE = 10
 
@@ -345,7 +346,7 @@ export default function StoragePage() {
                 {item.image_url != null ? (
                   <img src={item.image_url} alt={title} />
                 ) : (
-                  '📦'
+                  <EmojiIcon name="box" />
                 )}
               </div>
               <div className="entry-info">

@@ -14,6 +14,7 @@ import {
   TicketIcon,
   WarningIcon,
 } from '@phosphor-icons/react'
+import EmojiIcon from '@/components/EmojiIcon'
 
 // 바로가기 — id는 다른 페이지의 "도움이 필요하다면?" 링크(/guide#응모 등)가 쓰므로 바꾸지 않는다
 const SECTIONS = [
@@ -96,7 +97,7 @@ export default function GuidePage() {
         <div className="guide-table-wrap">
           <table className="guide-table">
             <thead>
-              <tr><th></th><th>🌾 쌀포인트</th><th>🎫 쌀 응모권</th></tr>
+              <tr><th></th><th><EmojiIcon name="rice" /> 쌀포인트</th><th><EmojiIcon name="ssal-ticket" /> 쌀 응모권</th></tr>
             </thead>
             <tbody>
               <tr><th>얻는 방법</th><td>응모 낙첨 시 지급</td><td>이벤트 · 친구 추천인 등록</td></tr>
@@ -175,14 +176,14 @@ export default function GuidePage() {
         <SectionTitle icon={StorefrontIcon} title="상점" summary="피규어와 굿즈를 바로 살 수 있어요. 결제 방식에 따라 상점이 나뉘어요." />
         <div className="guide-cards">
           <div className="guide-card">
-            <div className="guide-card-title">💳 일반 상점</div>
+            <div className="guide-card-title"><EmojiIcon name="store" /> 일반 상점</div>
             <Rules items={[
               '피규어 · 굿즈 · 카드',
               '카드로 바로 결제해요.',
             ]} />
           </div>
           <div className="guide-card">
-            <div className="guide-card-title">🌾 쌀포인트 상점</div>
+            <div className="guide-card-title"><EmojiIcon name="rice" /> 쌀포인트 상점</div>
             <Rules items={[
               '쿠폰 · 굿즈 · 아바타',
               '쌀포인트만으로 살 수 있어요.',
@@ -211,7 +212,7 @@ export default function GuidePage() {
           summary={CONTENTS_OPEN ? "일시적인 이벤트나 각종 컨텐츠를 즐길 수 있어요." : "일시적인 이벤트나 각종 컨텐츠를 즐길 수 있어요. 지금은 준비 중이라 곧 열릴 예정이에요."}
         />
         <div className="guide-card">
-          <div className="guide-card-title">👑 아바타 자랑 대회 (매주)</div>
+          <div className="guide-card-title"><EmojiIcon name="crown" /> 아바타 자랑 대회 (매주)</div>
           <Rules items={[
             '매주 월요일 0시에 시작해 일요일 자정에 순위가 확정돼요.',
             '참가는 무료예요. 지금 저장된 내 캐릭터로 참가해요.',
