@@ -2162,6 +2162,16 @@ a.product-card-home.is-soldout { cursor: pointer; }
   text-decoration: none;
   text-align: center;
 }
+.avatar-shop-catalog {
+  min-width: 0;
+}
+/* 아바타 아이템 분류 칩 (전체·표정·문신·상의…) */
+.avatar-shop-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
 .avatar-shop-items {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -3427,7 +3437,8 @@ a.product-card-home.is-soldout { cursor: pointer; }
 .avatar-style-option.locked {
   text-decoration: none;
 }
-.avatar-style-option.locked img {
+.avatar-style-option.locked img,
+.avatar-style-option.locked .avatar-bg-thumb {
   opacity: 0.55;
 }
 .avatar-locked-price {

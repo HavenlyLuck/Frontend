@@ -5,21 +5,29 @@ import Link from 'next/link'
 import { ArrowCounterClockwiseIcon, ConfettiIcon, GrainsIcon, LightningIcon, WarningIcon } from '@phosphor-icons/react'
 import AvatarRoom from '@/components/AvatarRoom'
 import PixelAvatar from '@/components/PixelAvatar'
+import AvatarItemPreview from '@/components/AvatarItemPreview'
 import LightningDrawScene from '@/components/LightningDrawScene'
 import { getValidSession, promptSignup } from '@/lib/auth'
 import { notifyPointsUpdated } from '@/hooks/useMyPoints'
 import { ApiError, getAvatarItems, getMyAvatarItems, getMyProfile, purchaseAvatarItem } from '@/lib/api'
 import { DEFAULT_AVATAR, normalizeAvatar, withItem, type AvatarConfig, type WearSlot } from '@/lib/avatar/compose'
-import { AVATAR_SHOP_ITEMS, type AvatarShopItem } from '@/lib/avatar/shopItems'
+import { AVATAR_SHOP_ITEMS, SLOT_LABELS, WEAR_SLOTS, type AvatarShopItem } from '@/lib/avatar/shopItems'
 import { SAMPLE_MY_ENTRY, sampleEntrants } from '@/lib/lightningDraw/sample'
 
 type Tried = Partial<Record<WearSlot, string>>
+type Category = 'all' | WearSlot
+// 카테고리 칩 — 파는 아이템이 있는 칸만 보여준다
+const CATEGORIES: { id: Category; label: string }[] = [
+  { id: 'all', label: '전체' },
+  ...WEAR_SLOTS.filter(slot => AVATAR_SHOP_ITEMS.some(i => i.slot === slot)).map(slot => ({ id: slot, label: SLOT_LABELS[slot] })),
+]
 
 // 쌀포인트 상점 "아바타" 탭 — 저장된 내 캐릭터에 아이템을 입혀 보고 추첨 화면에서 어떻게 보이는지까지 확인한다
 export default function AvatarShop() {
   const [base, setBase] = useState<AvatarConfig>(DEFAULT_AVATAR)
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null)
   const [tried, setTried] = useState<Tried>({})
+  const [category, setCategory] = useState<Category>('all')
   const [previewSeed, setPreviewSeed] = useState<number | null>(null)
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [owned, setOwned] = useState<Set<string>>(new Set())
@@ -136,14 +144,29 @@ export default function AvatarShop() {
         </button>
       </div>
 
+      <div className="avatar-shop-catalog">
+      <div className="avatar-shop-filters" role="tablist" aria-label="아바타 아이템 분류">
+        {CATEGORIES.map(c => (
+          <button
+            key={c.id}
+            type="button"
+            role="tab"
+            aria-selected={category === c.id}
+            className={`avatar-tab${category === c.id ? ' active' : ''}`}
+            onClick={() => setCategory(c.id)}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
       <div className="avatar-shop-items">
-        {AVATAR_SHOP_ITEMS.map((item) => {
+        {AVATAR_SHOP_ITEMS.filter(item => category === 'all' || item.slot === category).map((item) => {
           const worn = isWorn(item)
           return (
             <div key={item.id} className={`avatar-shop-item${worn ? ' worn' : ''}`}>
               <div className="avatar-shop-item-thumb">
                 {/* 기본 캐릭터가 이 아이템만 입은 모습 */}
-                <PixelAvatar config={withItem(DEFAULT_AVATAR, item.slot, item.id)} size={112} alt={item.name} />
+                <AvatarItemPreview config={withItem(DEFAULT_AVATAR, item.slot, item.id)} slot={item.slot} size={112} alt={item.name} />
               </div>
               <div className="avatar-shop-item-name">{item.name}</div>
               <div className="avatar-shop-item-desc">{item.description}</div>
@@ -173,6 +196,7 @@ export default function AvatarShop() {
             </div>
           )
         })}
+      </div>
       </div>
 
       <div className={`modal-overlay ${buyTarget ? 'open' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) closeBuy() }}>

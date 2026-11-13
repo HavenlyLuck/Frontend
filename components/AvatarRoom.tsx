@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { AVATAR_FEET_ROW, AVATAR_H, AVATAR_W, avatarKey, composeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 import { DEFAULT_ROOM_BACKGROUND, drawRoom, ROOM, ROOM_FLOOR_Y, type RoomBackgroundId } from '@/lib/avatar/rooms'
+import { AVATAR_SHOP_ITEMS } from '@/lib/avatar/shopItems'
 
 interface Props {
   config: AvatarConfig
@@ -34,7 +35,13 @@ function sprite(config: AvatarConfig, blink: boolean): HTMLCanvasElement {
 }
 
 // 마이페이지 프로필 카드·캐릭터 꾸미기·상점 미리보기의 큰 캐릭터 칸 — 픽셀 진열장 안 받침대 위에 캐릭터가 서 있고, 가끔 눈을 깜빡인다
-export default function AvatarRoom({ config, background = DEFAULT_ROOM_BACKGROUND, className, label }: Props) {
+// 착용한 배경 아이템의 방 배경 (없으면 기본 진열장)
+function roomOf(config: AvatarConfig): RoomBackgroundId {
+  return AVATAR_SHOP_ITEMS.find(i => i.id === config.background)?.room ?? DEFAULT_ROOM_BACKGROUND
+}
+
+export default function AvatarRoom({ config, background: backgroundProp, className, label }: Props) {
+  const background = backgroundProp ?? roomOf(config)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {

@@ -6,17 +6,19 @@ import { ArrowCounterClockwiseIcon, CheckIcon, GrainsIcon, LightningIcon, LockSi
 import PixelAvatar from '@/components/PixelAvatar'
 import LightningDrawScene from '@/components/LightningDrawScene'
 import AvatarRoom from '@/components/AvatarRoom'
+import AvatarItemPreview from '@/components/AvatarItemPreview'
 import { SAMPLE_MY_ENTRY, sampleEntrants } from '@/lib/lightningDraw/sample'
 import { getValidSession } from '@/lib/auth'
 import { getMyAvatarItems, getMyProfile, updateMyAvatar, ApiError } from '@/lib/api'
 import { DEFAULT_AVATAR, avatarKey, normalizeAvatar, withItem, type AvatarConfig, type WearSlot } from '@/lib/avatar/compose'
-import { AVATAR_SHOP_ITEMS, HAIRS, SLOT_LABELS, WEAR_SLOTS } from '@/lib/avatar/shopItems'
+import { AVATAR_SHOP_ITEMS, HAIRS, SLOT_LABELS, WEAR_SLOTS, type AvatarShopItem } from '@/lib/avatar/shopItems'
 import { notifyAvatarUpdated } from '@/lib/avatar/events'
 
 type TabId = 'hair' | WearSlot
 const TABS: { id: TabId; label: string }[] = [
   { id: 'hair', label: '머리' },
-  ...WEAR_SLOTS.map(slot => ({ id: slot, label: SLOT_LABELS[slot] })),
+  // 상점 머리(hairItem)는 따로 탭을 두지 않고 머리 탭에서 무료 머리 모양과 함께 고른다
+  ...WEAR_SLOTS.filter(slot => slot !== 'hairItem').map(slot => ({ id: slot, label: SLOT_LABELS[slot] })),
 ]
 
 export default function AvatarPage() {
@@ -73,6 +75,35 @@ export default function AvatarPage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [preview])
+
+  const slotItems = tabId === 'hair' ? [] : AVATAR_SHOP_ITEMS.filter(item => item.slot === tabId)
+  const hairItems = AVATAR_SHOP_ITEMS.filter(item => item.slot === 'hairItem')
+
+  // 상점 아이템 하나 — 산 것은 입히고, 안 산 것은 입은 모습만 보여주고 상점으로 보낸다
+  const itemOption = (item: AvatarShopItem) => {
+    const config = withItem(draft, item.slot, item.id)
+    const selected = draft[item.slot] === item.id
+    return owned.has(item.id) ? (
+      <button
+        key={item.id}
+        type="button"
+        className={`avatar-style-option${selected ? ' selected' : ''}`}
+        aria-pressed={selected}
+        onClick={() => update(config)}
+      >
+        <AvatarItemPreview config={config} slot={item.slot} size={80} />
+        <span>{item.name}</span>
+      </button>
+    ) : (
+      <Link key={item.id} href="/shop" className="avatar-style-option locked" title="쌀포인트 상점에서 구매">
+        <AvatarItemPreview config={config} slot={item.slot} size={80} />
+        <span>{item.name}</span>
+        <span className="avatar-locked-price">
+          <LockSimpleIcon size={11} weight="fill" /> <GrainsIcon size={11} weight="fill" /> {item.price.toLocaleString()}P
+        </span>
+      </Link>
+    )
+  }
 
   const update = (next: AvatarConfig) => {
     setDraft(next)
@@ -152,26 +183,31 @@ export default function AvatarPage() {
               </div>
               <div className="avatar-style-grid">
                 {HAIRS.map(h => {
-                  const selected = draft.hair === h.id
+                  const config = { ...withItem(draft, 'hairItem', undefined), hair: h.id }
+                  const selected = draft.hair === h.id && draft.hairItem == null
                   return (
                     <button
                       key={h.id}
                       type="button"
                       className={`avatar-style-option${selected ? ' selected' : ''}`}
                       aria-pressed={selected}
-                      onClick={() => update({ ...draft, hair: h.id })}
+                      onClick={() => update(config)}
                     >
-                      <PixelAvatar config={{ ...draft, hair: h.id }} size={80} />
+                      <PixelAvatar config={config} size={80} />
                       <span>{h.name}</span>
                     </button>
                   )
                 })}
+                {hairItems.map(itemOption)}
               </div>
             </div>
           ) : (
             <div className="avatar-option-group">
               <div className="avatar-option-label">
-                {SLOT_LABELS[tabId]}<span className="avatar-option-hint"> · 쌀포인트 상점에서 산 아이템을 입을 수 있어요</span>
+                {SLOT_LABELS[tabId]}
+                <span className="avatar-option-hint">
+                  {slotItems.length > 0 ? ' · 쌀포인트 상점에서 산 아이템을 입을 수 있어요' : ' · 아직 판매 중인 아이템이 없어요'}
+                </span>
               </div>
               <div className="avatar-style-grid">
                 <button
@@ -180,34 +216,10 @@ export default function AvatarPage() {
                   aria-pressed={draft[tabId] == null}
                   onClick={() => update(withItem(draft, tabId, undefined))}
                 >
-                  <PixelAvatar config={withItem(draft, tabId, undefined)} size={80} />
+                  <AvatarItemPreview config={withItem(draft, tabId, undefined)} slot={tabId} size={80} />
                   <span>기본</span>
                 </button>
-                {AVATAR_SHOP_ITEMS.filter(item => item.slot === tabId).map(item => {
-                  const has = owned.has(item.id)
-                  const selected = draft[tabId] === item.id
-                  return has ? (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={`avatar-style-option${selected ? ' selected' : ''}`}
-                      aria-pressed={selected}
-                      onClick={() => update(withItem(draft, tabId, item.id))}
-                    >
-                      <PixelAvatar config={withItem(draft, tabId, item.id)} size={80} />
-                      <span>{item.name}</span>
-                    </button>
-                  ) : (
-                    // 안 산 아이템은 입은 모습만 보여주고 상점으로 보낸다
-                    <Link key={item.id} href="/shop" className="avatar-style-option locked" title="쌀포인트 상점에서 구매">
-                      <PixelAvatar config={withItem(draft, tabId, item.id)} size={80} />
-                      <span>{item.name}</span>
-                      <span className="avatar-locked-price">
-                        <LockSimpleIcon size={11} weight="fill" /> <GrainsIcon size={11} weight="fill" /> {item.price.toLocaleString()}P
-                      </span>
-                    </Link>
-                  )
-                })}
+                {slotItems.map(itemOption)}
               </div>
             </div>
           )}
