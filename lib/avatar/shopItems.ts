@@ -3,14 +3,15 @@
 // 백엔드 app/core/avatar_items.py와 id·slot을 맞춰야 한다. 화면의 가격은 서버(/avatar-items) 값으로 덮어쓴다.
 
 import type { RoomBackgroundId } from './rooms'
+import type { AuraId } from './auras'
 
 // 착용 칸 — 칸마다 아이템 하나. 머리 모양은 무료라 상점 아이템 칸이 아니다.
 // 순서 = 캐릭터 꾸미기 탭 순서
 // hairItem = 상점에서 산 머리 (입으면 무료 머리 모양 대신 이 머리로 그린다)
-export type WearSlot = 'hairItem' | 'face' | 'tattoo' | 'top' | 'bottom' | 'hat' | 'shoes' | 'held' | 'background'
+export type WearSlot = 'hairItem' | 'face' | 'tattoo' | 'top' | 'bottom' | 'hat' | 'shoes' | 'held' | 'aura' | 'background'
 export type HairId = 'buns' | 'short'
 
-export const WEAR_SLOTS: WearSlot[] = ['hairItem', 'face', 'tattoo', 'top', 'bottom', 'hat', 'shoes', 'held', 'background']
+export const WEAR_SLOTS: WearSlot[] = ['hairItem', 'face', 'tattoo', 'top', 'bottom', 'hat', 'shoes', 'held', 'aura', 'background']
 export const SLOT_LABELS: Record<WearSlot, string> = {
   hairItem: '머리',
   face: '표정',
@@ -20,10 +21,11 @@ export const SLOT_LABELS: Record<WearSlot, string> = {
   hat: '모자',
   shoes: '신발',
   held: '손',
+  aura: '오라',
   background: '배경',
 }
 
-// 그림을 겹치는 순서 (뒤 → 앞). 배경은 그림 층이 아니라 방 배경이라 빠진다. 머리(무료 머리 모양 또는 hairItem)는 상의와 모자 사이에 들어간다
+// 그림을 겹치는 순서 (뒤 → 앞). 배경·오라는 그림 층이 아니라 캐릭터 방에 따로 그려서 빠진다. 머리(무료 머리 모양 또는 hairItem)는 상의와 모자 사이에 들어간다
 export const LAYER_ORDER: WearSlot[] = ['tattoo', 'face', 'bottom', 'shoes', 'top', 'hat', 'held']
 
 // 머리 모양 — 누구나 고를 수 있다. layer가 null이면 기본 그림(똥머리) 그대로
@@ -39,10 +41,52 @@ export interface AvatarShopItem {
   price: number // 쌀포인트
   slot: WearSlot
   room?: RoomBackgroundId // 배경 아이템만 — 캐릭터 방에 깔 배경
+  aura?: AuraId // 오라 아이템만 — 캐릭터 등 뒤에 그릴 빛 효과 (auras.ts)
   fullHead?: boolean // 머리 아이템만 — 머리카락이 아니라 얼굴까지 통째로 바꾸는 머리 (표정·문신이 가려지고 눈을 깜빡이지 않는다)
 }
 
 export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
+  // ── 오라 — 캐릭터 등 뒤에서 움직이는 빛 (그림은 auras.ts) ──
+  {
+    id: 'aura-gold-halo',
+    name: '금빛 후광',
+    description: '머리 뒤로 커다란 금빛 고리가 천천히 돌고, 고리 위에서 별이 반짝여요.',
+    price: 5000,
+    slot: 'aura',
+    aura: 'gold-halo',
+  },
+  {
+    id: 'aura-thunder',
+    name: '천운 번개',
+    description: '등 뒤 주황빛 속에서 천운 번개가 갈래로 내리쳐요.',
+    price: 5000,
+    slot: 'aura',
+    aura: 'thunder',
+  },
+  {
+    id: 'aura-blue-flame',
+    name: '푸른 도깨비불',
+    description: '발밑에서 푸른 불꽃이 피어올라 몸을 감싸요.',
+    price: 4500,
+    slot: 'aura',
+    aura: 'blue-flame',
+  },
+  {
+    id: 'aura-sakura',
+    name: '벚꽃 바람',
+    description: '분홍 꽃잎이 캐릭터 둘레를 빙글빙글 돌며 흩날려요.',
+    price: 4000,
+    slot: 'aura',
+    aura: 'sakura',
+  },
+  {
+    id: 'aura-angel-wings',
+    name: '천사 날개',
+    description: '등 뒤에서 하얀 날개가 천천히 퍼덕이고, 깃털이 한 장씩 떨어져요.',
+    price: 6000,
+    slot: 'aura',
+    aura: 'angel-wings',
+  },
   {
     id: 'outfit-jacket',
     name: '가죽 재킷 세트',

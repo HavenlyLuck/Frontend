@@ -30,6 +30,8 @@ export default function AvatarShop() {
   const [category, setCategory] = useState<Category>('all')
   const [previewSeed, setPreviewSeed] = useState<number | null>(null)
   const [prices, setPrices] = useState<Record<string, number>>({})
+  // 서버가 파는 아이템 id — 프론트에 그림만 먼저 들어온 새 아이템(서버 등록 전)은 '판매 준비 중'으로 막는다. null = 아직 모름
+  const [onSale, setOnSale] = useState<Set<string> | null>(null)
   const [owned, setOwned] = useState<Set<string>>(new Set())
   const [busyId, setBusyId] = useState<string | null>(null)
   // 구매 팝업 — 확인 → 완료까지 사이트 공통 모달(.modal-overlay)로 보여준다
@@ -40,7 +42,11 @@ export default function AvatarShop() {
   useEffect(() => {
     let cancelled = false
     getAvatarItems()
-      .then((items) => { if (!cancelled) setPrices(Object.fromEntries(items.map(i => [i.item_id, i.price]))) })
+      .then((items) => {
+        if (cancelled) return
+        setPrices(Object.fromEntries(items.map(i => [i.item_id, i.price])))
+        setOnSale(new Set(items.map(i => i.item_id)))
+      })
       .catch(() => {}) // 못 불러오면 목록에 적힌 가격을 보여준다
     getValidSession().then((session) => {
       if (cancelled) return
@@ -177,7 +183,12 @@ export default function AvatarShop() {
                 <button type="button" className="btn-ghost avatar-small-btn" aria-pressed={worn} onClick={() => toggle(item)}>
                   {worn ? '벗기' : '입어보기'}
                 </button>
-                {loggedIn !== true ? (
+                {onSale && !onSale.has(item.id) ? (
+                  // 입어보기는 되지만 아직 살 수는 없다 (서버에 아이템 등록 전)
+                  <button type="button" className="btn-primary avatar-small-btn" disabled>
+                    준비 중
+                  </button>
+                ) : loggedIn !== true ? (
                   // 로그인 안 했으면 누를 때 가입 안내 창을 띄운다 (로그인 여부 확인 중엔 잠깐 막아 둠)
                   <button type="button" className="btn-primary avatar-small-btn" disabled={loggedIn === null} onClick={() => promptSignup()}>
                     구매
