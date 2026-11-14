@@ -5,6 +5,7 @@ import { AVATAR_FEET_ROW, AVATAR_H, AVATAR_W, avatarKey, composeAvatar, type Ava
 import { DEFAULT_ROOM_BACKGROUND, drawRoom, ROOM, ROOM_FLOOR_Y, type RoomBackgroundId } from '@/lib/avatar/rooms'
 import { AVATAR_SHOP_ITEMS } from '@/lib/avatar/shopItems'
 import { drawAura, type AuraAnchor } from '@/lib/avatar/auras'
+import { drawBack } from '@/lib/avatar/backs'
 
 interface Props {
   config: AvatarConfig
@@ -19,7 +20,7 @@ const WORLD = ROOM * ROOM_SCALE
 // 발바닥이 진열장 받침대 금테 바로 위에 오게 세운다
 const AVATAR_X = Math.round((WORLD - AVATAR_W) / 2)
 const AVATAR_Y = ROOM_FLOOR_Y * ROOM_SCALE - 1 - AVATAR_FEET_ROW
-// 오라 기준점 — 머리 가운데(그림 11행쯤), 발바닥
+// 오라·등 장식 기준점 — 머리 가운데(그림 11행쯤), 발바닥
 const AURA_ANCHOR: AuraAnchor = { cx: WORLD / 2, headY: AVATAR_Y + 11, feetY: AVATAR_Y + AVATAR_FEET_ROW }
 
 // 설정별로 뜬 눈 / 감은 눈 그림을 한 번만 만든다
@@ -59,6 +60,7 @@ export default function AvatarRoom({ config, background: backgroundProp, classNa
     const open = sprite(config, false)
     const closed = sprite(config, true)
     const aura = AVATAR_SHOP_ITEMS.find(i => i.id === config.aura)?.aura
+    const back = AVATAR_SHOP_ITEMS.find(i => i.id === config.back)?.back
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let raf = 0
@@ -81,11 +83,14 @@ export default function AvatarRoom({ config, background: backgroundProp, classNa
       // 발밑 그림자
       wctx.fillStyle = 'rgba(0, 0, 0, 0.35)'
       wctx.fillRect(AVATAR_X + 13, ROOM_FLOOR_Y * ROOM_SCALE, 12, 1)
+      // 뒤 → 앞: 오라 빛 → 등 장식 → 캐릭터 → 오라(앞) → 등 장식(앞)
       if (aura) drawAura(wctx, aura, AURA_ANCHOR, t, 'back')
+      if (back) drawBack(wctx, back, AURA_ANCHOR, t, 'back')
       // 3.6초마다 0.12초 눈 감기
       const blink = !reduceMotion && t % 3600 > 3480
       wctx.drawImage(blink ? closed : open, AVATAR_X, AVATAR_Y)
       if (aura) drawAura(wctx, aura, AURA_ANCHOR, t, 'front')
+      if (back) drawBack(wctx, back, AURA_ANCHOR, t, 'front')
 
       ctx.imageSmoothingEnabled = false
       ctx.clearRect(0, 0, w, h)

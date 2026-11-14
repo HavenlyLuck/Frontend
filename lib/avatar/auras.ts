@@ -1,10 +1,11 @@
-// 오라 — 캐릭터 등 뒤(일부는 앞까지)에서 움직이는 빛 효과. 쌀포인트 상점 "오라" 칸 아이템.
+// 오라 — 캐릭터 둘레(일부는 앞까지)에서 움직이는 빛 효과. 쌀포인트 상점 "오라" 칸 아이템.
+// 날개·망토처럼 등에 다는 장식은 "등" 칸(backs.ts)이고, 오라와 함께 입을 수 있다.
 // 그림 파일이 아니라 코드로 그린다. 캐릭터 방(AvatarRoom)의 칸 좌표(60×60, 그림 1칸 = 1)에 그린다.
 // drawAura(..., 'back')은 캐릭터를 그리기 전에, drawAura(..., 'front')는 캐릭터를 그린 뒤에 부른다.
 
 import { hash01 } from '@/lib/lightningDraw/scene'
 
-export type AuraId = 'gold-halo' | 'thunder' | 'blue-flame' | 'sakura' | 'angel-wings'
+export type AuraId = 'gold-halo' | 'thunder' | 'blue-flame' | 'sakura'
 
 // 캐릭터 기준점 (AvatarRoom 칸 좌표) — 머리 가운데, 발바닥
 export interface AuraAnchor {
@@ -13,9 +14,9 @@ export interface AuraAnchor {
   feetY: number // 발바닥 y
 }
 
-type Ctx = CanvasRenderingContext2D
+export type Ctx = CanvasRenderingContext2D
 
-function px(ctx: Ctx, color: string, x: number, y: number, alpha = 1, w = 1, h = 1) {
+export function px(ctx: Ctx, color: string, x: number, y: number, alpha = 1, w = 1, h = 1) {
   if (alpha <= 0) return
   ctx.globalAlpha = Math.min(1, alpha)
   ctx.fillStyle = color
@@ -23,7 +24,7 @@ function px(ctx: Ctx, color: string, x: number, y: number, alpha = 1, w = 1, h =
 }
 
 // 부드럽게 퍼지는 둥근 빛 (가운데가 진하다)
-function glow(ctx: Ctx, color: string, cx: number, cy: number, r: number, alpha: number) {
+export function glow(ctx: Ctx, color: string, cx: number, cy: number, r: number, alpha: number) {
   for (let y = -r; y <= r; y++) {
     for (let x = -r; x <= r; x++) {
       const d = Math.sqrt(x * x + y * y) / r
@@ -34,7 +35,7 @@ function glow(ctx: Ctx, color: string, cx: number, cy: number, r: number, alpha:
 }
 
 // 반짝이 — 가운데 한 칸 + 십자 네 칸
-function twinkle(ctx: Ctx, x: number, y: number, size: number, alpha: number, core = '#ffffff', arm = '#fff3b0') {
+export function twinkle(ctx: Ctx, x: number, y: number, size: number, alpha: number, core = '#ffffff', arm = '#fff3b0') {
   px(ctx, core, x, y, alpha)
   for (let i = 1; i <= size; i++) {
     const a = alpha * (1 - i / (size + 1))
@@ -213,59 +214,11 @@ function sakura(ctx: Ctx, a: AuraAnchor, t: number, layer: 'back' | 'front') {
   }
 }
 
-// ── 5. 천사 날개 — 등 뒤에서 하얀 날개가 천천히 퍼덕인다 ──
-// 깃털 줄마다 어깨에서 바깥 위로 뻗는 선. 줄이 아래로 갈수록 짧다.
-function angelWings(ctx: Ctx, a: AuraAnchor, t: number, layer: 'back' | 'front') {
-  if (layer === 'front') {
-    // 떨어지는 깃털 하나
-    const LIFE = 2600
-    const age = (t % LIFE) / LIFE
-    const gen = Math.floor(t / LIFE)
-    const side = gen % 2 ? 1 : -1
-    const x = a.cx + side * (16 + hash01(gen) * 6) + Math.sin(age * Math.PI * 3) * 2
-    const y = a.headY + 4 + age * 22
-    const alpha = age < 0.1 ? age * 10 : 1 - age
-    px(ctx, '#ffffff', x, y, alpha, 2, 1)
-    px(ctx, '#b9c6dd', x + 1, y + 1, alpha * 0.7)
-    return
-  }
-  glow(ctx, '#ffffff', a.cx, a.headY + 6, 24, 0.12)
-  const flap = Math.sin(t / 650) // -1 ~ 1
-  const shoulderY = a.headY + 12
-  const FEATHERS = 7
-  for (const side of [-1, 1]) {
-    const sx = a.cx + side * 6
-    for (let f = 0; f < FEATHERS; f++) {
-      // 위쪽 깃털일수록 길고 위를 향한다. 퍼덕일 때 위쪽 깃털이 더 크게 움직인다
-      const k = f / (FEATHERS - 1) // 0 = 맨 위 깃털
-      const len = 25 - k * 13
-      const ang = (-0.95 + k * 1.15) + flap * (0.22 - k * 0.12)
-      const ex = sx + side * Math.cos(ang) * len
-      const ey = shoulderY + Math.sin(ang) * len + k * 2
-      const n = Math.ceil(len)
-      for (let i = 0; i <= n; i++) {
-        const u = i / n
-        const x = sx + (ex - sx) * u
-        const y = shoulderY + k * 2 + (ey - shoulderY - k * 2) * u
-        const tip = u > 0.8
-        // 깃털 두께 — 가운데는 두 칸, 끝은 한 칸
-        px(ctx, tip ? '#e8eef8' : '#ffffff', x, y, 1)
-        if (!tip) px(ctx, '#ffffff', x, y + 1, 1)
-        px(ctx, '#b9c6dd', x, y + (tip ? 1 : 2), 0.9) // 아랫면 그림자
-      }
-    }
-    // 날개 윤곽 끝 반짝임
-    const tipAng = -0.95 + flap * 0.22
-    twinkle(ctx, sx + side * Math.cos(tipAng) * 25, shoulderY + Math.sin(tipAng) * 25, 1, 0.5 + 0.5 * Math.sin(t / 300 + side))
-  }
-}
-
 const DRAW: Record<AuraId, (ctx: Ctx, a: AuraAnchor, t: number, layer: 'back' | 'front') => void> = {
   'gold-halo': goldHalo,
   thunder,
   'blue-flame': blueFlame,
   sakura,
-  'angel-wings': angelWings,
 }
 
 export function drawAura(ctx: Ctx, id: AuraId, anchor: AuraAnchor, t: number, layer: 'back' | 'front') {
