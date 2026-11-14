@@ -22,6 +22,8 @@ export interface AvatarConfig {
   hat?: string
   shoes?: string
   held?: string
+  back?: string // 등 장식 — 그림 층이 아니라 캐릭터 방(AvatarRoom)에서 따로 그린다
+  aura?: string // 오라 — 그림 층이 아니라 캐릭터 방(AvatarRoom)에서 따로 그린다
   background?: string
 }
 
