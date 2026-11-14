@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { AVATAR_H, drawAvatar, mulberry32, plotLine, type CastMember } from '@/lib/lightningDraw/scene'
+import { AVATAR_H, drawAvatar, drawAvatarEffects, mulberry32, plotLine, type CastMember } from '@/lib/lightningDraw/scene'
 import type { AvatarConfig } from '@/lib/avatar/compose'
 
 /*
@@ -152,7 +152,9 @@ export default function KujiAvatarScene({ avatar, count, phase, onDrawDone, onSt
       }
 
       drawBox(ctx, shake)
+      drawAvatarEffects(ctx, me, 'back', t, lift) // 오라·등 장식 (뒤)
       drawAvatar(ctx, me, { lift, zap, flicker: Math.floor(t / 140) % 2 === 1 })
+      drawAvatarEffects(ctx, me, 'front', t, lift)
 
       // 튀어 오르는 제비
       if (phase === 'draw') {

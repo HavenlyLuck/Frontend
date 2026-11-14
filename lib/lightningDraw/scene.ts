@@ -5,6 +5,9 @@
  */
 
 import { AVATAR_FEET_ROW, AVATAR_H as AVATAR_H_PX, AVATAR_W, DEFAULT_AVATAR, avatarKey, composeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
+import { drawAura, type AuraAnchor } from '@/lib/avatar/auras'
+import { drawBack } from '@/lib/avatar/backs'
+import { AVATAR_SHOP_ITEMS } from '@/lib/avatar/shopItems'
 
 export const WORLD_W = 208
 export const WORLD_H = 156
@@ -123,6 +126,35 @@ export interface AvatarDrawOptions {
   flicker?: boolean // 손에 든 무기의 불꽃 같은 깜빡이는 색을 바꿔 칠할 차례
 }
 
+
+// 오라·등 장식 — 캐릭터 그림 좌표(38×37칸)로 그린다. 캐릭터 방(AvatarRoom)과 같은 기준점
+const EFFECT_ANCHOR: AuraAnchor = { cx: AVATAR_W / 2, headY: 11, feetY: AVATAR_FEET_ROW }
+const auraOf = new Map(AVATAR_SHOP_ITEMS.filter(i => i.aura).map(i => [i.id, i.aura!]))
+const backOf = new Map(AVATAR_SHOP_ITEMS.filter(i => i.back).map(i => [i.id, i.back!]))
+
+export function hasAvatarEffects(m: CastMember): boolean {
+  return !!m.avatar && (auraOf.has(m.avatar.aura ?? '') || backOf.has(m.avatar.back ?? ''))
+}
+
+// 캐릭터의 오라·등 장식. layer 'back'은 모든 캐릭터를 그리기 전에, 'front'는 다 그린 뒤에 부른다
+// (옆 사람 오라가 내 캐릭터를 덮지 않게). lift는 drawAvatar에 준 값과 같게.
+export function drawAvatarEffects(ctx: CanvasRenderingContext2D, m: CastMember, layer: 'back' | 'front', t: number, lift = 0) {
+  if (!m.avatar) return
+  const aura = auraOf.get(m.avatar.aura ?? '')
+  const back = backOf.get(m.avatar.back ?? '')
+  if (!aura && !back) return
+  ctx.save()
+  ctx.translate(m.x - SPRITE_W / 2, m.y + PEDESTAL_TOP - FEET_FROM_TOP - Math.round(lift))
+  ctx.scale(1 / AVATAR_SCALE, 1 / AVATAR_SCALE)
+  if (layer === 'back') {
+    if (aura) drawAura(ctx, aura, EFFECT_ANCHOR, t, 'back')
+    if (back) drawBack(ctx, back, EFFECT_ANCHOR, t, 'back')
+  } else {
+    if (aura) drawAura(ctx, aura, EFFECT_ANCHOR, t, 'front')
+    if (back) drawBack(ctx, back, EFFECT_ANCHOR, t, 'front')
+  }
+  ctx.restore()
+}
 
 export function drawAvatar(ctx: CanvasRenderingContext2D, m: CastMember, opts: AvatarDrawOptions = {}) {
   const lift = Math.round(opts.lift ?? 0)
