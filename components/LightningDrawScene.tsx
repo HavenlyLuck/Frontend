@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   AVATAR_H, AVATAR_SCALE, CLOUD_Y, WORLD_H, WORLD_W,
-  buildCloudSprites, buildScene, drawAvatar, fillPixelEllipse, hash01, plotLine, strokePixelCircle,
-  type CastMember, type Scene, type SceneEntrant,
+  buildCloudSprites, buildScene, drawAvatar, drawAvatarEffects, fillPixelEllipse, hash01, plotLine, strokePixelCircle,
+  type AvatarDrawOptions, type CastMember, type Scene, type SceneEntrant,
 } from '@/lib/lightningDraw/scene'
 
 /*
@@ -161,6 +161,8 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
       const cloud = cloudAt(t)
 
       // 피규어 — 진짜 피규어처럼 가만히 서 있다(눈 깜빡임·아이템 불꽃만). 번개가 떨어지면 당첨 피규어가 받침대 위로 떠오른다.
+      // 오라·등 장식은 모든 피규어 뒤에 먼저 깔고(뒤), 피규어를 다 세운 뒤 앞으로 지나가는 것만 위에 그린다(앞)
+      const poses: { m: CastMember; opts: AvatarDrawOptions }[] = []
       for (const m of scene.cast) {
         const local = t + m.phase
         let lift = 0
@@ -175,8 +177,11 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
         } else if (ds >= 0 && (m.x - winner.x) ** 2 + (m.y - winner.y) ** 2 < 24 * 24) {
           lift = hop(ds, 80, 260, 2) // 옆 칸 피규어들이 들썩
         }
-        drawAvatar(fctx, m, { lift, blink: (local * 3) % 3400 < 130, zap, outline, flicker: Math.floor(local / 140) % 2 === 1 })
+        poses.push({ m, opts: { lift, blink: (local * 3) % 3400 < 130, zap, outline, flicker: Math.floor(local / 140) % 2 === 1 } })
       }
+      for (const { m, opts } of poses) drawAvatarEffects(fctx, m, 'back', t + m.phase, opts.lift)
+      for (const { m, opts } of poses) drawAvatar(fctx, m, opts)
+      for (const { m, opts } of poses) drawAvatarEffects(fctx, m, 'front', t + m.phase, opts.lift)
       // 당첨 피규어 받침대에 남는 금빛
       if (ds > 650) {
         fctx.globalAlpha = 0.6 * clamp01((ds - 650) / 400)

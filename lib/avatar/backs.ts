@@ -60,6 +60,7 @@ const DRAW: Record<BackId, (ctx: Ctx, a: AuraAnchor, t: number, layer: 'back' | 
 
 export function drawBack(ctx: Ctx, id: BackId, anchor: AuraAnchor, t: number, layer: 'back' | 'front') {
   ctx.save()
+  ctx.imageSmoothingEnabled = false
   DRAW[id](ctx, anchor, t, layer)
   ctx.restore()
 }

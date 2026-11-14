@@ -141,6 +141,7 @@ export function composeAvatar(c: AvatarConfig, { background = false, blink = fal
 // 샘플 화면(추첨 미리보기, 대회 데모)에 세울 아무 캐릭터
 export function randomAvatar(rng: () => number): AvatarConfig {
   let c: AvatarConfig = { v: 3, hair: rng() < 0.5 ? 'short' : 'buns' }
-  for (const item of AVATAR_SHOP_ITEMS) if (rng() < 0.35) c = withItem(c, item.slot, item.id)
+  // 오라·등은 눈에 확 띄어서, 샘플 군중엔 가끔만 입힌다
+  for (const item of AVATAR_SHOP_ITEMS) if (rng() < (item.slot === 'aura' || item.slot === 'back' ? 0.05 : 0.35)) c = withItem(c, item.slot, item.id)
   return c
 }

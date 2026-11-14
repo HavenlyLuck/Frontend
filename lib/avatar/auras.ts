@@ -24,14 +24,29 @@ export function px(ctx: Ctx, color: string, x: number, y: number, alpha = 1, w =
 }
 
 // 부드럽게 퍼지는 둥근 빛 (가운데가 진하다)
+// 색·반지름별로 한 번만 칸칸이 그려 두고, 매 프레임엔 그 그림을 진하기만 바꿔 붙인다
+const glowCache = new Map<string, HTMLCanvasElement>()
 export function glow(ctx: Ctx, color: string, cx: number, cy: number, r: number, alpha: number) {
-  for (let y = -r; y <= r; y++) {
-    for (let x = -r; x <= r; x++) {
-      const d = Math.sqrt(x * x + y * y) / r
-      if (d > 1) continue
-      px(ctx, color, cx + x, cy + y, alpha * (1 - d) * (1 - d))
+  if (alpha <= 0) return
+  const key = color + r
+  let c = glowCache.get(key)
+  if (!c) {
+    c = document.createElement('canvas')
+    c.width = c.height = r * 2 + 1
+    const g = c.getContext('2d')!
+    g.fillStyle = color
+    for (let y = -r; y <= r; y++) {
+      for (let x = -r; x <= r; x++) {
+        const d = Math.sqrt(x * x + y * y) / r
+        if (d > 1) continue
+        g.globalAlpha = (1 - d) * (1 - d)
+        g.fillRect(x + r, y + r, 1, 1)
+      }
     }
+    glowCache.set(key, c)
   }
+  ctx.globalAlpha = Math.min(1, alpha)
+  ctx.drawImage(c, Math.round(cx) - r, Math.round(cy) - r)
 }
 
 // 반짝이 — 가운데 한 칸 + 십자 네 칸
@@ -223,6 +238,7 @@ const DRAW: Record<AuraId, (ctx: Ctx, a: AuraAnchor, t: number, layer: 'back' | 
 
 export function drawAura(ctx: Ctx, id: AuraId, anchor: AuraAnchor, t: number, layer: 'back' | 'front') {
   ctx.save()
+  ctx.imageSmoothingEnabled = false
   DRAW[id](ctx, anchor, t, layer)
   ctx.restore()
 }
