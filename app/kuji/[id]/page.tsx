@@ -19,6 +19,9 @@ import { ApiError, getMyProfile } from '@/lib/api'
 import { PaymentWindowError } from '@/lib/payment'
 import { DEFAULT_AVATAR, normalizeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 import RefundNotice from "@/components/RefundNotice";
+import MobileBuyBar from "@/components/MobileBuyBar";
+import { SHIPPING_FEE_TEXT } from "@/lib/shipping";
+import { STORAGE_KEEP_DAYS } from "@/lib/storageExpiry";
 
 type DrawResult = { ticketId: number; grade: string; tier: KujiTier }[]
 
@@ -369,7 +372,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
               <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 8 }}>
                 총 {(product.pricePerTicket * qty).toLocaleString()}원 (최대 {maxQty}장)
               </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <div id="main-cta" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button
                   onClick={openDraw}
                   disabled={closed}
@@ -384,6 +387,13 @@ function KujiProductView({ product }: { product: KujiProduct }) {
                   {closed ? '품절되었습니다' : <><TicketIcon size={16} weight="fill" /> 뽑기 시작</>}
                 </button>
               </div>
+              <MobileBuyBar
+                watchId="main-cta"
+                price={<>{product.pricePerTicket.toLocaleString()}원 <small>/ 1회</small></>}
+                label={closed ? '품절' : <><TicketIcon size={16} weight="fill" /> 뽑기 시작</>}
+                onClick={openDraw}
+                disabled={closed}
+              />
             </div>
           </div>
         </div>
@@ -457,7 +467,8 @@ function KujiProductView({ product }: { product: KujiProduct }) {
 
             <div style={{ padding: 16, borderTop: '1px solid var(--border)' }}>
               <p style={{ margin: '0 0 10px', fontSize: 12, lineHeight: 1.6, color: 'var(--text-tertiary)' }}>
-                쿠지는 결제와 동시에 결과가 정해져서 <b>결제 후에는 취소·환불할 수 없어요.</b> 받은 상품이 파손·불량이면 교환해 드려요.{' '}
+                쿠지는 결제와 동시에 결과가 정해져서 <b>결제 후에는 취소·환불할 수 없어요.</b> 받은 상품이 파손·불량이면 교환해 드려요.
+                받은 상품은 보관함에서 {STORAGE_KEEP_DAYS}일 안에 배송 신청해야 해요(배송비 {SHIPPING_FEE_TEXT} 별도).{' '}
                 <a href="/refund#쿠지" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', color: 'inherit' }}>
                   취소·환불 정책
                 </a>

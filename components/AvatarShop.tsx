@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowCounterClockwiseIcon, ConfettiIcon, GrainsIcon, LightningIcon, WarningIcon } from '@phosphor-icons/react'
 import AvatarRoom from '@/components/AvatarRoom'
@@ -38,6 +38,33 @@ export default function AvatarShop() {
   const [buyTarget, setBuyTarget] = useState<AvatarShopItem | null>(null)
   const [buyError, setBuyError] = useState<string | null>(null)
   const [buyDone, setBuyDone] = useState(false)
+
+  // 주소의 분류(cat)·아이템(item) — 캐릭터 꾸미기에서 잠긴 아이템을 누르면 /shop?tab=ssal&cat=hat&item=hat-crown 으로 온다.
+  // 그 아이템을 입혀 보고 그 자리로 스크롤한다
+  const [targetId, setTargetId] = useState<string | null>(null)
+  const targetRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const qs = new URLSearchParams(window.location.search)
+    const cat = qs.get('cat')
+    if (cat && CATEGORIES.some(c => c.id === cat)) setCategory(cat as Category)
+    const item = AVATAR_SHOP_ITEMS.find(i => i.id === qs.get('item'))
+    if (item) {
+      setTargetId(item.id)
+      setTried(prev => ({ ...prev, [item.slot]: item.id }))
+    }
+  }, [])
+  useEffect(() => {
+    if (targetId) targetRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [targetId])
+  // 분류를 바꾸면 주소에도 남긴다 (새로고침해도 그 분류)
+  const pickCategory = (c: Category) => {
+    setCategory(c)
+    const qs = new URLSearchParams(window.location.search)
+    if (c === 'all') qs.delete('cat')
+    else qs.set('cat', c)
+    qs.delete('item')
+    window.history.replaceState(window.history.state, '', `/shop?${qs.toString()}`)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -159,17 +186,25 @@ export default function AvatarShop() {
             role="tab"
             aria-selected={category === c.id}
             className={`avatar-tab${category === c.id ? ' active' : ''}`}
-            onClick={() => setCategory(c.id)}
+            onClick={() => pickCategory(c.id)}
           >
             {c.label}
           </button>
         ))}
       </div>
       <div className="avatar-shop-items">
-        {AVATAR_SHOP_ITEMS.filter(item => category === 'all' || item.slot === category).map((item) => {
+        {AVATAR_SHOP_ITEMS
+          .filter(item => category === 'all' || item.slot === category)
+          // 아직 살 수 없는(서버 등록 전) 아이템은 맨 뒤로
+          .sort((a, b) => Number(!!onSale && !onSale.has(a.id)) - Number(!!onSale && !onSale.has(b.id)))
+          .map((item) => {
           const worn = isWorn(item)
           return (
-            <div key={item.id} className={`avatar-shop-item${worn ? ' worn' : ''}`}>
+            <div
+              key={item.id}
+              ref={item.id === targetId ? targetRef : undefined}
+              className={`avatar-shop-item${worn ? ' worn' : ''}${item.id === targetId ? ' is-target' : ''}`}
+            >
               <div className="avatar-shop-item-thumb">
                 {/* 기본 캐릭터가 이 아이템만 입은 모습 */}
                 <AvatarItemPreview config={withItem(DEFAULT_AVATAR, item.slot, item.id)} slot={item.slot} size={112} alt={item.name} />

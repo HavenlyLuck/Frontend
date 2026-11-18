@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { SHIPPING_FEE_TEXT, SHIP_WITHIN_BUSINESS_DAYS } from '@/lib/shipping'
+import { STORAGE_EXPIRY_NOTICE, convertPoints, daysLeft, expiresFor } from '@/lib/storageExpiry'
 import { ArchiveIcon, CalendarIcon, ConfettiIcon, MagnifyingGlassIcon, MapPinIcon, PackageIcon, ShoppingBagIcon, TrashIcon, TruckIcon, XIcon } from '@phosphor-icons/react'
 import { useStorage } from '@/hooks/useStorage'
 import { notifyStorageUpdated } from '@/lib/storage'
@@ -310,6 +312,10 @@ export default function StoragePage() {
 
       <FreeTicketShelf />
 
+      {readyItems.some(expiresFor) && (
+        <p className="storage-expiry-note">{STORAGE_EXPIRY_NOTICE}</p>
+      )}
+
       {readyItems.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -358,6 +364,15 @@ export default function StoragePage() {
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {item.created_at.slice(0, 10)}</span>
                   {value && <span>{value}</span>}
                 </div>
+                {expiresFor(item) && (() => {
+                  const left = daysLeft(item)
+                  const pts = convertPoints(item)
+                  return (
+                    <div className={`storage-expiry${left <= 7 ? ' is-soon' : ''}`}>
+                      {left > 0 ? `D-${left}` : '오늘'} · 지나면 {pts != null ? `${pts.toLocaleString()} 쌀포인트` : '쌀포인트'}로 바뀌어요
+                    </div>
+                  )
+                })()}
               </div>
               <div className="entry-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                 <span className="status-badge waiting">보관 중</span>
@@ -385,6 +400,8 @@ export default function StoragePage() {
       {loaded && readyItems.length === 0 && (
         <div className="coming-soon-box">
           <div className="desc">보관함이 비어 있어요.</div>
+          <div className="desc">응모에 당첨되거나 쿠지·상점에서 받은 상품이 여기에 모여요.</div>
+          <Link className="empty-cta" href="/eungmo">응모 보러 가기 →</Link>
         </div>
       )}
 
@@ -402,6 +419,11 @@ export default function StoragePage() {
         >
           선택 상품 배송 신청{selected.size > 0 ? ` (${selected.size})` : ''}
         </button>
+      )}
+      {readyItems.length > 0 && (
+        <p className="ship-fee-note">
+          배송비 {SHIPPING_FEE_TEXT} · 여러 상품을 한 번에 신청하면 한 상자로 묶어 보내고 배송비도 한 번만 내요. 신청 후 영업일 기준 {SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송해요.
+        </p>
       )}
 
       {/* 배송지 선택 모달 */}
@@ -463,6 +485,14 @@ export default function StoragePage() {
               + 새 배송지 추가
             </button>
 
+            <div className="ship-fee-row">
+              <span>배송비 (묶음 {selected.size}개)</span>
+              <b>{SHIPPING_FEE_TEXT}</b>
+            </div>
+            <p className="ship-fee-note" style={{ margin: '0 0 12px' }}>
+              신청 후 영업일 기준 {SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송해요. 발송 전에는 후기/문의 또는 고객센터로 배송 취소를 요청할 수 있고, 배송비를 돌려드려요.
+              배송지를 잘못 입력해 생긴 손해는 책임지기 어려우니 주소를 한 번 더 확인해 주세요.
+            </p>
             <button
               onClick={confirmShipping}
               disabled={!selectedAddrId || submitting}
@@ -575,11 +605,11 @@ export default function StoragePage() {
               <div style={{ display: 'flex', gap: 10 }}>
                 <div style={{ flex: 1 }}>
                   <div style={labelStyle}>받는 사람 *</div>
-                  <input style={inputStyle} placeholder="이름" value={newAddr.recipient} onChange={e => setNewAddr(p => ({ ...p, recipient: e.target.value }))} />
+                  <input style={inputStyle} placeholder="이름" autoComplete="name" value={newAddr.recipient} onChange={e => setNewAddr(p => ({ ...p, recipient: e.target.value }))} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={labelStyle}>연락처 *</div>
-                  <input style={inputStyle} placeholder="010-0000-0000" value={newAddr.phone} onChange={e => setNewAddr(p => ({ ...p, phone: e.target.value }))} />
+                  <input style={inputStyle} type="tel" inputMode="tel" autoComplete="tel" placeholder="010-0000-0000" value={newAddr.phone} onChange={e => setNewAddr(p => ({ ...p, phone: e.target.value }))} />
                 </div>
               </div>
               <div>
@@ -612,7 +642,7 @@ export default function StoragePage() {
                 <input
                   ref={address2Ref}
                   style={inputStyle}
-                  placeholder="상세 주소 (동, 호수 등)"
+                  placeholder="상세 주소 (동, 호수 등)" autoComplete="address-line2"
                   value={newAddr.address2}
                   onChange={e => setNewAddr(p => ({ ...p, address2: e.target.value }))}
                 />

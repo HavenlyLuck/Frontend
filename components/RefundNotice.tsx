@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { InfoIcon } from "@phosphor-icons/react";
+import { InfoIcon, TruckIcon } from "@phosphor-icons/react";
+import { SHIPPING_NOTICE } from "@/lib/shipping";
+import { STORAGE_KEEP_DAYS } from "@/lib/storageExpiry";
 
 // 상품 상세의 구매 버튼 아래에 늘 보이는 취소·환불 요약. 자세한 기준은 /refund
 type Kind = "raffle" | "kuji" | "shop-cash" | "shop-point";
@@ -52,6 +54,15 @@ export default function RefundNotice({ kind, style }: { kind: Kind; style?: Reac
         {items.map((item, i) => (
           <li key={i}>{item}</li>
         ))}
+      </ul>
+      <div className="refund-notice-head shipping">
+        <TruckIcon size={14} weight="fill" /> 배송 안내
+      </div>
+      <ul>
+        <li>{SHIPPING_NOTICE}</li>
+        {(kind === "raffle" || kind === "kuji") && (
+          <li>받은 상품은 보관함에 들어온 날부터 {STORAGE_KEEP_DAYS}일 안에 배송 신청해 주세요. 지나면 쌀포인트로 바뀌어요.</li>
+        )}
       </ul>
     </div>
   );

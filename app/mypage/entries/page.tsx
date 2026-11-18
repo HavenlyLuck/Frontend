@@ -248,6 +248,7 @@ export default function RaffleEntriesPage() {
       {ongoing.length === 0 ? (
         <div className="coming-soon-box" style={{ marginBottom: 32 }}>
           <div className="desc">참여 중인 응모가 없어요.</div>
+          <Link className="empty-cta" href="/eungmo">응모 보러 가기 →</Link>
         </div>
       ) : (
         <div className="entry-list" style={{ marginBottom: 32 }}>

@@ -16,7 +16,7 @@ import {
 import EmojiIcon from '@/components/EmojiIcon'
 
 export default function MyPage() {
-  const { ssalPoint } = useMyPoints();
+  const { ssalPoint, ssalTicket } = useMyPoints();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   useEffect(() => {
@@ -40,10 +40,14 @@ export default function MyPage() {
       </div>
 
       <div className="notif-list" style={{ display: "flex", padding: "18px 20px", marginBottom: 24 }}>
-        <div style={{ flex: 1, textAlign: "center" }}>
+        <Link href="/mypage/points" className="mypage-point-cell">
           <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 4 }}><EmojiIcon name="rice" /> 쌀포인트</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)" }}>{ssalPoint.toLocaleString()}P</div>
-        </div>
+        </Link>
+        <Link href="/mypage/storage" className="mypage-point-cell">
+          <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginBottom: 4 }}><EmojiIcon name="ssal-ticket" /> 쌀 응모권</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)" }}>{ssalTicket.toLocaleString()}장</div>
+        </Link>
       </div>
 
       {/* 최근 알림 */}

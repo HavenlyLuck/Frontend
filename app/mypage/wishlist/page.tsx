@@ -113,6 +113,7 @@ export default function WishlistPage() {
             {tab === 'raffle' ? '아직 찜한 응모 상품이 없어요.' : '아직 찜한 상점 상품이 없어요.'}
             <br />상품 사진 위의 하트를 눌러보세요.
           </div>
+          <Link className="empty-cta" href={tab === 'raffle' ? '/eungmo' : '/shop'}>{tab === 'raffle' ? '응모 보러 가기 →' : '상점 둘러보기 →'}</Link>
         </div>
       ) : tab === 'raffle' ? (
         <div className="product-grid-home">

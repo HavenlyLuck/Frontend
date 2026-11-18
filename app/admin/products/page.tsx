@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { productInfoTemplate } from '@/lib/productInfo'
 import Link from 'next/link'
 import {
   CoinsIcon,
@@ -818,10 +819,20 @@ export default function AdminProductsPage() {
               )}
               {productTab !== '쿠지' && (
                 <div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>상품 설명</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>상품 설명 · 상품정보제공고시</span>
+                    {/* "항목: 값" 줄은 상품 상세에서 표로 보인다. 값을 비운 줄은 안 보인다 */}
+                    <button
+                      type="button"
+                      onClick={() => setNewP(p => p.description.includes('품명 및 모델명:') ? p : ({ ...p, description: (p.description ? p.description.trimEnd() + '\n\n' : '') + productInfoTemplate() }))}
+                      style={{ border: '1px solid var(--border-strong)', background: 'var(--surface)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer' }}
+                    >
+                      고시 양식 넣기
+                    </button>
+                  </div>
                   <textarea
                     style={{ ...lightInput, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }}
-                    placeholder="상품 상태, 구성품, 유의사항 등을 적어주세요"
+                    placeholder={'소개 글을 먼저 쓰고, "고시 양식 넣기"로 상품정보제공고시 항목을 채워 주세요.\n(예: 크기·중량: 높이 약 15cm)'}
                     value={newP.description}
                     onChange={e => setNewP(p => ({ ...p, description: e.target.value }))}
                   />
