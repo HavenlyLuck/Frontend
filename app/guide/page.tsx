@@ -1,6 +1,8 @@
 'use client'
 
 import { CONTENTS_OPEN } from '@/lib/features'
+import { SHIPPING_FEE_TEXT, SHIP_WITHIN_BUSINESS_DAYS } from '@/lib/shipping'
+import { STORAGE_CONVERT_PERCENT_TEXT, STORAGE_KEEP_DAYS } from '@/lib/storageExpiry'
 import {
   ArchiveIcon,
   CoinsIcon,
@@ -26,6 +28,7 @@ const SECTIONS = [
   { id: '캐릭터', label: '캐릭터', icon: PaintBrushIcon },
   { id: '컨텐츠', label: '컨텐츠', icon: SparkleIcon },
   { id: '보관함', label: '보관함·배송', icon: ArchiveIcon },
+  { id: '유의사항', label: '꼭 알아두세요', icon: WarningIcon },
 ] as const
 
 function SectionTitle({ icon: Icon, title, summary }: { icon: React.ElementType; title: string; summary: string }) {
@@ -142,6 +145,8 @@ export default function GuidePage() {
           <>낙첨되면 <b>산 응모권 1장당 1,000 쌀포인트</b>를 드려요. (쌀 응모권으로 응모한 장수는 제외)</>,
           <>원하는 응모는 응모권을 더 사거나 친구에게 알려서 마감 전에 빨리 채울 수 있어요.</>,
           <>사라진 응모는 나중에 로테이션으로 다시 열릴 수 있어요.</>,
+          <><b>매진 전</b>에는 마이페이지 › 응모 내역에서 취소하고 전액 환불받을 수 있어요. <b>매진되어 추첨이 시작되면 취소·환불할 수 없어요.</b></>,
+          <>당첨 상품은 <b>단순 변심으로 반품할 수 없어요.</b> 파손·불량이면 교환해 드려요.</>,
         ]} />
         <Callout tone="warn">
           <b>당첨되면 상품만 드려요.</b> 여러 장을 샀더라도 나머지 장수에 대한 쌀포인트는 지급되지 않아요.
@@ -165,6 +170,7 @@ export default function GuidePage() {
           <>상위상(A상·B상 등) 남은 수량은 쿠지판에서 실시간으로 확인할 수 있어요.</>,
           <>고르는 사이 다른 분이 같은 번호를 먼저 뽑으면, 그 번호만 풀리고 다시 고를 수 있어요. 이미 결제했다면 결제는 자동으로 취소돼요.</>,
           <>상위상이 모두 나가고 라스트원상만 남은 쿠지판은 조기 마감되거나 특별 이벤트가 열릴 수 있어요.</>,
+          <><b>결제와 동시에 결과가 정해져서 결제 후에는 취소·환불할 수 없어요.</b></>,
         ]} />
         <Callout>
           <b><LightningIcon size={14} weight="fill" /> 라스트원상</b> — 쿠지판의 <b>마지막 1장을 뽑은 분</b>께 추가로 드리는 특별한 상이에요. 상위상이 다 나가도 끝까지 노려볼 이유가 돼요.
@@ -180,6 +186,8 @@ export default function GuidePage() {
             <Rules items={[
               '피규어 · 굿즈 · 카드',
               '카드로 바로 결제해요.',
+              '배송 전에는 보관함에서 바로 취소할 수 있어요.',
+              '받은 날부터 7일 안에 반품할 수 있어요. 단, 상자·포장을 개봉해 상품 가치가 떨어지면 반품이 어려워요. 단순 변심 반품의 왕복 배송비는 고객님 부담이에요.',
             ]} />
           </div>
           <div className="guide-card">
@@ -188,9 +196,15 @@ export default function GuidePage() {
               '쿠폰 · 굿즈 · 아바타',
               '쌀포인트만으로 살 수 있어요.',
               '아바타 탭에서는 아이템을 내 캐릭터에 입어보고 살 수 있어요.',
+              '쌀포인트로 산 상품·아이템은 산 뒤에 취소할 수 없어요.',
             ]} />
           </div>
         </div>
+        <Callout>
+          <b>응모 전환</b> — 일부 상점 상품은 응모권(1,000원)으로 "응모 상품으로 바꾸기"에 참여할 수 있어요. 정해진 장수가 모이면 그 상품이 응모로 열리고, 산 응모권은 그대로 응모돼요.
+          <div className="guide-example">예) "5장 중 2장 모이면 전환" → 응모권이 2장 팔리면 응모 상품으로 바뀌어요. 시작 후 정해진 기간 안에 못 모이면 전액 자동 환불돼요.</div>
+          응모 상품으로 바뀐 뒤 전환 때 산 응모권을 취소하면, 그 응모권은 전부 함께 취소되고 3일 동안 전환 응모권을 살 수 없어요.
+        </Callout>
       </section>
 
       {/* 캐릭터 */}
@@ -228,7 +242,35 @@ export default function GuidePage() {
         <Steps items={[
           { title: '보관함에 담김', desc: '응모 당첨, 쿠지 결과, 상점 구매 상품이 마이페이지 › 보관함에 들어가요.' },
           { title: '배송 신청', desc: '보관함에서 받을 상품을 골라 배송지를 정하고 배송을 신청해요.' },
+          { title: '배송비 결제 · 발송', desc: `배송비 ${SHIPPING_FEE_TEXT}을 결제하면 영업일 기준 ${SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송해요.` },
         ]} />
+        <Callout>여러 상품을 한 번에 배송 신청하면 한 상자로 묶어 보내고, 배송비도 {SHIPPING_FEE_TEXT} 한 번만 내요. 발송 전에 배송을 취소하면 배송비를 돌려드려요.</Callout>
+        <Callout tone="warn">
+          <b>보관 기간은 {STORAGE_KEEP_DAYS}일이에요.</b> 응모 당첨·쿠지 상품은 보관함에 들어온 날부터 {STORAGE_KEEP_DAYS}일 안에 배송 신청하지 않으면 판매가의 {STORAGE_CONVERT_PERCENT_TEXT}가 쌀포인트로 바뀌어요. 바뀌기 7일 전과 1일 전에 알려 드리고, 바뀐 뒤에는 상품으로 되돌릴 수 없어요. (상점에서 산 상품은 해당 없음)
+        </Callout>
+        <Rules items={[
+          <>받은 상품이 파손·불량이면 교환해 드려요. <b>택배 상자를 여는 장면부터 영상으로 찍어 두시면</b> 빠르게 처리돼요.</>,
+          <>배송지를 잘못 입력해 생긴 손해는 책임지기 어려우니, 신청 전에 주소를 꼭 확인해 주세요.</>,
+        ]} />
+      </section>
+
+      {/* 꼭 알아두세요 — 고객이 꼭 알아야 할 규칙을 한곳에 모은 요약 (자세한 기준은 약관·취소환불 정책) */}
+      <section id="유의사항" className="guide-section">
+        <SectionTitle icon={WarningIcon} title="꼭 알아두세요" summary="결제 전에 꼭 확인해 주세요. 자세한 기준은 이용약관과 취소·환불 정책을 따라요." />
+        <Rules items={[
+          <><b>응모</b> · 매진되어 추첨이 시작되면 취소·환불할 수 없어요. 제한 시간 안에 매진되지 않으면 자동 전액 환불돼요.</>,
+          <><b>낙첨 보상</b> · 카드로 산 응모권 1장당 1,000 쌀포인트. 쌀 응모권으로 응모한 장수는 보상이 없어요. 당첨되면 상품만 드려요.</>,
+          <><b>쿠지</b> · 결제와 동시에 결과가 정해져서 결제 후 취소·환불할 수 없어요.</>,
+          <><b>상점</b> · 카드 구매는 배송 전 취소, 받은 날부터 7일 안 반품(개봉 시 제한). 쌀포인트 구매는 취소할 수 없어요.</>,
+          <><b>쌀포인트·쌀 응모권</b> · 현금으로 바꾸거나 남에게 줄 수 없고, 탈퇴하면 사라져요.</>,
+          <><b>배송비</b> · 배송 신청 1건당 {SHIPPING_FEE_TEXT}(묶음 배송), 영업일 기준 {SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송, 발송 전 취소 시 환불.</>,
+          <><b>보관 기간</b> · 응모 당첨·쿠지 상품은 {STORAGE_KEEP_DAYS}일 안에 배송 신청하지 않으면 쌀포인트로 바뀌어요.</>,
+          <><b>탈퇴</b> · 남은 쌀포인트·쌀 응모권과 배송 신청하지 않은 보관함 상품은 모두 사라지고 되돌릴 수 없어요.</>,
+          <><b>가입</b> · 만 14세 이상만 가입할 수 있고, 본인인증으로 1인 1계정만 만들 수 있어요.</>,
+        ]} />
+        <p className="guide-policy-links">
+          <a href="/terms">이용약관</a> · <a href="/refund">취소·환불 정책</a> · <a href="/privacy">개인정보처리방침</a>
+        </p>
       </section>
 
       <div className="guide-footer">

@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { BIZ_INFO, PolicyDoc, PolicySection } from "@/components/PolicyDoc";
 
-export const metadata: Metadata = { title: "취소·환불 정책 - 천운" };
+export const metadata: Metadata = { title: "취소·환불 정책" };
 
 export default function RefundPage() {
   return (
     <PolicyDoc
       title="취소·환불 정책"
       current="/refund"
-      effectiveDate="2026년 11월 1일"
+      effectiveDate="2026년 11월 27일"
       intro={
         <p>
           천운은 「전자상거래 등에서의 소비자보호에 관한 법률」에 따라 청약철회(취소·반품)를 보장합니다.
@@ -71,6 +71,14 @@ export default function RefundPage() {
             </ul>
           </li>
           <li>쌀포인트로 교환한 상품은 교환 후 취소·반품할 수 없습니다. 파손·하자·오배송은 「4. 상품 파손·하자·오배송」 기준에 따라 교환해 드립니다.</li>
+        </ul>
+      </PolicySection>
+
+      <PolicySection id="배송" title="3-1. 배송비와 보관함">
+        <ul className="policy-list">
+          <li>배송비는 배송 신청 1건당 4,000원이며, 한 번에 신청한 상품은 한 상자로 묶어 보내고 배송비는 1건으로 계산합니다.</li>
+          <li>배송 신청 후 발송 전에 배송을 취소하면 결제한 배송비 전액을 환불해 드립니다. 발송 후에는 배송비를 환불하지 않습니다.</li>
+          <li>응모 당첨·쿠지 상품은 보관함에 들어온 날부터 30일 안에 배송을 신청하지 않으면 판매가의 50%에 해당하는 쌀포인트로 바뀌며, 바뀐 뒤에는 상품으로 되돌릴 수 없습니다. 바뀌기 7일 전과 1일 전에 알려 드립니다. 상점에서 산 상품은 해당하지 않습니다.</li>
         </ul>
       </PolicySection>
 

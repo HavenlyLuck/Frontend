@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { CalendarIcon, ConfettiIcon, MapPinIcon, PackageIcon, ShoppingBagIcon, TruckIcon } from '@phosphor-icons/react'
 import { useStorage } from '@/hooks/useStorage'
 import ParcelTrackingModal from '@/components/ParcelTrackingModal'
@@ -192,6 +193,7 @@ export default function ShippingHistoryPage() {
           <div className="desc">
             {filter === 'all' ? '아직 배송 신청한 상품이 없어요.' : `${STATUS_LABEL[filter]} 상품이 없어요.`}
           </div>
+          {filter === 'all' && <Link className="empty-cta" href="/mypage/storage">보관함에서 배송 신청하기 →</Link>}
         </div>
       )}
     </div>

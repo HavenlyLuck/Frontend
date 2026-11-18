@@ -23,6 +23,10 @@ import StoreProductCard, {
 } from "@/components/StoreProductCard";
 import RefundNotice from "@/components/RefundNotice";
 import StoreFundingCard from "@/components/StoreFundingCard";
+import MobileBuyBar from "@/components/MobileBuyBar";
+import ProductDescription from "@/components/ProductDescription";
+import { SHIPPING_NOTICE } from "@/lib/shipping";
+import { cloudinarySized } from "@/lib/image";
 import { ConfettiIcon, HeartIcon, WarningIcon } from "@phosphor-icons/react";
 
 // 상점 상품 상세 — 관련 상품 섹션 때문에 목록을 받아 id로 찾는다.
@@ -240,7 +244,7 @@ export default function ShopProductPage({
           <div className="image-area">
             <div className="main-image">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.product_name} />
+                <img src={cloudinarySized(product.image_url, 1080)} alt={product.product_name} />
               ) : (
                 <div className="image-placeholder">
                   <PayTypeIcon type={product.pay_type} size={64} />
@@ -297,7 +301,7 @@ export default function ShopProductPage({
             {product.description && (
               <>
                 <div className="divider" />
-                <div className="description">{product.description}</div>
+                <ProductDescription text={product.description} />
               </>
             )}
 
@@ -386,7 +390,7 @@ export default function ShopProductPage({
               </div>
             </div>
 
-            <div className="cta-row" style={{ marginTop: 24 }}>
+            <div className="cta-row" id="main-cta" style={{ marginTop: 24 }}>
               <button
                 className="btn-raffle"
                 disabled={soldOut}
@@ -395,6 +399,13 @@ export default function ShopProductPage({
                 {soldOut ? "품절" : "구매하기"}
               </button>
             </div>
+            <MobileBuyBar
+              watchId="main-cta"
+              price={formatStorePrice(product.pay_type, product.price)}
+              label={soldOut ? "품절" : "구매하기"}
+              onClick={openPurchaseModal}
+              disabled={soldOut}
+            />
 
             {isCash && funding && (
               <StoreFundingCard product={product} funding={funding} onChanged={loadDetail} />
@@ -493,6 +504,8 @@ export default function ShopProductPage({
                 <a href="/refund#상점" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>
                   취소·환불 정책
                 </a>
+                <br />
+                {SHIPPING_NOTICE}
               </span>
             </div>
 

@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { cloudinarySized } from '@/lib/image'
+import { maskNickname } from '@/lib/mask'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -235,7 +237,7 @@ export default function ReviewPage() {
                   <p className="review-content" style={{ whiteSpace: 'pre-line' }}>{r.content}</p>
                   {r.image_url && (
                     <a href={r.image_url} target="_blank" rel="noopener noreferrer" className="review-photo-frame" style={{ marginBottom: 10 }}>
-                      <img src={r.image_url} alt="후기 사진" />
+                      <img src={cloudinarySized(r.image_url, 800)} alt="후기 사진" loading="lazy" />
                     </a>
                   )}
                   <div className="review-meta">
@@ -280,7 +282,7 @@ export default function ReviewPage() {
                       {q.title}
                     </div>
                     <div className="inquiry-meta">
-                      <span>{q.nickname}{q.is_mine && ' (나)'}</span>
+                      <span>{q.is_mine ? q.nickname : maskNickname(q.nickname ?? '')}{q.is_mine && ' (나)'}</span>
                       <span>{formatKstDate(q.created_at)}</span>
                     </div>
                     <span className={`inquiry-caret${isOpen ? ' open' : ''}`}><CaretDownIcon size={16} /></span>

@@ -100,7 +100,7 @@ export default function MyPageLayout({ children }: { children: React.ReactNode }
   return (
     <div className="mypage-layout">
       <div className="sidebar">
-        <div className="profile-card">
+        <div className={`profile-card${pathname === '/mypage' ? '' : ' is-sub'}`}>
           <Link href="/mypage/avatar" className="profile-room" aria-label="캐릭터 꾸미기">
             {profile && (
               <AvatarRoom config={avatarConfig} label={`${profile.nickname}의 캐릭터`} />

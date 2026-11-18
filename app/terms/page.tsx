@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BIZ_INFO, PolicyDoc, PolicySection } from "@/components/PolicyDoc";
 
-export const metadata: Metadata = { title: "이용약관 - 천운" };
+export const metadata: Metadata = { title: "이용약관" };
 
 // 공정거래위원회 전자상거래 표준약관을 바탕으로 응모·쿠지·쌀포인트 조항을 더한 초안.
 // TODO: 정식 오픈 전 법률 자문을 받은 변호사 검토 받기.
 export default function TermsPage() {
   return (
-    <PolicyDoc title="이용약관" current="/terms" effectiveDate="2026년 11월 1일">
+    <PolicyDoc title="이용약관" current="/terms" effectiveDate="2026년 11월 27일">
       <PolicySection title="제1조 (목적)">
         <p>
           이 약관은 {BIZ_INFO.name}(이하 &quot;회사&quot;)가 운영하는 온라인 서비스 &quot;천운&quot;(이하 &quot;서비스&quot;)에서 제공하는
@@ -80,6 +80,10 @@ export default function TermsPage() {
       <PolicySection title="제9조 (배송)">
         <ol className="policy-list">
           <li>당첨·쿠지·구매 상품은 마이페이지 보관함에 담기며, 회원이 배송을 신청하면 등록한 배송지로 발송합니다.</li>
+          <li>배송비는 배송 신청 1건당 4,000원이며 배송 신청 시 결제합니다. 한 번에 신청한 상품은 한 상자로 묶어 보내며 배송비는 1건으로 계산합니다.</li>
+          <li>회사는 배송비 결제가 끝난 날부터 영업일 기준 3일 안에 상품을 발송합니다.</li>
+          <li>발송 전에 배송 신청을 취소하면 결제한 배송비를 환불합니다.</li>
+          <li>응모 당첨·쿠지 상품은 보관함에 담긴 날부터 30일 안에 배송을 신청하지 않으면 판매가의 50%에 해당하는 쌀포인트로 전환되며, 전환 후에는 상품으로 되돌릴 수 없습니다. 회사는 전환 7일 전과 1일 전에 회원에게 알립니다. 상점에서 구매한 상품은 전환 대상이 아닙니다.</li>
           <li>배송지를 잘못 입력해 생긴 손해는 회원이 부담합니다.</li>
         </ol>
       </PolicySection>

@@ -95,7 +95,7 @@ export default function AvatarPage() {
         <span>{item.name}</span>
       </button>
     ) : (
-      <Link key={item.id} href="/shop" className="avatar-style-option locked" title="쌀포인트 상점에서 구매">
+      <Link key={item.id} href={`/shop?tab=ssal&cat=${item.slot}&item=${item.id}`} className="avatar-style-option locked" title="쌀포인트 상점에서 구매">
         <AvatarItemPreview config={config} slot={item.slot} size={80} />
         <span>{item.name}</span>
         <span className="avatar-locked-price">

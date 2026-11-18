@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { BIZ_INFO, PolicyDoc, PolicySection } from "@/components/PolicyDoc";
 
-export const metadata: Metadata = { title: "개인정보처리방침 - 천운" };
+export const metadata: Metadata = { title: "개인정보처리방침" };
 
-// 캐치시큐(처리방침 관리)로 만든 처리방침 원문을 그대로 옮긴 것 — 2026-11-06 시행본.
+// 캐치시큐(처리방침 관리)로 만든 처리방침 원문을 옮긴 것 — 2026-11-06 시행본에 알림톡 위탁(솔라피·카카오)을 더한 2026-11-27 시행본.
 // 원본: https://app.catchsecu.com/document/P/1426d1f9196adf5 (캐치시큐 이용 기간이 끝나면 링크가 안 열릴 수 있어 사이트에 직접 둔다)
-// 내용을 바꿀 땐 캐치시큐에서 먼저 고친 뒤 이 파일도 같이 고칠 것.
+// 캐치시큐 크레딧이 끝나 2026-11-27 시행본부터는 이 파일이 원본이다. 이후 변경은 여기서 직접 고친다.
 
 const Table = ({ head, rows }: { head: string[]; rows: string[][] }) => (
   <div style={{ overflowX: "auto" }}>
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
     <PolicyDoc
       title="개인정보처리방침"
       current="/privacy"
-      effectiveDate="2026년 11월 6일"
+      effectiveDate="2026년 11월 27일"
       intro={
         <p>
           &apos;{BIZ_INFO.name}&apos;(이하 &apos;회사&apos;)이 운영하는 &apos;천운&apos;은 개인정보보호법 제30조에 의거하여 정보주체의 개인정보 및 권익을 보호하고
@@ -140,6 +140,8 @@ export default function PrivacyPage() {
             ["Microsoft Corporation(Microsoft Azure)", "회원 데이터베이스 운영 및 데이터 보관(클라우드 서버), 데이터베이스 및 클라우드 서버 운영"],
             ["택배사(업체 확정 후 업체명 고지)", "상품 배송"],
             ["Vercel Inc.", "웹사이트 호스팅 및 접속 기록 처리"],
+            ["솔라피(주)(SOLAPI)", "카카오 알림톡 및 문자 메시지 발송 대행(응모 접수·마감·취소·환불, 배송 등 서비스 이용 안내)"],
+            ["주식회사 카카오", "카카오 알림톡 전송"],
           ]}
         />
       </PolicySection>

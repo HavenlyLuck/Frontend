@@ -119,7 +119,7 @@ export default function PointHistoryPage() {
         <div className="coming-soon-box">
           <div className="desc">{EMPTY_TEXT[filter]}</div>
           {filter !== 'earn' && sorted.length === 0 && (
-            <Link href="/shop" style={{ display: 'inline-block', marginTop: 10, fontSize: 13, color: 'var(--accent)' }}>쌀포인트 상점 둘러보기 →</Link>
+            <Link href="/shop?tab=ssal" style={{ display: 'inline-block', marginTop: 10, fontSize: 13, color: 'var(--accent)' }}>쌀포인트 상점 둘러보기 →</Link>
           )}
         </div>
       ) : (

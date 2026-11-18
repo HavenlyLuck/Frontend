@@ -22,6 +22,11 @@ import {
 import { getValidSession, isLoggedIn, loginPath, promptSignup } from "@/lib/auth";
 import { payWithCard, paymentFailureMessage } from "@/lib/payment";
 import RefundNotice from "@/components/RefundNotice";
+import MobileBuyBar from "@/components/MobileBuyBar";
+import { SHIPPING_FEE_TEXT } from "@/lib/shipping";
+import { STORAGE_KEEP_DAYS } from "@/lib/storageExpiry";
+import ProductDescription from "@/components/ProductDescription";
+import { cloudinarySized } from "@/lib/image";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
 import { addRaffleToWishlist, getMyRaffleWishlist, removeRaffleFromWishlist } from "@/lib/wishlist";
 import EmojiIcon from '@/components/EmojiIcon'
@@ -306,7 +311,7 @@ export default function RaffleProductPage({
           <div className="image-area">
             <div className="main-image">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.product_name} />
+                <img src={cloudinarySized(product.image_url, 1080)} alt={product.product_name} />
               ) : (
                 <div className="image-placeholder">
                   <TicketIcon size={72} weight="thin" />
@@ -351,7 +356,7 @@ export default function RaffleProductPage({
             <div className="divider" />
 
             {product.description && (
-              <div className="description">{product.description}</div>
+              <ProductDescription text={product.description} />
             )}
 
             <div className="raffle-section">
@@ -451,7 +456,7 @@ export default function RaffleProductPage({
               </details>
             )}
 
-            <div className="cta-row">
+            <div className="cta-row" id="main-cta">
               <button
                 className="btn-raffle"
                 onClick={openModal}
@@ -461,6 +466,13 @@ export default function RaffleProductPage({
                 {soldOut ? "매진" : expired ? "마감" : "응모하기"}
               </button>
             </div>
+            <MobileBuyBar
+              watchId="main-cta"
+              price={<>{product.ticket_price.toLocaleString()}원 <small>/ 1장</small></>}
+              label={<><TicketIcon size={17} weight="fill" /> {soldOut ? "매진" : expired ? "마감" : "응모하기"}</>}
+              onClick={openModal}
+              disabled={soldOut || expired}
+            />
 
             <RefundNotice kind="raffle" />
           </div>
@@ -547,7 +559,9 @@ export default function RaffleProductPage({
               <span>
                 매진 전에는 마이페이지 응모 내역에서 취소할 수 있어요.{" "}
                 <b>매진되어 추첨이 시작되면 취소·환불할 수 없어요.</b> 기간 안에
-                응모권이 다 팔리지 않으면 결제 금액이 카드로 자동 환불돼요.{" "}
+                응모권이 다 팔리지 않으면 결제 금액이 카드로 자동 환불돼요.
+                낙첨되면 카드로 산 응모권 1장당 1,000 쌀포인트를 드려요(현금으로 바꿀 수 없어요).
+                당첨 상품은 단순 변심으로 반품할 수 없고, 보관함에서 {STORAGE_KEEP_DAYS}일 안에 배송 신청해야 해요(배송비 {SHIPPING_FEE_TEXT} 별도).{" "}
                 <a href="/refund#응모" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>
                   취소·환불 정책
                 </a>

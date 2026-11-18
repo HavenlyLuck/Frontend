@@ -7266,3 +7266,284 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
   text-underline-offset: 3px;
 }
 .signup-req-login:hover { color: var(--text); }
+
+/* ══ 2026-11 사이트 점검 반영 (어사이드 점검 B묶음) ══ */
+
+/* 휴대폰 입력칸 — 아이폰 사파리는 16px보다 작은 입력칸을 누르면 화면을 확대해 버린다 */
+@media (max-width: 900px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* 상단 메뉴 — 휴대폰에서 아래로 내리면 검색창을 접어 메뉴를 얇게 (components/Navbar.tsx의 nav-compact) */
+@media (max-width: 900px) {
+  nav.nav-compact .search-bar { display: none; }
+  nav.nav-compact .nav-tabs-row { padding-top: 4px; padding-bottom: 4px; }
+}
+
+/* 누르는 곳이 작은 링크 — 보이는 크기는 그대로 두고 누르는 영역만 넓힌다 */
+.see-all { padding: 10px 0; margin: -10px 0; }
+.footer-policy-links a,
+.footer-links a { display: inline-block; padding: 8px 0; }
+.footer-policy-links { gap: 0 16px; }
+
+/* 하단 회사 정보 — 휴대폰에선 줄이 바뀔 때 "|"만 덩그러니 남아서, 구분선 없이 한 줄씩 */
+@media (max-width: 720px) {
+  .footer-biz-row { flex-direction: column; gap: 0; }
+  .footer-biz-row span:not(:last-child)::after { content: none; }
+}
+
+/* 아바타 상점 — 캐릭터 꾸미기에서 눌러 온 아이템 */
+.avatar-shop-item.is-target {
+  border-color: var(--accent-tint-border);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+/* 아바타 상점 휴대폰 — 입어 본 캐릭터를 메뉴 바로 아래에 작게 붙여 두고(아이템을 고르는 동안 계속 보이게), 아이템은 두 줄로 */
+@media (max-width: 720px) {
+  .avatar-shop { gap: 14px; }
+  .avatar-shop-preview {
+    position: sticky;
+    top: calc(var(--nav-h, 0px) + 8px);
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'pv label label'
+      'pv login login'
+      'pv undo prev';
+    column-gap: 10px;
+    row-gap: 6px;
+    align-items: center;
+    justify-items: start;
+    padding: 10px 12px;
+    box-shadow: var(--shadow-lg);
+  }
+  .avatar-shop-preview > .avatar-shop-room {
+    grid-area: pv;
+    max-width: 88px;
+  }
+  .avatar-shop-preview .avatar-shop-preview-label { grid-area: label; font-size: 13px; }
+  .avatar-shop-preview .avatar-shop-login { grid-area: login; font-size: 11px; }
+  .avatar-shop-preview > button:nth-of-type(1) { grid-area: undo; }
+  .avatar-shop-preview > button:nth-of-type(2) { grid-area: prev; }
+  .avatar-shop-preview .avatar-shop-login { text-align: left; }
+  .avatar-shop-preview .avatar-small-btn { width: 100%; padding: 6px 4px; font-size: 12px; white-space: nowrap; }
+  .avatar-shop-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .avatar-shop-item { padding: 12px 10px; gap: 4px; }
+  .avatar-shop-item-thumb { width: 96px; height: 96px; }
+  .avatar-shop-item-name { font-size: 14px; }
+  .avatar-shop-item-desc {
+    font-size: 11px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+  .avatar-shop-item-actions { flex-direction: column; gap: 6px; }
+  .avatar-shop-item-actions .avatar-small-btn { width: 100%; }
+}
+
+/* 404 — 없는 주소 (app/not-found.tsx) */
+.not-found {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+}
+.not-found-mark { width: 88px; height: auto; margin-bottom: 8px; }
+.not-found h1 {
+  margin: 0;
+  font-family: var(--font-display), 'Noto Sans KR', sans-serif;
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--text);
+}
+.not-found p { margin: 0; font-size: 15px; color: var(--text-secondary); word-break: keep-all; }
+.not-found-actions { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
+
+/* 휴대폰 상품 상세 하단 고정 구매·응모 버튼 (components/MobileBuyBar.tsx) — 원래 버튼이 화면 밖일 때만 올라온다 */
+.mobile-buy-bar,
+.mobile-buy-spacer { display: none; }
+@media (max-width: 720px) {
+  .mobile-buy-spacer { display: block; height: 76px; }
+  .mobile-buy-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--surface);
+    border-top: 1px solid var(--border-strong);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+    transform: translateY(110%);
+    transition: transform 0.22s ease-out;
+  }
+  .mobile-buy-bar.show { transform: translateY(0); }
+  .mobile-buy-price {
+    flex-shrink: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .mobile-buy-price small { font-size: 12px; font-weight: 500; color: var(--text-tertiary); }
+  .mobile-buy-bar .btn-raffle { flex: 1; width: auto; margin: 0; }
+}
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+  .mobile-buy-bar { transition: none; }
+}
+
+/* 마이페이지 내 포인트 칸 (쌀포인트 · 쌀 응모권) — 누르면 내역으로 */
+.mypage-point-cell {
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 10px;
+  padding: 4px 0;
+}
+.mypage-point-cell + .mypage-point-cell { border-left: 1px solid var(--border); border-radius: 0; }
+.mypage-point-cell:hover { background: var(--bg-subtle); }
+
+/* 마이페이지 하위 화면(응모 내역·보관함 등) — 휴대폰에선 프로필을 한 줄로 줄여 본문이 바로 보이게 */
+@media (max-width: 600px) {
+  .profile-card.is-sub {
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas: "room name";
+    grid-template-rows: auto;
+    align-items: center;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .profile-card.is-sub .profile-room { width: 44px; border-radius: 8px; }
+  .profile-card.is-sub .profile-room-edit,
+  .profile-card.is-sub .profile-email,
+  .profile-card.is-sub .profile-stats { display: none; }
+  .profile-card.is-sub .profile-name { margin: 0; font-size: 15px; }
+}
+
+/* 빈 목록의 다음 행동 버튼 (마이페이지 응모 내역·보관함·구매 내역 등) */
+.coming-soon-box .empty-cta {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--accent-tint-border);
+  background: var(--accent-tint);
+  color: var(--accent-fg);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.coming-soon-box .empty-cta:hover { background: var(--accent); color: #fff; }
+
+/* 캐릭터 꾸미기 휴대폰 — 미리보기·저장 버튼을 메뉴 바로 아래에 작게 붙여 둔다.
+   아이템을 고르러 아래로 내려가도 바뀐 모습이 보이고, 저장하러 다시 올라갈 필요가 없다 */
+@media (max-width: 720px) {
+  .avatar-preview-card {
+    position: sticky;
+    top: calc(var(--nav-h, 0px) + 8px);
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'pv save save'
+      'pv undo prev'
+      'pv msg msg';
+    align-items: center;
+    gap: 8px 8px;
+    padding: 10px 12px;
+    box-shadow: var(--shadow-lg);
+  }
+  .avatar-preview-card .avatar-preview { grid-area: pv; width: 96px !important; }
+  .avatar-preview-card > button:nth-of-type(1) { grid-area: undo; }
+  .avatar-preview-card > button:nth-of-type(2) { grid-area: prev; }
+  .avatar-preview-card > button:nth-of-type(3) { grid-area: save; }
+  .avatar-preview-card .avatar-message { grid-area: msg; font-size: 12px; }
+  .avatar-preview-card .avatar-small-btn { width: 100%; padding: 6px 4px; font-size: 12px; white-space: nowrap; }
+}
+
+/* 가이드 비교 표 — 휴대폰에서 오른쪽 칸이 잘려 옆으로 넘겨야 했다. 칸이 3개뿐이라 글자를 줄바꿈해 한 화면에 다 넣는다 */
+@media (max-width: 600px) {
+  .guide-table { min-width: 0; font-size: 13px; table-layout: fixed; }
+  .guide-table th,
+  .guide-table td { padding: 9px 8px; word-break: keep-all; overflow-wrap: anywhere; }
+  .guide-table tbody th { white-space: normal; width: 28%; }
+}
+
+/* 배송 안내 (lib/shipping.ts) — 상품 상세 안내 상자·보관함 */
+.refund-notice-head.shipping { margin-top: 10px; }
+.ship-fee-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+  word-break: keep-all;
+}
+.ship-fee-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 2px;
+  margin-bottom: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.ship-fee-row b { color: var(--text); font-size: 15px; }
+
+/* 상품정보제공고시 표 (components/ProductDescription.tsx) — 접어 두고 누르면 펼친다 */
+.product-info-notice {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.product-info-notice summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+}
+.product-info-notice .policy-table { margin: 0; border: none; border-radius: 0; }
+.product-info-notice .policy-table th { width: 38%; white-space: normal; }
+
+/* 보관함 보관 기간 (lib/storageExpiry.ts) */
+.storage-expiry-note {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  word-break: keep-all;
+}
+.storage-expiry {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.storage-expiry.is-soon { color: var(--danger); font-weight: 700; }
+.guide-policy-links { margin: 14px 0 0; font-size: 13px; color: var(--text-tertiary); }
+.guide-policy-links a { color: var(--text-secondary); }

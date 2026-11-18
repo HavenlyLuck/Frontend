@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { MagnifyingGlassIcon, ReceiptIcon, ShoppingBagIcon, SquaresFourIcon, TicketIcon, XIcon } from '@phosphor-icons/react'
 import { getMyPayments, type MyPaymentResponse, type PaymentOrderType } from '@/lib/api'
 import { getValidSession } from '@/lib/auth'
@@ -104,6 +105,7 @@ export default function PurchaseHistoryPage() {
         loaded && (
           <div className="coming-soon-box">
             <div className="desc">아직 구매 내역이 없어요.</div>
+            <Link className="empty-cta" href="/shop">상점 둘러보기 →</Link>
           </div>
         )
       ) : (

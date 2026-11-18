@@ -26,19 +26,46 @@ const TAB_ICON: Record<StoreTab, React.ReactNode> = {
   쌀포인트: <GrainsIcon size={15} weight="fill" />,
 };
 
-// 상점별 세부 탭 — "전체"는 분류가 없는 상품까지 모두 보여준다
+// 상점별 세부 탭 — 일반 상점의 "전체"는 분류가 없는 상품까지 모두 보여준다.
+// 쌀포인트 상점은 "전체"를 두지 않는다 (상품 대부분이 아바타 아이템이라 "전체"가 비어 보였음). 아바타가 기본 탭
 type SubTab = "all" | StoreCategory;
 const SUB_TABS: Record<StoreTab, { id: SubTab; label: string }[]> = {
   일반: [{ id: "all", label: "전체" }, ...STORE_CATEGORIES.cash],
-  쌀포인트: [{ id: "all", label: "전체" }, ...STORE_CATEGORIES.ssal],
+  쌀포인트: [
+    ...STORE_CATEGORIES.ssal.filter((c) => c.id === "avatar"),
+    ...STORE_CATEGORIES.ssal.filter((c) => c.id !== "avatar"),
+  ],
 };
+const DEFAULT_SUB: Record<StoreTab, SubTab> = { 일반: "all", 쌀포인트: "avatar" };
+
+// 주소에 지금 탭을 남긴다 (/shop?tab=ssal&sub=goods) — 새로고침·뒤로 가기·링크 공유해도 같은 탭이 열린다.
+// 아바타 탭 안의 분류(cat)·아이템(item)은 AvatarShop이 따로 관리하므로 아바타 탭일 때만 남겨 둔다
+function writeShopUrl(tab: StoreTab, sub: SubTab) {
+  const qs = new URLSearchParams(window.location.search);
+  if (tab === "쌀포인트") qs.set("tab", "ssal");
+  else qs.delete("tab");
+  if (sub !== DEFAULT_SUB[tab]) qs.set("sub", sub);
+  else qs.delete("sub");
+  if (!(tab === "쌀포인트" && sub === "avatar")) {
+    qs.delete("cat");
+    qs.delete("item");
+  }
+  const s = qs.toString();
+  window.history.replaceState(window.history.state, "", s ? `/shop?${s}` : "/shop");
+}
 
 export default function ShopPage() {
   const [sort, setSort] = useState("최신순");
   const [storeTab, setStoreTab] = useState<StoreTab>("일반");
-  // /shop?tab=ssal 로 들어오면 쌀포인트 상점 탭을 연다 (쌀포인트 상품 구매 후 "계속 둘러보기")
+  // /shop?tab=ssal(&sub=goods) 로 들어오면 그 탭을 연다 (쌀포인트 상품 구매 후 "계속 둘러보기", 캐릭터 꾸미기의 잠긴 아이템 등)
+  const [urlRead, setUrlRead] = useState(false);
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("tab") === "ssal") setStoreTab("쌀포인트");
+    const qs = new URLSearchParams(window.location.search);
+    const tab: StoreTab = qs.get("tab") === "ssal" ? "쌀포인트" : "일반";
+    const sub = qs.get("sub");
+    setStoreTab(tab);
+    setSubTab(SUB_TABS[tab].some((t) => t.id === sub) ? (sub as SubTab) : DEFAULT_SUB[tab]);
+    setUrlRead(true);
   }, []);
   // 탭별로 결과를 캐싱해서, 이미 불러온 탭은 다시 눌러도 상품이 그대로 유지되고
   // storeTab이 바뀌는 렌더와 상품 데이터가 항상 같이 바뀌어 라벨이 섞이는 프레임도 생기지 않음
@@ -46,6 +73,9 @@ export default function ShopPage() {
     Partial<Record<StoreTab, StoreProductResponse[]>>
   >({});
   const [subTab, setSubTab] = useState<SubTab>("all");
+  useEffect(() => {
+    if (urlRead) writeShopUrl(storeTab, subTab);
+  }, [urlRead, storeTab, subTab]);
   const isAvatarTab = storeTab === "쌀포인트" && subTab === "avatar";
   const tabProducts = cache[storeTab] ?? [];
   const loaded = cache[storeTab] !== undefined;
@@ -120,7 +150,7 @@ export default function ShopPage() {
                 key={tab}
                 onClick={() => {
                   setStoreTab(tab);
-                  setSubTab("all");
+                  setSubTab(DEFAULT_SUB[tab]);
                 }}
                 style={{
                   padding: "8px 20px",
@@ -188,7 +218,7 @@ export default function ShopPage() {
         </div>
 
         {/* 아바타 탭은 일반 상품 목록 대신 내 캐릭터에 입어보는 화면 */}
-        {isAvatarTab ? (
+        {!urlRead ? null : isAvatarTab ? (
           <AvatarShop />
         ) : (
           <>
