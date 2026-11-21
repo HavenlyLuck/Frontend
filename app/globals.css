@@ -7546,4 +7546,215 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
 }
 .storage-expiry.is-soon { color: var(--danger); font-weight: 700; }
 .guide-policy-links { margin: 14px 0 0; font-size: 13px; color: var(--text-tertiary); }
-.guide-policy-links a { color: var(--text-secondary); }
+.guide-policy-links a { color: var(--text-secondary); }
+
+/* 가이드 한눈에 보기 그림 (components/GuideDiagrams.tsx) */
+.gd-row { display: grid; gap: 10px; margin: 4px 0 16px; }
+.gd-row.n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.gd-row.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.gd-panel {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  overflow: hidden;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.gd-panel.is-active { border-color: var(--accent-tint-border); box-shadow: 0 0 0 3px var(--accent-tint); }
+.gd-stage {
+  position: relative;
+  height: 118px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 6px 12px;
+}
+.gd-stage.gd-col { flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding-bottom: 6px; }
+.gd-stage.is-flash { background: radial-gradient(circle at 50% 30%, rgba(255, 230, 120, 0.35), transparent 70%); }
+.gd-panel figcaption {
+  padding: 9px 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  word-break: keep-all;
+  line-height: 1.4;
+}
+.gd-panel figcaption b {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+}
+.gd-person { position: relative; display: flex; flex-direction: column; align-items: center; }
+.gd-person.is-glow img { filter: drop-shadow(0 0 4px #f3c94f); }
+.gd-person.is-dim img { opacity: 0.5; }
+
+/* 위로 톡 튀어나오는 표시 (응모권·칩·동전) */
+.gd-pop {
+  position: absolute;
+  top: -22px;
+  opacity: 0;
+  transform: translateY(6px) scale(0.7);
+  transition: opacity 0.2s, transform 0.28s cubic-bezier(.3,1.6,.5,1);
+}
+.gd-pop.static { position: static; }
+.gd-pop.on { opacity: 1; transform: none; }
+.gd-ticket { color: var(--gold); }
+.gd-chip {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+.gd-chip.gold { background: var(--gold); color: #1a1408; border-color: transparent; }
+.gd-coin {
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--gold);
+  border: 1px solid var(--border);
+}
+.gd-coin.no { position: absolute; }
+.gd-no { position: absolute; color: var(--danger); }
+.gd-icon-pop .emoji-icon { width: 20px; height: 20px; }
+
+/* 응모권 칸 */
+.gd-grid { display: grid; grid-template-columns: repeat(4, 22px); gap: 5px; }
+.gd-grid i { height: 14px; border-radius: 3px; border: 1px dashed var(--border-strong); transition: background 0.2s, border-color 0.2s; }
+.gd-grid i.on { background: var(--accent); border-color: var(--accent); }
+.gd-grid i.on.ssal { background: var(--gold); border-color: var(--gold); }
+.gd-count { font-size: 12px; font-weight: 700; color: var(--text-secondary); font-variant-numeric: tabular-nums; text-align: center; }
+.gd-count.full { color: var(--gold); }
+
+/* 번개 */
+.gd-bolt { position: absolute; top: -34px; color: #ffd23f; opacity: 0; transform: translateY(-12px); filter: drop-shadow(0 0 6px rgba(255, 151, 0, 0.8)); }
+.gd-bolt.on { opacity: 1; transform: none; transition: opacity 0.08s, transform 0.12s; }
+
+/* 쿠지판 · 카드 */
+.gd-board { display: grid; grid-template-columns: repeat(4, 24px); gap: 4px; }
+.gd-board.small { grid-template-columns: repeat(4, 16px); }
+.gd-board i {
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  transition: background 0.2s, color 0.2s;
+}
+.gd-board.small i { height: 14px; }
+.gd-board i.taken { background: var(--border); color: transparent; border-color: transparent; }
+.gd-board i.pick { background: var(--accent); color: #fff; border-color: var(--accent); }
+.gd-board i.last { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(243, 201, 79, 0.35); }
+.gd-card { position: relative; width: 46px; height: 64px; perspective: 300px; margin: 0 4px 10px; align-self: center; }
+.gd-card span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  backface-visibility: hidden;
+  transition: transform 0.35s;
+}
+.gd-card .back { background: var(--surface); border: 1px solid var(--border-strong); }
+.gd-card .back .emoji-icon { width: 24px; height: 24px; }
+.gd-card .front { background: var(--gold); color: #1a1408; font-size: 13px; font-weight: 800; transform: rotateY(180deg); }
+.gd-card.flip .back { transform: rotateY(180deg); }
+.gd-card.flip .front { transform: rotateY(0); }
+
+/* 아이콘 · 화살표 · 바뀜 */
+.gd-icon { align-self: center; display: grid; place-items: center; }
+.gd-icon .emoji-icon { width: 30px; height: 30px; }
+.gd-icon.big .emoji-icon { width: 40px; height: 40px; }
+.gd-arrow { align-self: center; color: var(--border-strong); transition: color 0.2s; }
+.gd-arrow.on { color: var(--accent-fg); }
+.gd-swap { opacity: 0.25; transform: scale(0.8); transition: opacity 0.25s, transform 0.3s cubic-bezier(.3,1.6,.5,1); }
+.gd-swap.on { opacity: 1; transform: none; }
+.gd-stack { display: flex; flex-direction: column; gap: 4px; align-self: center; margin-left: 6px; }
+.gd-stack .gd-pop { position: static; }
+.gd-won { position: relative; align-self: center; display: grid; place-items: center; width: 40px; height: 40px; font-size: 24px; font-weight: 800; color: var(--text-secondary); }
+.gd-won .gd-no { opacity: 0; transition: opacity 0.2s; }
+.gd-won.no .gd-no { opacity: 1; }
+.gd-meter { width: 80%; height: 8px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.gd-meter i { display: block; height: 100%; background: var(--gold); transition: width 0.3s; }
+.gd-items { display: flex; gap: 6px; height: 34px; align-items: flex-end; }
+.gd-drop { opacity: 0; transform: translateY(-18px); transition: opacity 0.2s, transform 0.3s cubic-bezier(.3,1.5,.5,1); }
+.gd-drop.in { opacity: 1; transform: none; }
+.gd-drop .emoji-icon { width: 28px; height: 28px; }
+.gd-truck { align-self: center; color: var(--text-secondary); transform: translateX(-40px); opacity: 0.4; }
+.gd-truck.go { color: var(--accent-fg); opacity: 1; transform: translateX(40px); transition: transform 2s linear, opacity 0.2s; }
+
+@media (max-width: 720px) {
+  .gd-row.n4, .gd-row.n3 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .gd-row.n3 > :last-child { grid-column: span 2; }
+  .gd-stage { height: 104px; }
+  .gd-stage .gd-person img { width: 33px !important; height: 32px !important; }
+  .gd-panel figcaption { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gd-row * { transition: none !important; }
+}
+
+/* 가이드 "자세히 보기" — 긴 설명을 접어 둔다 */
+.guide-more {
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.guide-more > summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.guide-more[open] > summary { border-bottom: 1px solid var(--border); }
+.guide-more > .guide-more-body { padding: 14px 14px 4px; }
+
+.guide-sub { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: var(--text-secondary); }
+
+/* 가이드 그림 — 가격표·곧 열려요 · 상점 설명 문단 */
+.gd-price { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.gd-price s { font-size: 11px; color: var(--text-tertiary); visibility: hidden; }
+.gd-price b { font-size: 15px; color: var(--text); transition: color 0.2s; }
+.gd-price.cut s { visibility: visible; }
+.gd-price.cut b { color: var(--accent-fg); }
+.gd-soon {
+  display: inline-block;
+  margin-left: 2px;
+  padding: 0 5px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: 1px;
+  color: var(--gold);
+  border: 1px solid currentColor;
+}
+.guide-sub-desc { margin: -2px 0 10px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); word-break: keep-all; }
+.guide-sub-desc b { color: var(--text); }

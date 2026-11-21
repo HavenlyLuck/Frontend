@@ -1,6 +1,7 @@
 'use client'
 
 import { CONTENTS_OPEN } from '@/lib/features'
+import { FundingDiagram, KujiDiagram, PointDiagram, RaffleDiagram, SsalTicketDiagram, StorageDiagram, StoreDiagram } from '@/components/GuideDiagrams'
 import { SHIPPING_FEE_TEXT, SHIP_WITHIN_BUSINESS_DAYS } from '@/lib/shipping'
 import { STORAGE_CONVERT_PERCENT_TEXT, STORAGE_KEEP_DAYS } from '@/lib/storageExpiry'
 import {
@@ -97,123 +98,157 @@ export default function GuidePage() {
       {/* 포인트 */}
       <section id="포인트" className="guide-section">
         <SectionTitle icon={CoinsIcon} title="포인트" summary="응모권 · 쿠지 · 일반 상점은 카드로 바로 결제해요. 포인트는 보상으로 받는 쌀포인트와 쌀 응모권이 있어요." />
-        <div className="guide-table-wrap">
-          <table className="guide-table">
-            <thead>
-              <tr><th></th><th><EmojiIcon name="rice" /> 쌀포인트</th><th><EmojiIcon name="ssal-ticket" /> 쌀 응모권</th></tr>
-            </thead>
-            <tbody>
-              <tr><th>얻는 방법</th><td>응모 낙첨 시 지급</td><td>이벤트 · 친구 추천인 등록</td></tr>
-              <tr><th>쓰는 곳</th><td>쌀포인트 상점, 캐릭터 아이템</td><td>응모 (1장 = 응모권 1장)</td></tr>
-              <tr><th>현금으로 돌려받기</th><td className="is-no">불가</td><td className="is-no">불가</td></tr>
-              <tr><th>낙첨 시 쌀포인트</th><td>-</td><td className="is-no">지급 안 됨</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <Callout>쌀 응모권은 보상으로 무료로 드리는 응모권이라, 낙첨돼도 쌀포인트가 지급되지 않아요. 돈으로는 살 수 없어요.</Callout>
+        <PointDiagram />
+        <details className="guide-more">
+          <summary>자세히 보기</summary>
+          <div className="guide-more-body">
+            <div className="guide-table-wrap">
+              <table className="guide-table">
+                <thead>
+                  <tr><th></th><th><EmojiIcon name="rice" /> 쌀포인트</th><th><EmojiIcon name="ssal-ticket" /> 쌀 응모권</th></tr>
+                </thead>
+                <tbody>
+                  <tr><th>얻는 방법</th><td>응모 낙첨 시 지급</td><td>이벤트 · 친구 추천인 등록</td></tr>
+                  <tr><th>쓰는 곳</th><td>쌀포인트 상점, 캐릭터 아이템, 일반 상점 할인 (곧 열려요)</td><td>응모 (1장 = 응모권 1장)</td></tr>
+                  <tr><th>현금으로 돌려받기</th><td className="is-no">불가</td><td className="is-no">불가</td></tr>
+                  <tr><th>낙첨 시 쌀포인트</th><td>-</td><td className="is-no">지급 안 됨</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <Callout>쌀 응모권은 보상으로 무료로 드리는 응모권이라, 낙첨돼도 쌀포인트가 지급되지 않아요. 돈으로는 살 수 없어요.</Callout>
+          </div>
+        </details>
       </section>
 
       {/* 쌀 응모권 */}
       <section id="쌀응모권" className="guide-section">
         <SectionTitle icon={TicketIcon} title="쌀 응모권" summary="이벤트나 친구 추천인 등록으로 받는 무료 응모권이에요. 결제 대신 응모에 쓸 수 있어요." />
-        <Rules items={[
-          <><b>얻는 방법</b> · 천운의 각종 이벤트 보상, 그리고 친구 추천인 등록으로 받아요.</>,
-          <><b>친구 추천</b> · 추천인 코드를 등록한 친구가 첫 응모권을 사면, 친구와 나 모두 쌀 응모권 1장을 받아요.</>,
-          <><b>쓰는 방법</b> · 응모 상품에서 결제 방식을 "쌀 응모권"으로 고르면 1장당 응모권 1장으로 응모돼요.</>,
-          <><b>확인하는 곳</b> · 화면 위 쌀포인트 왼쪽, 그리고 보관함에서 가진 장수를 볼 수 있어요.</>,
-          <>응모를 취소하면 쓴 쌀 응모권은 보관함으로 돌아와요.</>,
-          <>돈으로 살 수 없고, 현금으로 돌려받을 수도 없어요.</>,
-        ]} />
-        <Callout tone="warn">
-          <b>쌀 응모권으로 응모한 장수는 낙첨돼도 쌀포인트 페이백이 없어요.</b> 카드로 산 응모권만 낙첨 시 1장당 1,000 쌀포인트를 드려요.
-          <div className="guide-example">예) 카드 3장 + 쌀 응모권 2장으로 응모 → 낙첨: 3,000 쌀포인트</div>
-        </Callout>
+        <SsalTicketDiagram />
+        <details className="guide-more">
+          <summary>자세히 보기</summary>
+          <div className="guide-more-body">
+            <Rules items={[
+              <><b>얻는 방법</b> · 천운의 각종 이벤트 보상, 그리고 친구 추천인 등록으로 받아요.</>,
+              <><b>친구 추천</b> · 추천인 코드를 등록한 친구가 첫 응모권을 사면, 친구와 나 모두 쌀 응모권 1장을 받아요.</>,
+              <><b>쓰는 방법</b> · 응모 상품에서 결제 방식을 "쌀 응모권"으로 고르면 1장당 응모권 1장으로 응모돼요.</>,
+              <><b>확인하는 곳</b> · 화면 위 쌀포인트 왼쪽, 그리고 보관함에서 가진 장수를 볼 수 있어요.</>,
+              <>응모를 취소하면 쓴 쌀 응모권은 보관함으로 돌아와요.</>,
+              <>돈으로 살 수 없고, 현금으로 돌려받을 수도 없어요.</>,
+            ]} />
+            <Callout tone="warn">
+              <b>쌀 응모권으로 응모한 장수는 낙첨돼도 쌀포인트 페이백이 없어요.</b> 카드로 산 응모권만 낙첨 시 1장당 1,000 쌀포인트를 드려요.
+              <div className="guide-example">예) 카드 3장 + 쌀 응모권 2장으로 응모 → 낙첨: 3,000 쌀포인트</div>
+            </Callout>
+          </div>
+        </details>
       </section>
 
       {/* 응모 */}
       <section id="응모" className="guide-section">
         <SectionTitle icon={TicketIcon} title="응모" summary="응모권이 모두 팔리면 자동으로 추첨하는, 천운의 메인 시스템이에요." />
-        <Steps items={[
-          { title: '응모권 구매', desc: '1장 1,000원, 카드로 결제해요. 한 상품에 여러 장 살 수 있어요.' },
-          { title: '응모권 매진', desc: '상품마다 정해진 장수가 모두 팔리면 응모가 마감돼요.' },
-          { title: '1분 뒤 자동 추첨', desc: 'drand(여러 기관이 함께 만드는 공개 난수)로 공정하게 추첨해요.' },
-          { title: '결과 확인', desc: '마이페이지 › 응모 내역의 "당첨결과 확인하기"에서 번개 추첨 연출과 함께 확인해요.' },
-        ]} />
-        <Rules items={[
-          <>당첨 확률 = <b>내 응모권 수 ÷ 전체 응모권 수</b></>,
-          <>당첨되면 상품은 <b>보관함</b>으로 들어가요.</>,
-          <>낙첨되면 <b>산 응모권 1장당 1,000 쌀포인트</b>를 드려요. (쌀 응모권으로 응모한 장수는 제외)</>,
-          <>원하는 응모는 응모권을 더 사거나 친구에게 알려서 마감 전에 빨리 채울 수 있어요.</>,
-          <>사라진 응모는 나중에 로테이션으로 다시 열릴 수 있어요.</>,
-          <><b>매진 전</b>에는 마이페이지 › 응모 내역에서 취소하고 전액 환불받을 수 있어요. <b>매진되어 추첨이 시작되면 취소·환불할 수 없어요.</b></>,
-          <>당첨 상품은 <b>단순 변심으로 반품할 수 없어요.</b> 파손·불량이면 교환해 드려요.</>,
-        ]} />
-        <Callout tone="warn">
-          <b>당첨되면 상품만 드려요.</b> 여러 장을 샀더라도 나머지 장수에 대한 쌀포인트는 지급되지 않아요.
-          <div className="guide-example">예) 15장 구매 → 당첨: 상품만 / 낙첨: 15,000 쌀포인트</div>
-        </Callout>
-        <Callout tone="warn">
-          <b>응모마다 제한 시간이 있어요.</b> 시간 안에 응모권이 다 팔리지 않으면 응모가 취소되고, 응모권 결제는 카드로 자동 환불돼요.
-        </Callout>
+        <RaffleDiagram />
+        <details className="guide-more">
+          <summary>자세히 보기</summary>
+          <div className="guide-more-body">
+            <Steps items={[
+              { title: '응모권 구매', desc: '1장 1,000원, 카드로 결제해요. 한 상품에 여러 장 살 수 있어요.' },
+              { title: '응모권 매진', desc: '상품마다 정해진 장수가 모두 팔리면 응모가 마감돼요.' },
+              { title: '1분 뒤 자동 추첨', desc: 'drand(여러 기관이 함께 만드는 공개 난수)로 공정하게 추첨해요.' },
+              { title: '결과 확인', desc: '마이페이지 › 응모 내역의 "당첨결과 확인하기"에서 번개 추첨 연출과 함께 확인해요.' },
+            ]} />
+            <Rules items={[
+              <>당첨 확률 = <b>내 응모권 수 ÷ 전체 응모권 수</b></>,
+              <>당첨되면 상품은 <b>보관함</b>으로 들어가요.</>,
+              <>낙첨되면 <b>산 응모권 1장당 1,000 쌀포인트</b>를 드려요. (쌀 응모권으로 응모한 장수는 제외)</>,
+              <>원하는 응모는 응모권을 더 사거나 친구에게 알려서 마감 전에 빨리 채울 수 있어요.</>,
+              <>사라진 응모는 나중에 로테이션으로 다시 열릴 수 있어요.</>,
+              <><b>매진 전</b>에는 마이페이지 › 응모 내역에서 취소하고 전액 환불받을 수 있어요. <b>매진되어 추첨이 시작되면 취소·환불할 수 없어요.</b></>,
+              <>당첨 상품은 <b>단순 변심으로 반품할 수 없어요.</b> 파손·불량이면 교환해 드려요.</>,
+            ]} />
+            <Callout tone="warn">
+              <b>당첨되면 상품만 드려요.</b> 여러 장을 샀더라도 나머지 장수에 대한 쌀포인트는 지급되지 않아요.
+              <div className="guide-example">예) 15장 구매 → 당첨: 상품만 / 낙첨: 15,000 쌀포인트</div>
+            </Callout>
+            <Callout tone="warn">
+              <b>응모마다 제한 시간이 있어요.</b> 시간 안에 응모권이 다 팔리지 않으면 응모가 취소되고, 응모권 결제는 카드로 자동 환불돼요.
+            </Callout>
+          </div>
+        </details>
       </section>
 
       {/* 쿠지 */}
       <section id="쿠지" className="guide-section">
         <SectionTitle icon={GiftIcon} title="쿠지" summary="이치방쿠지처럼 번호를 골라 뽑으면, 그 자리에서 바로 결과가 나와요." />
-        <Steps items={[
-          { title: '뽑을 개수 정하기', desc: '쿠지 상세에서 몇 장 뽑을지 정하고 "뽑기 시작"을 눌러요.' },
-          { title: '번호 고르기', desc: '쿠지판에서 원하는 번호를 골라요. 이미 뽑힌 번호는 회색으로 잠겨 있어요.' },
-          { title: '결과 확인', desc: '카드를 하나씩 뒤집어 등급을 확인해요. "모두 열기"로 한 번에 볼 수도 있어요.' },
-        ]} />
-        <Rules items={[
-          <>응모와 달리 매진을 기다리지 않아요. <b>뽑는 즉시 등급이 확정</b>돼요.</>,
-          <>상위상(A상·B상 등) 남은 수량은 쿠지판에서 실시간으로 확인할 수 있어요.</>,
-          <>고르는 사이 다른 분이 같은 번호를 먼저 뽑으면, 그 번호만 풀리고 다시 고를 수 있어요. 이미 결제했다면 결제는 자동으로 취소돼요.</>,
-          <>상위상이 모두 나가고 라스트원상만 남은 쿠지판은 조기 마감되거나 특별 이벤트가 열릴 수 있어요.</>,
-          <><b>결제와 동시에 결과가 정해져서 결제 후에는 취소·환불할 수 없어요.</b></>,
-        ]} />
-        <Callout>
-          <b><LightningIcon size={14} weight="fill" /> 라스트원상</b> — 쿠지판의 <b>마지막 1장을 뽑은 분</b>께 추가로 드리는 특별한 상이에요. 상위상이 다 나가도 끝까지 노려볼 이유가 돼요.
-        </Callout>
+        <KujiDiagram />
+        <details className="guide-more">
+          <summary>자세히 보기</summary>
+          <div className="guide-more-body">
+            <Steps items={[
+              { title: '뽑을 개수 정하기', desc: '쿠지 상세에서 몇 장 뽑을지 정하고 "뽑기 시작"을 눌러요.' },
+              { title: '번호 고르기', desc: '쿠지판에서 원하는 번호를 골라요. 이미 뽑힌 번호는 회색으로 잠겨 있어요.' },
+              { title: '결과 확인', desc: '카드를 하나씩 뒤집어 등급을 확인해요. "모두 열기"로 한 번에 볼 수도 있어요.' },
+            ]} />
+            <Rules items={[
+              <>응모와 달리 매진을 기다리지 않아요. <b>뽑는 즉시 등급이 확정</b>돼요.</>,
+              <>상위상(A상·B상 등) 남은 수량은 쿠지판에서 실시간으로 확인할 수 있어요.</>,
+              <>고르는 사이 다른 분이 같은 번호를 먼저 뽑으면, 그 번호만 풀리고 다시 고를 수 있어요. 이미 결제했다면 결제는 자동으로 취소돼요.</>,
+              <>상위상이 모두 나가고 라스트원상만 남은 쿠지판은 조기 마감되거나 특별 이벤트가 열릴 수 있어요.</>,
+              <><b>결제와 동시에 결과가 정해져서 결제 후에는 취소·환불할 수 없어요.</b></>,
+            ]} />
+            <Callout>
+              <b><LightningIcon size={14} weight="fill" /> 라스트원상</b> — 쿠지판의 <b>마지막 1장을 뽑은 분</b>께 추가로 드리는 특별한 상이에요. 상위상이 다 나가도 끝까지 노려볼 이유가 돼요.
+            </Callout>
+          </div>
+        </details>
       </section>
 
       {/* 상점 */}
       <section id="상점" className="guide-section">
-        <SectionTitle icon={StorefrontIcon} title="상점" summary="피규어와 굿즈를 바로 살 수 있어요. 결제 방식에 따라 상점이 나뉘어요." />
-        <div className="guide-cards">
-          <div className="guide-card">
-            <div className="guide-card-title"><EmojiIcon name="store" /> 일반 상점</div>
-            <Rules items={[
-              '피규어 · 굿즈 · 카드',
-              '카드로 바로 결제해요.',
-              '배송 전에는 보관함에서 바로 취소할 수 있어요.',
-              '받은 날부터 7일 안에 반품할 수 있어요. 단, 상자·포장을 개봉해 상품 가치가 떨어지면 반품이 어려워요. 단순 변심 반품의 왕복 배송비는 고객님 부담이에요.',
-            ]} />
+        <SectionTitle icon={StorefrontIcon} title="상점" summary="피규어와 굿즈를 바로 살 수 있어요. 카드로 사는 일반 상점과 쌀포인트로 사는 쌀포인트 상점이 있어요." />
+        <StoreDiagram />
+        <p className="guide-sub">응모 전환이란?</p>
+        <p className="guide-sub-desc">일부 상점 상품은 1,000원 응모권을 정해진 장수만큼 모으면 <b>응모에 올라가요.</b> 정가를 다 내지 않고 응모로 노려볼 수 있는 방법이에요. 응모에 올라간 뒤에는 일반 응모와 똑같이 추첨해요.</p>
+        <FundingDiagram />
+        <details className="guide-more">
+          <summary>자세히 보기</summary>
+          <div className="guide-more-body">
+            <div className="guide-cards">
+              <div className="guide-card">
+                <div className="guide-card-title"><EmojiIcon name="store" /> 일반 상점</div>
+                <Rules items={[
+                  '피규어 · 굿즈 · 카드',
+                  '카드로 바로 결제해요.',
+                  '쌀포인트로 일부를 할인받아 살 수 있어요. (곧 열려요 · 상품마다 할인 한도가 달라요)',
+                  '배송 전에는 보관함에서 바로 취소할 수 있어요.',
+                  '받은 날부터 7일 안에 반품할 수 있어요. 단, 상자·포장을 개봉해 상품 가치가 떨어지면 반품이 어려워요. 단순 변심 반품의 왕복 배송비는 고객님 부담이에요.',
+                ]} />
+              </div>
+              <div className="guide-card">
+                <div className="guide-card-title"><EmojiIcon name="rice" /> 쌀포인트 상점</div>
+                <Rules items={[
+                  '쿠폰 · 굿즈 · 아바타',
+                  '쌀포인트만으로 살 수 있어요.',
+                  '아바타 탭에서는 아이템을 내 캐릭터에 입어보고 살 수 있어요.',
+                  '쌀포인트로 산 상품·아이템은 산 뒤에 취소할 수 없어요.',
+                ]} />
+              </div>
+            </div>
+            <Callout>
+              <b>응모 전환</b> — 상품 상세의 "응모 전환 시작하기"로 응모권(1,000원)을 사면, 정해진 장수가 모였을 때 그 상품이 응모에 올라가고 산 응모권은 그대로 응모돼요.
+              <div className="guide-example">예) 응모권 5장짜리 상품에 "2장 모이면 응모" → 응모권 2장이 팔리면 상품이 응모에 올라가고, 남은 3장은 응모 페이지에서 팔려요. 시작 후 정해진 기간 안에 2장이 안 모이면 전액 자동 환불돼요.</div>
+              응모에 올라간 뒤 전환 때 산 응모권을 취소하면, 그 응모권은 전부 함께 취소되고 3일 동안 전환 응모권을 살 수 없어요.
+            </Callout>
           </div>
-          <div className="guide-card">
-            <div className="guide-card-title"><EmojiIcon name="rice" /> 쌀포인트 상점</div>
-            <Rules items={[
-              '쿠폰 · 굿즈 · 아바타',
-              '쌀포인트만으로 살 수 있어요.',
-              '아바타 탭에서는 아이템을 내 캐릭터에 입어보고 살 수 있어요.',
-              '쌀포인트로 산 상품·아이템은 산 뒤에 취소할 수 없어요.',
-            ]} />
-          </div>
-        </div>
-        <Callout>
-          <b>응모 전환</b> — 일부 상점 상품은 응모권(1,000원)으로 "응모 상품으로 바꾸기"에 참여할 수 있어요. 정해진 장수가 모이면 그 상품이 응모로 열리고, 산 응모권은 그대로 응모돼요.
-          <div className="guide-example">예) "5장 중 2장 모이면 전환" → 응모권이 2장 팔리면 응모 상품으로 바뀌어요. 시작 후 정해진 기간 안에 못 모이면 전액 자동 환불돼요.</div>
-          응모 상품으로 바뀐 뒤 전환 때 산 응모권을 취소하면, 그 응모권은 전부 함께 취소되고 3일 동안 전환 응모권을 살 수 없어요.
-        </Callout>
+        </details>
       </section>
 
       {/* 캐릭터 */}
       <section id="캐릭터" className="guide-section">
-        <SectionTitle icon={PaintBrushIcon} title="캐릭터" summary="나만의 픽셀 캐릭터를 꾸며서 추첨과 대회에 등장시켜 보세요." />
+        <SectionTitle icon={PaintBrushIcon} title="캐릭터" summary="나만의 픽셀 캐릭터를 꾸며서 추첨 화면에 등장시켜 보세요." />
         <Rules items={[
           <>마이페이지 › <b>캐릭터 꾸미기</b>에서 머리, 옷, 피부색을 자유롭게 바꿀 수 있어요 (무료).</>,
           <>무기·모자·망토·스킨 같은 특별 아이템은 <b>쌀포인트 상점 › 아바타</b>에서 살 수 있어요.</>,
-          <>꾸민 캐릭터는 응모 <b>번개 추첨 화면</b>, 쿠지 뽑기 화면, 아바타 대회에 그대로 나와요.</>,
+          <>꾸민 캐릭터는 응모 <b>번개 추첨 화면</b>과 쿠지 뽑기 화면에 그대로 나와요.</>,
           <>"추첨영상 미리보기"로 추첨 화면에서 어떻게 보일지 미리 확인할 수 있어요.</>,
         ]} />
       </section>
@@ -225,33 +260,30 @@ export default function GuidePage() {
           title="컨텐츠"
           summary={CONTENTS_OPEN ? "일시적인 이벤트나 각종 컨텐츠를 즐길 수 있어요." : "일시적인 이벤트나 각종 컨텐츠를 즐길 수 있어요. 지금은 준비 중이라 곧 열릴 예정이에요."}
         />
-        <div className="guide-card">
-          <div className="guide-card-title"><EmojiIcon name="crown" /> 아바타 자랑 대회 (매주)</div>
-          <Rules items={[
-            '매주 월요일 0시에 시작해 일요일 자정에 순위가 확정돼요.',
-            '참가는 무료예요. 지금 저장된 내 캐릭터로 참가해요.',
-            '한 계정당 하루 1표, 내 캐릭터에는 투표할 수 없어요.',
-            '1·2·3등에게 수상자 전용 왕관과 쌀 응모권을 드려요.',
-          ]} />
-        </div>
       </section>
 
       {/* 보관함 · 배송 */}
       <section id="보관함" className="guide-section">
         <SectionTitle icon={ArchiveIcon} title="보관함 · 배송" summary="당첨되거나 구매한 상품은 모두 보관함에 모여요." />
-        <Steps items={[
-          { title: '보관함에 담김', desc: '응모 당첨, 쿠지 결과, 상점 구매 상품이 마이페이지 › 보관함에 들어가요.' },
-          { title: '배송 신청', desc: '보관함에서 받을 상품을 골라 배송지를 정하고 배송을 신청해요.' },
-          { title: '배송비 결제 · 발송', desc: `배송비 ${SHIPPING_FEE_TEXT}을 결제하면 영업일 기준 ${SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송해요.` },
-        ]} />
-        <Callout>여러 상품을 한 번에 배송 신청하면 한 상자로 묶어 보내고, 배송비도 {SHIPPING_FEE_TEXT} 한 번만 내요. 발송 전에 배송을 취소하면 배송비를 돌려드려요.</Callout>
-        <Callout tone="warn">
-          <b>보관 기간은 {STORAGE_KEEP_DAYS}일이에요.</b> 응모 당첨·쿠지 상품은 보관함에 들어온 날부터 {STORAGE_KEEP_DAYS}일 안에 배송 신청하지 않으면 판매가의 {STORAGE_CONVERT_PERCENT_TEXT}가 쌀포인트로 바뀌어요. 바뀌기 7일 전과 1일 전에 알려 드리고, 바뀐 뒤에는 상품으로 되돌릴 수 없어요. (상점에서 산 상품은 해당 없음)
-        </Callout>
-        <Rules items={[
-          <>받은 상품이 파손·불량이면 교환해 드려요. <b>택배 상자를 여는 장면부터 영상으로 찍어 두시면</b> 빠르게 처리돼요.</>,
-          <>배송지를 잘못 입력해 생긴 손해는 책임지기 어려우니, 신청 전에 주소를 꼭 확인해 주세요.</>,
-        ]} />
+        <StorageDiagram />
+        <details className="guide-more">
+          <summary>자세히 보기</summary>
+          <div className="guide-more-body">
+            <Steps items={[
+              { title: '보관함에 담김', desc: '응모 당첨, 쿠지 결과, 상점 구매 상품이 마이페이지 › 보관함에 들어가요.' },
+              { title: '배송 신청', desc: '보관함에서 받을 상품을 골라 배송지를 정하고 배송을 신청해요.' },
+              { title: '배송비 결제 · 발송', desc: `배송비 ${SHIPPING_FEE_TEXT}을 결제하면 영업일 기준 ${SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송해요.` },
+            ]} />
+            <Callout>여러 상품을 한 번에 배송 신청하면 한 상자로 묶어 보내고, 배송비도 {SHIPPING_FEE_TEXT} 한 번만 내요. 발송 전에 배송을 취소하면 배송비를 돌려드려요.</Callout>
+            <Callout tone="warn">
+              <b>보관 기간은 {STORAGE_KEEP_DAYS}일이에요.</b> 응모 당첨·쿠지 상품은 보관함에 들어온 날부터 {STORAGE_KEEP_DAYS}일 안에 배송 신청하지 않으면 판매가의 {STORAGE_CONVERT_PERCENT_TEXT}가 쌀포인트로 바뀌어요. 바뀌기 7일 전과 1일 전에 알려 드리고, 바뀐 뒤에는 상품으로 되돌릴 수 없어요. (상점에서 산 상품은 해당 없음)
+            </Callout>
+            <Rules items={[
+              <>받은 상품이 파손·불량이면 교환해 드려요. <b>택배 상자를 여는 장면부터 영상으로 찍어 두시면</b> 빠르게 처리돼요.</>,
+              <>배송지를 잘못 입력해 생긴 손해는 책임지기 어려우니, 신청 전에 주소를 꼭 확인해 주세요.</>,
+            ]} />
+          </div>
+        </details>
       </section>
 
       {/* 꼭 알아두세요 — 고객이 꼭 알아야 할 규칙을 한곳에 모은 요약 (자세한 기준은 약관·취소환불 정책) */}
