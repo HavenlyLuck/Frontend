@@ -124,8 +124,8 @@ export default function StoreFundingCard({ product, funding, onChanged }: Props)
           )}
         </div>
         <div className="funding-desc">
-          응모권({funding.ticket_price.toLocaleString()}원)이 {funding.total_slots}장 중 {funding.threshold}장 모이면
-          이 상품이 응모 상품으로 바뀌어요.{' '}
+          응모권({funding.ticket_price.toLocaleString()}원)이 {funding.threshold}장 모이면 이 상품이 응모에 올라가요
+          (응모권은 모두 {funding.total_slots}장).{' '}
           {started ? '기간' : `시작 후 ${funding.duration_days}일`} 안에 못 모이면 전액 자동 환불돼요.
         </div>
 
