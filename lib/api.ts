@@ -349,7 +349,7 @@ export function getMyRaffleEntriesForProduct(token: string, raffleProductId: num
 // 마이페이지 구매 내역 1건 — 카드 결제 1건 (응모권 · 쿠지 · 결제 상점)
 // status: paid(결제 완료) / refunded(환불됨 — 응모 취소·구매 취소 등). 부분 취소 후엔 quantity·amount가 남은 만큼
 // store_funding: 상점 상품의 응모 전환 모금 응모권
-export type PaymentOrderType = 'raffle_entry' | 'kuji_draw' | 'store_purchase' | 'store_funding'
+export type PaymentOrderType = 'raffle_entry' | 'kuji_draw' | 'store_purchase' | 'store_funding' | 'shipping_fee'
 
 export interface MyPaymentResponse {
   payment_id: string
@@ -534,6 +534,8 @@ export interface StorageItemResponse {
   amount_spent: number | null  // 결제 상점·쿠지는 원, 쌀포인트 상점은 쌀포인트
   status: 'ready' | 'requested' | 'shipped'
   address_id: number | null
+  // 배송 신청 때 낸 배송비 결제 — 같은 값인 상품끼리 같이 신청한 한 상자 (배송 취소도 같이 된다)
+  shipping_payment_id: string | null
   requested_at: string | null
   created_at: string
   // 관리자가 발송 처리할 때 저장된다
@@ -549,11 +551,13 @@ export function getMyStorage(token: string) {
   })
 }
 
-export function requestShipping(token: string, storageItemIds: number[], addressId: number) {
-  return request<StorageItemResponse[]>('/storage/ship', {
+// 배송 신청은 배송비 카드 결제로 한다 — lib/payment.ts payWithCard({ order_type: 'shipping_fee', ... })
+
+// 배송 신청 취소 — 발송 전 상품만. 같은 배송비로 같이 신청한 상품은 함께 보관함으로 돌아가고 배송비는 카드로 환불된다
+export function cancelShipping(token: string, storageItemId: number) {
+  return request<StorageItemResponse[]>(`/storage/${storageItemId}/cancel-shipping`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ storage_item_ids: storageItemIds, address_id: addressId }),
   })
 }
 
@@ -1068,12 +1072,13 @@ export async function createRaffleProduct(token: string, payload: CreateRafflePr
   return data as RaffleProductResponse
 }
 
-// ── 카드 결제 (포트원) — 응모권 · 쿠지 제비 · 결제 상점 상품 ──
+// ── 카드 결제 (포트원) — 응모권 · 쿠지 제비 · 결제 상점 상품 · 배송비 ──
 export type PaymentOrder =
   | { order_type: 'raffle_entry'; target_id: number; quantity: number }
   | { order_type: 'kuji_draw'; target_id: number; ticket_numbers: number[] }
   | { order_type: 'store_purchase'; target_id: number; quantity: number }
   | { order_type: 'store_funding'; target_id: number; quantity: number }  // target_id = 상점 상품
+  | { order_type: 'shipping_fee'; target_id: number; storage_item_ids: number[] }  // target_id = 배송지
 
 export interface PaymentPrepareResponse {
   // 없으면 결제창을 열지 않는다 — 쿠지에서 고른 제비가 이미 나간 경우
@@ -1093,6 +1098,7 @@ export interface PaymentCompleteResponse {
   raffle_entry: RaffleEntryCreateResponse | null
   kuji_draw: KujiDrawResponse | null
   store_purchase: StorePurchaseResponse | null
+  shipping?: StorageItemResponse[] | null  // 배송비 — 배송 신청된 보관함 상품들
 }
 
 export function preparePayment(token: string, order: PaymentOrder) {

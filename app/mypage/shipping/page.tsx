@@ -6,7 +6,9 @@ import { CalendarIcon, ConfettiIcon, MapPinIcon, PackageIcon, ShoppingBagIcon, T
 import { useStorage } from '@/hooks/useStorage'
 import ParcelTrackingModal from '@/components/ParcelTrackingModal'
 import { getValidSession } from '@/lib/auth'
-import { getMyAddresses, type AddressResponse, type StorageItemResponse } from '@/lib/api'
+import { ApiError, cancelShipping, getMyAddresses, type AddressResponse, type StorageItemResponse } from '@/lib/api'
+import { notifyStorageUpdated } from '@/lib/storage'
+import { SHIPPING_FEE_TEXT } from '@/lib/shipping'
 import { formatKstDate } from '@/lib/date'
 import Pagination from '@/components/Pagination'
 import EmojiIcon from '@/components/EmojiIcon'
@@ -31,7 +33,7 @@ function shippingStatus(item: StorageItemResponse): ShippingStatus {
   return item.delivered_at ? 'delivered' : 'in_transit'
 }
 
-// 화면에 보이는 한 줄 — 발송된 상품은 같은 송장(택배사+송장번호)끼리 한 상자로 묶고, 발송 전 상품은 하나씩
+// 화면에 보이는 한 줄 — 발송된 상품은 같은 송장(택배사+송장번호)끼리, 발송 전 상품은 같은 배송비 결제(같이 신청한 것)끼리 한 상자로 묶는다
 interface Parcel {
   key: string
   items: StorageItemResponse[]
@@ -43,7 +45,9 @@ function groupParcels(items: StorageItemResponse[]): Parcel[] {
   for (const item of items) {
     const key = item.status === 'shipped' && item.tracking_number
       ? `t|${item.carrier}|${item.tracking_number}`
-      : `i|${item.storage_item_id}`
+      : item.status === 'requested' && item.shipping_payment_id
+        ? `p|${item.shipping_payment_id}`
+        : `i|${item.storage_item_id}`
     const parcel = parcels.get(key)
     if (parcel) parcel.items.push(item)
     else parcels.set(key, { key, items: [item], status: shippingStatus(item) })
@@ -67,6 +71,29 @@ export default function ShippingHistoryPage() {
   const [filter, setFilter] = useState<Filter>('all')
   const [page, setPage] = useState(1)
   const [addresses, setAddresses] = useState<AddressResponse[]>([])
+  const [cancelling, setCancelling] = useState(false)
+
+  // 배송 신청 취소 — 같이 신청한 상품이 함께 보관함으로 돌아가고 배송비는 카드로 환불된다
+  const handleCancel = async (parcel: Parcel) => {
+    if (cancelling) return
+    const paid = parcel.items[0].shipping_payment_id != null
+    const what = parcel.items.length > 1 ? `함께 신청한 상품 ${parcel.items.length}개의 배송` : '배송'
+    const refund = paid ? `\n배송비 ${SHIPPING_FEE_TEXT}은 카드로 환불되고, 환불까지 며칠 걸릴 수 있어요.` : ''
+    if (!window.confirm(`${what} 신청을 취소할까요?\n상품은 보관함으로 돌아가요.${refund}`)) return
+    const session = await getValidSession()
+    if (!session) return
+    setCancelling(true)
+    try {
+      await cancelShipping(session.token, parcel.items[0].storage_item_id)
+      window.alert(paid ? '배송 신청을 취소했어요. 배송비는 카드로 환불돼요.' : '배송 신청을 취소했어요.')
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : '배송 취소 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.')
+    } finally {
+      await reload()
+      notifyStorageUpdated()
+      setCancelling(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -97,7 +124,7 @@ export default function ShippingHistoryPage() {
         <div className="mypage-section-title"><PackageIcon size={17} weight="fill" color="var(--accent)" /> 배송 내역</div>
       </div>
       <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 20px' }}>
-        보관함에서 배송 신청한 상품의 진행 상황을 확인할 수 있어요.
+        보관함에서 배송 신청한 상품의 진행 상황을 확인할 수 있어요. 발송 전이면 배송을 취소하고 배송비를 환불받을 수 있어요.
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -165,6 +192,11 @@ export default function ShippingHistoryPage() {
               </div>
               <div className="entry-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                 <span className={`status-badge ${STATUS_BADGE[status]}`}>{STATUS_LABEL[status]}</span>
+                {status === 'requested' && (
+                  <button type="button" className="entry-cancel-btn" disabled={cancelling} onClick={() => handleCancel(parcel)}>
+                    배송 취소
+                  </button>
+                )}
                 {item.carrier && item.tracking_number && (
                   <button type="button" className="entry-cancel-btn" onClick={() => setTracking(parcel)}>
                     배송 조회

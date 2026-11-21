@@ -1,6 +1,7 @@
 // 배송 규칙 — 화면 안내 문구가 모두 이 값을 쓴다 (2026-11 결정)
 // 배송비는 보관함에서 배송 신청할 때 한 번 결제한다. 여러 상품을 한 번에 신청하면 묶어서 한 상자로 보내고 배송비도 한 번만.
-// ※ 실제 결제(배송 신청 시 카드 결제)는 백엔드 결제 종류 추가가 필요하다 — 그 전까지는 안내만 보인다.
+// 결제는 카드 결제 종류 shipping_fee로 하고, 발송 전이면 배송 내역에서 취소하고 배송비를 환불받는다.
+// SHIPPING_FEE는 백엔드 app/core/config.py의 SHIPPING_FEE와 같아야 한다 (실제 결제 금액은 서버 값)
 export const SHIPPING_FEE = 4000
 export const SHIP_WITHIN_BUSINESS_DAYS = 3
 

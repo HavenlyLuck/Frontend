@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowCounterClockwiseIcon, CheckIcon, GrainsIcon, LightningIcon, LockSimpleIcon, PaintBrushIcon } from '@phosphor-icons/react'
+import { ArrowCounterClockwiseIcon, CheckIcon, LightningIcon, PaintBrushIcon } from '@phosphor-icons/react'
 import PixelAvatar from '@/components/PixelAvatar'
 import LightningDrawScene from '@/components/LightningDrawScene'
 import AvatarRoom from '@/components/AvatarRoom'
@@ -49,7 +49,7 @@ export default function AvatarPage() {
         })
       getMyAvatarItems(session.token)
         .then((ids) => { if (!cancelled) setOwned(new Set(ids)) })
-        .catch(() => {}) // 못 불러오면 아이템이 전부 잠겨 보인다
+        .catch(() => {}) // 못 불러오면 상점 아이템이 안 보인다
     })
     return () => { cancelled = true }
   }, [])
@@ -76,14 +76,16 @@ export default function AvatarPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [preview])
 
-  const slotItems = tabId === 'hair' ? [] : AVATAR_SHOP_ITEMS.filter(item => item.slot === tabId)
-  const hairItems = AVATAR_SHOP_ITEMS.filter(item => item.slot === 'hairItem')
+  // 산 아이템만 보여준다 — 안 산 아이템은 상점에서 고른다
+  const ownedItems = AVATAR_SHOP_ITEMS.filter(item => owned.has(item.id))
+  const slotItems = tabId === 'hair' ? [] : ownedItems.filter(item => item.slot === tabId)
+  const hairItems = ownedItems.filter(item => item.slot === 'hairItem')
 
-  // 상점 아이템 하나 — 산 것은 입히고, 안 산 것은 입은 모습만 보여주고 상점으로 보낸다
+  // 산 상점 아이템 하나
   const itemOption = (item: AvatarShopItem) => {
     const config = withItem(draft, item.slot, item.id)
     const selected = draft[item.slot] === item.id
-    return owned.has(item.id) ? (
+    return (
       <button
         key={item.id}
         type="button"
@@ -94,14 +96,6 @@ export default function AvatarPage() {
         <AvatarItemPreview config={config} slot={item.slot} size={80} />
         <span>{item.name}</span>
       </button>
-    ) : (
-      <Link key={item.id} href={`/shop?tab=ssal&cat=${item.slot}&item=${item.id}`} className="avatar-style-option locked" title="쌀포인트 상점에서 구매">
-        <AvatarItemPreview config={config} slot={item.slot} size={80} />
-        <span>{item.name}</span>
-        <span className="avatar-locked-price">
-          <LockSimpleIcon size={11} weight="fill" /> <GrainsIcon size={11} weight="fill" /> {item.price.toLocaleString()}P
-        </span>
-      </Link>
     )
   }
 
@@ -206,7 +200,8 @@ export default function AvatarPage() {
               <div className="avatar-option-label">
                 {SLOT_LABELS[tabId]}
                 <span className="avatar-option-hint">
-                  {slotItems.length > 0 ? ' · 쌀포인트 상점에서 산 아이템을 입을 수 있어요' : ' · 아직 판매 중인 아이템이 없어요'}
+                  {slotItems.length > 0 ? ' · 쌀포인트 상점에서 산 아이템을 입을 수 있어요' : ' · 아직 산 아이템이 없어요 · '}
+                  {slotItems.length === 0 && <Link href={`/shop?tab=ssal&cat=${tabId}`}>상점 둘러보기</Link>}
                 </span>
               </div>
               <div className="avatar-style-grid">

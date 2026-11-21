@@ -22,6 +22,9 @@ function successText(res: PaymentCompleteResponse): string {
     const lastOne = res.kuji_draw.last_one ? ` + 라스트원상 ${res.kuji_draw.last_one.name}` : ''
     return `${prizes}${lastOne} 당첨! 보관함에서 확인해주세요.`
   }
+  if (res.order_type === 'shipping_fee') {
+    return '배송비 결제가 끝나 배송 신청이 접수되었어요. 배송 내역에서 확인해주세요.'
+  }
   return '구매가 완료되었습니다. 보관함에서 확인해주세요.'
 }
 
@@ -68,7 +71,9 @@ export default function PaymentCompletePage() {
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 24 }}>
               <Link href={next} className="field-btn">돌아가기</Link>
-              {ok && <Link href="/mypage/storage" className="field-btn">보관함</Link>}
+              {ok && view.kind === 'done' && view.res.order_type === 'shipping_fee'
+                ? <Link href="/mypage/shipping" className="field-btn">배송 내역</Link>
+                : ok && <Link href="/mypage/storage" className="field-btn">보관함</Link>}
             </div>
           </>
         )}
