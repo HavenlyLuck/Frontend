@@ -45,8 +45,10 @@ export interface SignupPayload {
   password: string
   identity_verification_id: string  // 포트원 본인인증 ID — 이름·전화번호는 서버가 포트원에서 직접 가져온다
   referral_code?: string | null  // 추천인 코드 (선택)
+  // 만 19세 미만이면 필수 — 보호자(법정대리인) 본인인증 ID와 보호자 동의
+  guardian_identity_verification_id?: string | null
+  guardian_consent?: boolean
   // 가입 동의 — 서버가 동의 여부와 동의 일시를 저장한다 (동의 증거)
-  // TODO(백엔드): UserSignup에 아직 없는 필드라 지금은 서버가 무시한다. 받아서 저장하도록 요청함.
   terms_agreed?: boolean            // (필수) 이용약관 동의
   age_14_confirmed?: boolean        // (필수) 만 14세 이상 확인
   review_marketing_agreed?: boolean // (선택) 후기 SNS·홈페이지 홍보 활용 동의
@@ -87,6 +89,7 @@ export function signup(payload: SignupPayload) {
 export interface IdentityVerifyResponse {
   name: string | null
   phone: string
+  guardian_required: boolean  // 만 19세 미만 — 보호자 본인인증을 해야 가입된다
 }
 
 // 포트원 본인인증을 마친 뒤 서버에서 결과를 확인한다 (이미 가입된 번호면 에러)
@@ -94,6 +97,17 @@ export function verifyIdentity(identityVerificationId: string) {
   return request<IdentityVerifyResponse>('/users/identity-verification', {
     method: 'POST',
     body: JSON.stringify({ identity_verification_id: identityVerificationId }),
+  })
+}
+
+// 보호자(법정대리인) 본인인증 확인 — 만 19세 이상이고 가입자와 다른 사람이어야 한다
+export function verifyGuardian(identityVerificationId: string, minorIdentityVerificationId: string) {
+  return request<{ name: string | null }>('/users/guardian-verification', {
+    method: 'POST',
+    body: JSON.stringify({
+      identity_verification_id: identityVerificationId,
+      minor_identity_verification_id: minorIdentityVerificationId,
+    }),
   })
 }
 
