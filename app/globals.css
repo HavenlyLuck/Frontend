@@ -7797,3 +7797,5 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
 }
 .guide-sub-desc { margin: -2px 0 10px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); word-break: keep-all; }
 .guide-sub-desc b { color: var(--text); }
+
+.gd-trophy { color: var(--gold); filter: drop-shadow(0 0 4px rgba(243, 201, 79, 0.6)); }
