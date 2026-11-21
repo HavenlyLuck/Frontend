@@ -4722,6 +4722,37 @@ a.field-btn {
 .field-hint.ok { color: var(--success); }
 .field-hint.fail { color: var(--danger); }
 
+/* 회원가입 — 만 19세 미만 보호자(법정대리인) 인증 */
+.signup-guardian {
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--accent-tint-border);
+  border-radius: var(--radius-md, 12px);
+  background: var(--accent-tint);
+}
+.signup-guardian-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.signup-guardian-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.signup-guardian-consent input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+
 /* 회원가입 동의 */
 .signup-agree {
   border: 1px solid var(--border);
@@ -7349,8 +7380,10 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
   }
   .avatar-shop-item-actions { flex-direction: column; gap: 6px; }
   .avatar-shop-item-actions .avatar-small-btn { width: 100%; }
-}
-
+}
+
+
+
 /* 404 — 없는 주소 (app/not-found.tsx) */
 .not-found {
   min-height: 60vh;
@@ -7451,8 +7484,10 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
   font-weight: 700;
   text-decoration: none;
 }
-.coming-soon-box .empty-cta:hover { background: var(--accent); color: #fff; }
-
+.coming-soon-box .empty-cta:hover { background: var(--accent); color: #fff; }
+
+
+
 /* 캐릭터 꾸미기 휴대폰 — 미리보기·저장 버튼을 메뉴 바로 아래에 작게 붙여 둔다.
    아이템을 고르러 아래로 내려가도 바뀐 모습이 보이고, 저장하러 다시 올라갈 필요가 없다 */
 @media (max-width: 720px) {
@@ -7477,8 +7512,10 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
   .avatar-preview-card > button:nth-of-type(3) { grid-area: save; }
   .avatar-preview-card .avatar-message { grid-area: msg; font-size: 12px; }
   .avatar-preview-card .avatar-small-btn { width: 100%; padding: 6px 4px; font-size: 12px; white-space: nowrap; }
-}
-
+}
+
+
+
 /* 가이드 비교 표 — 휴대폰에서 오른쪽 칸이 잘려 옆으로 넘겨야 했다. 칸이 3개뿐이라 글자를 줄바꿈해 한 화면에 다 넣는다 */
 @media (max-width: 600px) {
   .guide-table { min-width: 0; font-size: 13px; table-layout: fixed; }
@@ -7546,8 +7583,10 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
 }
 .storage-expiry.is-soon { color: var(--danger); font-weight: 700; }
 .guide-policy-links { margin: 14px 0 0; font-size: 13px; color: var(--text-tertiary); }
-.guide-policy-links a { color: var(--text-secondary); }
-
+.guide-policy-links a { color: var(--text-secondary); }
+
+
+
 /* 가이드 한눈에 보기 그림 (components/GuideDiagrams.tsx) */
 .gd-row { display: grid; gap: 10px; margin: 4px 0 16px; }
 .gd-row.n4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }

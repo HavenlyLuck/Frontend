@@ -5,7 +5,7 @@ import LogoMark, { Logo } from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { loginPath, safeNextPath, SIGNUP_NEXT_KEY } from '@/lib/auth'
-import { signup, checkDuplicate, verifyIdentity, ApiError, DuplCheckField } from '@/lib/api'
+import { signup, checkDuplicate, verifyIdentity, verifyGuardian, ApiError, DuplCheckField } from '@/lib/api'
 import {
   requestIdentityVerification,
   readIdentityVerificationRedirect,
@@ -27,6 +27,13 @@ const USER_ID_REGEX = /^[A-Za-z0-9]{5,20}$/
 const EMAIL_REGEX =/^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,20}$/
 
+interface Identity {
+  id: string
+  phone: string
+  name: string | null
+  guardianRequired: boolean
+}
+
 function StatusMsg({ state, message }: { state: CheckState; message: string }) {
   if (state === 'idle' || state === 'checking') return null
   return <p className={`field-hint ${state === 'ok' ? 'ok' : 'fail'}`}>{message}</p>
@@ -40,9 +47,13 @@ export default function SignupPage() {
     nickname: 'idle', userId: 'idle', email: 'idle',
   })
   const [checkMessages, setCheckMessages] = useState({ nickname: '', userId: '', email: '' })
-  // 본인인증: 포트원 인증 ID와 서버가 확인해 준 휴대폰 번호·이름
-  const [identity, setIdentity] = useState<{ id: string; phone: string; name: string | null } | null>(null)
+  // 본인인증: 포트원 인증 ID와 서버가 확인해 준 휴대폰 번호·이름. 만 19세 미만이면 guardianRequired
+  const [identity, setIdentity] = useState<Identity | null>(null)
   const [certifying, setCertifying] = useState(false)
+  // 만 19세 미만 — 보호자(법정대리인) 본인인증과 보호자 동의
+  const [guardian, setGuardian] = useState<{ id: string; name: string | null } | null>(null)
+  const [guardianConsent, setGuardianConsent] = useState(false)
+  const [guardianCertifying, setGuardianCertifying] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   // 가입 동의 — 약관·만 14세는 필수, 후기 홍보 활용은 선택(안 해도 가입됨)
   const [agree, setAgree] = useState({ terms: false, age14: false, reviewMarketing: false })
@@ -72,6 +83,8 @@ export default function SignupPage() {
     const result = readIdentityVerificationRedirect(window.location.search)
     if (!result) return
     window.history.replaceState(null, '', window.location.pathname)
+    // 보호자 본인인증에서 돌아온 경우 draft.pending === 'guardian' (가입자 본인인증 결과도 draft에 있다)
+    let pendingGuardianOf: Identity | null = null
     try {
       const draft = JSON.parse(sessionStorage.getItem(SIGNUP_DRAFT_KEY) ?? 'null')
       if (draft) {
@@ -79,10 +92,16 @@ export default function SignupPage() {
         setChecks(draft.checks)
         setCheckMessages(draft.checkMessages)
         if (draft.agree) setAgree(draft.agree)
+        if (draft.guardianConsent) setGuardianConsent(true)
+        if (draft.pending === 'guardian' && draft.identity) {
+          pendingGuardianOf = draft.identity
+          setIdentity(draft.identity)
+        }
       }
       sessionStorage.removeItem(SIGNUP_DRAFT_KEY)
     } catch {}
-    handleCertResult(result)
+    if (pendingGuardianOf) handleGuardianResult(result, pendingGuardianOf)
+    else handleCertResult(result)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -106,9 +125,11 @@ export default function SignupPage() {
       return
     }
     setCertifying(true)
+    // 본인인증을 다시 하면 보호자 인증도 다시 받는다
+    setGuardian(null)
     try {
       const res = await verifyIdentity(result.identityVerificationId)
-      setIdentity({ id: result.identityVerificationId, phone: res.phone, name: res.name })
+      setIdentity({ id: result.identityVerificationId, phone: res.phone, name: res.name, guardianRequired: res.guardian_required })
     } catch (err) {
       setIdentity(null)
       alert(err instanceof ApiError ? err.message : '본인인증 확인 중 오류가 발생했습니다.')
@@ -117,15 +138,56 @@ export default function SignupPage() {
     }
   }
 
-  async function handlePhoneCert() {
+  // 모바일 본인인증은 페이지를 떠나므로 입력값(비밀번호 제외)을 보관해 둔다.
+  // 보호자 인증이면 가입자 본인인증 결과도 같이 보관한다 (돌아와서 보호자 확인에 쓴다)
+  function saveDraft(pending: 'self' | 'guardian') {
     try {
       sessionStorage.setItem(SIGNUP_DRAFT_KEY, JSON.stringify({
         form: { nickname: form.nickname, userId: form.userId, email: form.email, referral: form.referral },
         checks,
         checkMessages,
         agree,
+        guardianConsent,
+        pending,
+        identity: pending === 'guardian' ? identity : null,
       }))
     } catch {}
+  }
+
+  async function handleGuardianResult(result: IdentityVerificationResult, minor: Identity) {
+    if (!result.ok) {
+      alert(result.message)
+      return
+    }
+    setGuardianCertifying(true)
+    try {
+      const res = await verifyGuardian(result.identityVerificationId, minor.id)
+      setGuardian({ id: result.identityVerificationId, name: res.name })
+    } catch (err) {
+      setGuardian(null)
+      alert(err instanceof ApiError ? err.message : '보호자 본인인증 확인 중 오류가 발생했습니다.')
+    } finally {
+      setGuardianCertifying(false)
+    }
+  }
+
+  async function handleGuardianCert() {
+    if (!identity) return
+    saveDraft('guardian')
+    setGuardianCertifying(true)
+    try {
+      const result = await requestIdentityVerification(`${window.location.origin}/signup`)
+      try { sessionStorage.removeItem(SIGNUP_DRAFT_KEY) } catch {}
+      await handleGuardianResult(result, identity)
+    } catch {
+      alert('본인인증 창을 열지 못했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setGuardianCertifying(false)
+    }
+  }
+
+  async function handlePhoneCert() {
+    saveDraft('self')
     setCertifying(true)
     try {
       const result = await requestIdentityVerification(`${window.location.origin}/signup`)
@@ -180,6 +242,8 @@ export default function SignupPage() {
       alert('닉네임, 아이디, 이메일 중복확인을 완료해주세요.'); return
     }
     if (!identity) { alert('핸드폰 본인인증을 완료해주세요.'); return }
+    if (identity.guardianRequired && !guardian) { alert('만 19세 미만은 보호자(법정대리인) 본인인증이 필요해요.'); return }
+    if (identity.guardianRequired && !guardianConsent) { alert('보호자(법정대리인)의 가입 동의가 필요해요.'); return }
     if (!agree.terms || !agree.age14) { alert('이용약관 동의와 만 14세 이상 확인은 필수예요.'); return }
 
     setSubmitting(true)
@@ -191,6 +255,8 @@ export default function SignupPage() {
         password: form.password,
         identity_verification_id: identity.id,
         referral_code: form.referral.trim() || null,
+        guardian_identity_verification_id: identity.guardianRequired ? guardian?.id ?? null : null,
+        guardian_consent: identity.guardianRequired && guardianConsent,
         // 동의 기록 — 서버가 동의 여부와 동의 일시를 저장한다
         terms_agreed: true,
         age_14_confirmed: true,
@@ -360,6 +426,38 @@ export default function SignupPage() {
                 </p>
               )}
             </div>
+
+            {/* 만 19세 미만 — 보호자(법정대리인) 본인인증과 동의 */}
+            {identity?.guardianRequired && (
+              <div className="field signup-guardian">
+                <p className="signup-guardian-title">만 19세 미만은 보호자 동의가 필요해요</p>
+                <p className="field-hint">
+                  부모님 등 법정대리인이 직접 본인인증을 하고 가입에 동의해야 가입할 수 있어요.
+                  보호자의 이름·휴대폰 번호는 동의 확인 기록으로만 보관돼요.
+                </p>
+                <div className="field-row">
+                  <input
+                    id="signup-guardian"
+                    type="text"
+                    placeholder="보호자 본인인증"
+                    value={guardian ? `${guardian.name ?? '보호자'} (보호자)` : ''}
+                    readOnly
+                    className="field-input"
+                  />
+                  <button type="button" disabled={guardianCertifying} className="field-btn" onClick={handleGuardianCert}>
+                    {guardianCertifying ? '인증 중...' : guardian ? '재인증' : '보호자 인증'}
+                  </button>
+                </div>
+                {guardian && <p className="field-hint ok">보호자 본인인증이 완료되었습니다.</p>}
+                <label className="signup-guardian-consent">
+                  <input type="checkbox" checked={guardianConsent} onChange={(e) => setGuardianConsent(e.target.checked)} />
+                  <span>
+                    <b>(필수)</b> 보호자(법정대리인)로서 {identity.name ? `${identity.name}님의` : '가입자의'} 천운 회원가입과
+                    이용약관·개인정보 수집·이용에 동의합니다
+                  </span>
+                </label>
+              </div>
+            )}
 
             {/* 추천인 코드 (선택) */}
             <div className="field">
