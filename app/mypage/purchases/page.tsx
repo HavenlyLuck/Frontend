@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { MagnifyingGlassIcon, ReceiptIcon, ShoppingBagIcon, SquaresFourIcon, TicketIcon, XIcon } from '@phosphor-icons/react'
+import { MagnifyingGlassIcon, ReceiptIcon, ShoppingBagIcon, SquaresFourIcon, TicketIcon, TruckIcon, XIcon } from '@phosphor-icons/react'
 import { getMyPayments, type MyPaymentResponse, type PaymentOrderType } from '@/lib/api'
 import { getValidSession } from '@/lib/auth'
 import { parseServerTime } from '@/lib/raffle'
@@ -22,9 +22,10 @@ const ORDER_KIND: Record<PaymentOrderType, { label: string; unit: string; Icon: 
   kuji_draw: { label: '쿠지', unit: '장', Icon: SquaresFourIcon },
   store_purchase: { label: '상점', unit: '개', Icon: ShoppingBagIcon },
   store_funding: { label: '응모 전환', unit: '장', Icon: TicketIcon },
+  shipping_fee: { label: '배송비', unit: '개', Icon: TruckIcon },
 }
 
-// 내 카드 결제 내역 (응모권 · 쿠지 · 결제 상점, 환불된 것 포함)
+// 내 카드 결제 내역 (응모권 · 쿠지 · 결제 상점 · 배송비, 환불된 것 포함)
 function useMyPayments() {
   const [entries, setEntries] = useState<MyPaymentResponse[]>([])
   const [loaded, setLoaded] = useState(false)

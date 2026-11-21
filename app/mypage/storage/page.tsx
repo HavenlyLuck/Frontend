@@ -8,6 +8,7 @@ import { ArchiveIcon, CalendarIcon, ConfettiIcon, MagnifyingGlassIcon, MapPinIco
 import { useStorage } from '@/hooks/useStorage'
 import { notifyStorageUpdated } from '@/lib/storage'
 import { getValidSession } from '@/lib/auth'
+import { payWithCard, paymentFailureMessage, PaymentWindowError } from '@/lib/payment'
 import {
   ApiError,
   cancelStorePurchase,
@@ -15,7 +16,6 @@ import {
   deleteAddress,
   getMyAddresses,
   MAX_ADDRESSES,
-  requestShipping,
   searchAddress,
   setDefaultAddress,
   type AddressResponse,
@@ -70,7 +70,7 @@ function errorMessage(err: unknown) {
 }
 
 export default function StoragePage() {
-  const { items, setItems, loaded } = useStorage()
+  const { items, setItems, loaded, reload } = useStorage()
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [page, setPage] = useState(1)
   const [toast, setToast] = useState('')
@@ -141,19 +141,31 @@ export default function StoragePage() {
     setShowShipModal(true)
   }
 
+  // 배송비 카드 결제 → 결제가 확인되면 서버가 배송 신청을 접수한다.
+  // 모바일은 결제창이 페이지를 옮겼다가 /payment/complete 에서 마무리하고 이 페이지로 돌아온다
   const confirmShipping = async () => {
     if (!selectedAddrId || submitting) return
     const session = await getValidSession()
     if (!session) return
     setSubmitting(true)
     try {
-      setItems(await requestShipping(session.token, Array.from(selected), selectedAddrId))
-      setSelected(new Set())
-      setShowShipModal(false)
+      const res = await payWithCard(session.token, {
+        order_type: 'shipping_fee',
+        target_id: selectedAddrId,
+        storage_item_ids: Array.from(selected),
+      })
+      if (res.status === 'paid') {
+        setSelected(new Set())
+        setShowShipModal(false)
+        showToast('배송비 결제가 끝나 배송 신청이 접수되었어요. 배송 내역에서 확인할 수 있어요.')
+      } else if (res.status !== 'conflict') {
+        showToast(paymentFailureMessage(res))
+      }
+      // 결제가 취소·실패했어도 그 사이 상태가 바뀌었을 수 있으니 다시 받는다
+      await reload()
       notifyStorageUpdated()
-      showToast('배송 신청이 접수되었어요. 배송 내역에서 확인할 수 있어요.')
     } catch (err) {
-      showToast(errorMessage(err))
+      showToast(err instanceof PaymentWindowError ? err.message : errorMessage(err))
     } finally {
       setSubmitting(false)
     }
@@ -490,7 +502,7 @@ export default function StoragePage() {
               <b>{SHIPPING_FEE_TEXT}</b>
             </div>
             <p className="ship-fee-note" style={{ margin: '0 0 12px' }}>
-              신청 후 영업일 기준 {SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송해요. 발송 전에는 후기/문의 또는 고객센터로 배송 취소를 요청할 수 있고, 배송비를 돌려드려요.
+              신청 후 영업일 기준 {SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송해요. 발송 전에는 배송 내역에서 직접 배송을 취소할 수 있고, 배송비는 카드로 돌려드려요.
               배송지를 잘못 입력해 생긴 손해는 책임지기 어려우니 주소를 한 번 더 확인해 주세요.
             </p>
             <button
@@ -503,7 +515,7 @@ export default function StoragePage() {
                 fontSize: 14, fontWeight: 700, cursor: selectedAddrId ? 'pointer' : 'default',
               }}
             >
-              이 배송지로 신청하기
+              {submitting ? '결제 진행 중...' : `배송비 ${SHIPPING_FEE_TEXT} 결제하고 신청하기`}
             </button>
           </div>
         </div>

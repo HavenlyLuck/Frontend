@@ -287,20 +287,46 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
       }
     }
 
-    // me: 빨간 "나" 이름표 / gold: 당첨 이름표 / count: 다른 사람 머리 위의 작은 ×N
-    type LabelStyle = 'me' | 'gold' | 'count'
+    // me: 빨간 "나" 이름표 / gold: 당첨 이름표 / name: 다른 사람 머리 위의 작은 닉네임(×N)
+    type LabelStyle = 'me' | 'gold' | 'name'
     const LABEL_COLORS: Record<LabelStyle, { bg: string; fg: string }> = {
       me: { bg: '#d93347', fg: '#ffffff' },
       gold: { bg: '#f3c94f', fg: '#2a1d05' },
-      count: { bg: 'rgba(16, 18, 24, 0.72)', fg: '#f2f2f0' },
+      name: { bg: 'rgba(16, 18, 24, 0.72)', fg: '#f2f2f0' },
     }
-    const drawLabel = (text: string, m: CastMember, cam: Cam, scale: number, ox: number, oy: number, style: LabelStyle, dpr: number) => {
-      const small = style === 'count'
+    // 피규어 한 칸의 너비(장면 좌표) — 옆 사람 이름표와 겹치지 않도록 작은 이름표는 이 너비 안에 맞춘다
+    const xs = Array.from(new Set(scene.cast.map(m => m.x))).sort((a, b) => a - b)
+    let slotW = WORLD_W
+    for (let i = 1; i < xs.length; i++) slotW = Math.min(slotW, xs[i] - xs[i - 1])
+
+    // text + suffix가 maxW 안에 들어가도록 text 뒤를 잘라 '…'을 붙인다. 하나도 안 들어가면 null
+    const fitText = (text: string, suffix: string, maxW: number): string | null => {
+      if (ctx.measureText(text + suffix).width <= maxW) return text + suffix
+      const chars = Array.from(text)
+      for (let n = chars.length - 1; n >= 1; n--) {
+        const t = `${chars.slice(0, n).join('')}…${suffix}`
+        if (ctx.measureText(t).width <= maxW) return t
+      }
+      return suffix && ctx.measureText(suffix.trim()).width <= maxW ? suffix.trim() : null
+    }
+
+    const drawLabel = (
+      text: string, m: CastMember, cam: Cam, scale: number, ox: number, oy: number, style: LabelStyle, dpr: number, suffix = '',
+    ) => {
+      const small = style === 'name'
       const px = ox + (m.x - (cam.cx - WORLD_W / (2 * cam.zoom))) * scale
       const py = oy + (m.y - AVATAR_H - 3 - (cam.cy - WORLD_H / (2 * cam.zoom))) * scale - (small ? 2 : 6) * dpr
       ctx.font = `800 ${(small ? 10 : 12) * dpr}px Pretendard, system-ui, sans-serif`
+      const pad = (small ? 8 : 14) * dpr
+      if (small) {
+        const fitted = fitText(text, suffix, slotW * scale - 2 * dpr - pad)
+        if (!fitted) return
+        text = fitted
+      } else {
+        text += suffix
+      }
       const tw = ctx.measureText(text).width
-      const pw = tw + (small ? 8 : 14) * dpr
+      const pw = tw + pad
       const ph = (small ? 15 : 20) * dpr
       const x = px - pw / 2
       const y = py - ph
@@ -360,11 +386,14 @@ export default function LightningDrawScene({ seed, myEntryNumbers, winnerEntryNu
       // 이름표
       const winnerLabelOn = ds > 700
       const tickets = (m: CastMember) => (m.ticketCount != null && m.ticketCount >= 2 ? ` ×${m.ticketCount}` : '')
-      // 2장 이상 산 다른 사람은 머리 위에 작게 ×N — 번개가 떨어진 뒤엔 당첨자에게 집중하도록 숨긴다
+      // 다른 사람은 머리 위에 작게 닉네임(2장 이상 샀으면 ×N) — 칸보다 길면 잘라서 보여준다.
+      // 닉네임이 없으면(데모, 미리보기) ×N만. 번개가 떨어진 뒤엔 당첨자에게 집중하도록 숨긴다
       if (ds < 600) {
         for (const m of scene.cast) {
-          if (m === me || !tickets(m)) continue
-          drawLabel(tickets(m).trim(), m, cam, scale, ox, oy, 'count', dpr)
+          if (m === me || (m === winner && winnerLabelOn)) continue
+          const name = m.nickname?.trim() ?? ''
+          if (!name && !tickets(m)) continue
+          drawLabel(name, m, cam, scale, ox, oy, 'name', dpr, name ? tickets(m) : tickets(m).trim())
         }
       }
       if (me && !(me === winner && winnerLabelOn)) drawLabel(`나${tickets(me)}`, me, cam, scale, ox, oy, 'me', dpr)
