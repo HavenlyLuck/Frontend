@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import { AuthProvider } from '@/contexts/AuthContext'
 import RaffleAlertWatcher from '@/components/RaffleAlertWatcher'
 import SignupRequiredModal from '@/components/SignupRequiredModal'
+import MetaPixel from '@/components/MetaPixel'
 
 // 제목 글씨 — 로고 글씨와 같은 계열인 티머니 둥근바람 ExtraBold (무료 폰트).
 // 파일은 자주 쓰는 한글 2,350자 + 영문·숫자·기호만 남긴 것. 없는 글자는 본문 글씨(Noto Sans KR)로 나온다.
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <RaffleAlertWatcher />
           <SignupRequiredModal />
         </AuthProvider>
+        <MetaPixel />
       </body>
     </html>
   )

@@ -1,5 +1,6 @@
 import * as PortOne from '@portone/browser-sdk/v2'
 import { preparePayment, completePayment, PaymentOrder, PaymentCompleteResponse } from './api'
+import { trackPixel, trackPurchase } from './metaPixel'
 
 // 포트원 콘솔 > 결제 연동 > 연동 정보 의 상점 아이디와 결제 채널 키 (한국결제네트웍스 KPN)
 const STORE_ID = process.env.NEXT_PUBLIC_PORTONE_STORE_ID ?? ''
@@ -24,6 +25,9 @@ export async function payWithCard(token: string, order: PaymentOrder): Promise<P
   if (!prepared.payment_id) {
     return { status: 'conflict', conflict_ticket_numbers: prepared.conflict_ticket_numbers }
   }
+  if (order.order_type !== 'shipping_fee') {
+    trackPixel('InitiateCheckout', { value: prepared.amount, currency: 'KRW' })
+  }
 
   const back = `${window.location.pathname}${window.location.search}`
   const res = await PortOne.requestPayment({
@@ -47,7 +51,9 @@ export async function payWithCard(token: string, order: PaymentOrder): Promise<P
   if (!res || res.code !== undefined) {
     throw new PaymentWindowError(res?.message || '결제가 취소되었습니다.')
   }
-  return completePayment(token, prepared.payment_id)
+  const result = await completePayment(token, prepared.payment_id)
+  trackPurchase(result)
+  return result
 }
 
 // 결제는 됐지만 지급하지 못해 자동 취소된 경우 등 — 사용자에게 보여줄 문구

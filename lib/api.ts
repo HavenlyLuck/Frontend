@@ -177,7 +177,8 @@ export interface PointsResponse {
 }
 
 // 쌀포인트 거래 내역 — 최신순. amount는 지급 +, 차감 -
-export type PointTransactionReason = 'store_purchase' | 'admin_grant' | 'raffle_consolation' | 'avatar_purchase'
+// store_discount: 상점 카드 결제 할인에 사용, store_discount_refund: 그 구매를 취소해 돌려받음
+export type PointTransactionReason = 'store_purchase' | 'admin_grant' | 'raffle_consolation' | 'avatar_purchase' | 'store_discount' | 'store_discount_refund' | 'withdrawal'
 
 export interface PointTransactionResponse {
   transaction_id: number
@@ -373,6 +374,7 @@ export interface MyPaymentResponse {
   image_url: string | null
   quantity: number
   amount: number
+  point_used?: number  // 일반 상점: 할인에 쓴 쌀포인트
   status: 'paid' | 'refunded'
   paid_at: string
 }
@@ -522,6 +524,7 @@ export interface StorePurchaseResponse {
   amount_spent: number
   pay_type: StorePayType
   remaining_stock: number
+  point_used?: number  // 일반 상점: 할인에 쓴 쌀포인트 (카드 결제 금액 = amount_spent - point_used)
 }
 
 // 쌀포인트 상품 구매 (결제 상점 상품은 lib/payment.ts의 카드 결제로 산다)
@@ -1090,7 +1093,8 @@ export async function createRaffleProduct(token: string, payload: CreateRafflePr
 export type PaymentOrder =
   | { order_type: 'raffle_entry'; target_id: number; quantity: number }
   | { order_type: 'kuji_draw'; target_id: number; ticket_numbers: number[] }
-  | { order_type: 'store_purchase'; target_id: number; quantity: number }
+  // point_use: 쌀포인트 할인 (구매 금액의 10%까지, 1P = 1원)
+  | { order_type: 'store_purchase'; target_id: number; quantity: number; point_use?: number }
   | { order_type: 'store_funding'; target_id: number; quantity: number }  // target_id = 상점 상품
   | { order_type: 'shipping_fee'; target_id: number; storage_item_ids: number[] }  // target_id = 배송지
 
@@ -1098,7 +1102,8 @@ export interface PaymentPrepareResponse {
   // 없으면 결제창을 열지 않는다 — 쿠지에서 고른 제비가 이미 나간 경우
   payment_id: string | null
   order_name: string
-  amount: number
+  amount: number  // 카드로 낼 금액 (쌀포인트 할인 뒤)
+  point_used?: number
   customer: { full_name: string; phone_number: string; email: string } | null
   conflict_ticket_numbers: number[]
 }
@@ -1109,6 +1114,10 @@ export interface PaymentCompleteResponse {
   // cancelled: 결제 후 지급할 수 없어 결제를 자동 취소함(message에 이유), pending: 아직 결제 확인 전
   status: 'paid' | 'pending' | 'failed' | 'cancelled'
   message: string | null
+  // 메타 픽셀 Purchase용 — 실제 카드 결제 금액, 상품, 수량
+  amount: number
+  target_id: number
+  quantity: number
   raffle_entry: RaffleEntryCreateResponse | null
   kuji_draw: KujiDrawResponse | null
   store_purchase: StorePurchaseResponse | null

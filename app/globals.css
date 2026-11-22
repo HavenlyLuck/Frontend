@@ -1702,6 +1702,7 @@ a.product-card-home.is-soldout { cursor: pointer; }
 .modal-overlay {
   position: fixed;
   inset: 0;
+  overscroll-behavior: contain;
   background: rgba(0, 0, 0, 0.75);
   z-index: 200;
   display: flex;
@@ -1728,6 +1729,34 @@ a.product-card-home.is-soldout { cursor: pointer; }
   box-shadow: var(--shadow-lg);
   transform: translateY(16px) scale(0.97);
   transition: transform 0.25s;
+  /* 화면보다 길어지면 팝업 안에서만 스크롤 — 뒤 화면까지 스크롤이 넘어가지 않게 */
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 세로가 낮은 화면에서는 팝업을 줄여 한 화면에 들어오게 한다 */
+@media (max-height: 860px) {
+  .modal {
+    padding: 24px 28px;
+  }
+  .modal .modal-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+  .modal .ticket-count {
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .modal .ticket-label {
+    margin-bottom: 8px;
+  }
+  .modal .point-discount {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
 }
 
 .modal-overlay.open .modal {
@@ -1823,6 +1852,105 @@ a.product-card-home.is-soldout { cursor: pointer; }
 .ticket-info .total {
   color: var(--text);
   font-weight: 700;
+}
+
+/* 일반 상점 구매 — 쌀포인트 할인 */
+.point-discount {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.point-discount-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+}
+.point-discount-row {
+  display: flex;
+  gap: 8px;
+}
+.point-discount-input {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+.point-discount-input:focus-within {
+  border-color: var(--accent);
+}
+.point-discount-input input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+}
+.point-discount-input input:disabled {
+  opacity: 0.5;
+}
+.point-discount-max {
+  flex-shrink: 0;
+  height: 44px;
+  padding: 0 14px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.point-discount-max:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.point-discount-max:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.point-discount-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: left;
+}
+.point-discount-summary {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.point-discount-summary > div {
+  display: flex;
+  justify-content: space-between;
+}
+.point-discount-summary .minus {
+  color: var(--accent-fg);
+}
+.point-discount-summary .final {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-strong);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 14px;
 }
 
 .modal-notice {
@@ -5833,6 +5961,96 @@ a.auth-submit {
 
 .footer-policy-links a:hover {
   color: var(--text);
+}
+
+.footer-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.footer-link-btn:hover {
+  color: var(--text);
+}
+
+/* 푸터 "광고 측정 설정" 팝업 */
+.ad-measure-modal {
+  text-align: left;
+}
+.ad-measure-modal .modal-title {
+  text-align: left;
+}
+.ad-measure-desc {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
+}
+.ad-measure-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.ad-measure-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ad-measure-state {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.ad-measure-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 26px;
+  border-radius: 13px;
+  border: none;
+  background: var(--border-strong);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.ad-measure-switch span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 0.2s;
+}
+.ad-measure-switch.on {
+  background: var(--accent);
+}
+.ad-measure-switch.on span {
+  transform: translateX(20px);
+}
+.ad-measure-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ad-measure-note {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+}
+.ad-measure-note a {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+.ad-measure-modal .modal-btn-row {
+  margin-top: 20px;
 }
 
 /* 상품 상세 구매 버튼 아래 취소·환불 요약 */

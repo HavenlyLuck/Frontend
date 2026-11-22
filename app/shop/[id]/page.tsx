@@ -12,7 +12,9 @@ import {
   type StoreProductResponse,
 } from "@/lib/api";
 import { notifyStorageUpdated } from "@/lib/storage";
-import { notifyPointsUpdated } from "@/hooks/useMyPoints";
+import { notifyPointsUpdated, useMyPoints } from "@/hooks/useMyPoints";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { trackViewContent } from "@/lib/metaPixel";
 import { payWithCard, paymentFailureMessage, PaymentWindowError } from "@/lib/payment";
 import { addToWishlist, getMyWishlist, removeFromWishlist } from "@/lib/wishlist";
 import { getValidSession, isLoggedIn, loginPath, promptSignup } from "@/lib/auth";
@@ -28,6 +30,9 @@ import ProductDescription from "@/components/ProductDescription";
 import { SHIPPING_NOTICE } from "@/lib/shipping";
 import { cloudinarySized } from "@/lib/image";
 import { ConfettiIcon, HeartIcon, WarningIcon } from "@phosphor-icons/react";
+
+// 일반 상점 구매 때 쌀포인트로 할인받을 수 있는 최대 비율 — 서버(STORE_POINT_DISCOUNT_RATE_PERCENT)와 같아야 한다
+const POINT_DISCOUNT_PERCENT = 10;
 
 // 상점 상품 상세 — 관련 상품 섹션 때문에 목록을 받아 id로 찾는다.
 export default function ShopProductPage({
@@ -78,6 +83,12 @@ export default function ShopProductPage({
   }, [productId]);
 
   const product = products?.find((p) => p.store_product_id === productId);
+  // 메타 픽셀 — 상품을 처음 불러왔을 때 한 번 (쌀포인트 상점은 돈 거래가 아니라 뺀다)
+  const viewed = product && product.pay_type === "cash" ? product : null;
+  useEffect(() => {
+    if (viewed) trackViewContent("store", viewed.store_product_id, viewed.product_name, viewed.price);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewed?.store_product_id]);
   // 찜 상태 — 로그인했을 때만 서버에서 불러온다 (일반 상점 상품만 찜할 수 있다)
   const [isLiked, setIsLiked] = useState(false);
   const [wishBusy, setWishBusy] = useState(false);
@@ -98,7 +109,11 @@ export default function ShopProductPage({
   const [purchasing, setPurchasing] = useState(false);
   // 구매 팝업 안에서 보여줄 결과 — 실패 문구, 또는 완료 카드(산 개수·금액)
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
-  const [purchaseDone, setPurchaseDone] = useState<{ quantity: number; amount: number } | null>(null);
+  const [purchaseDone, setPurchaseDone] = useState<{ quantity: number; amount: number; pointUsed: number } | null>(null);
+  // 일반 상점: 쌀포인트 할인 (구매 금액의 10%까지, 1P = 1원)
+  const [pointUse, setPointUse] = useState(0);
+  const { ssalPoint } = useMyPoints();
+  useBodyScrollLock(modalOpen);
   if (failed || (products && !product)) {
     return (
       <div className="container">
@@ -158,6 +173,12 @@ export default function ShopProductPage({
     }
   };
 
+  const total = product.price * qty;
+  // 쓸 수 있는 쌀포인트 — 구매 금액의 10%와 보유 쌀포인트 중 작은 쪽. 수량을 줄이면 입력값도 같이 줄어든다
+  const pointLimit = isCash ? Math.min(Math.floor((total * POINT_DISCOUNT_PERCENT) / 100), ssalPoint) : 0;
+  const pointApplied = Math.min(pointUse, pointLimit);
+  const payAmount = total - pointApplied;
+
   const changeQty = (delta: number) =>
     setQty((prev) => Math.min(product.stock, Math.max(1, prev + delta)));
 
@@ -178,6 +199,7 @@ export default function ShopProductPage({
           order_type: "store_purchase",
           target_id: product.store_product_id,
           quantity: qty,
+          ...(pointApplied > 0 ? { point_use: pointApplied } : {}),
         });
         if (paid.status !== "paid" || !paid.store_purchase) {
           setPurchaseError(paid.status === "conflict" ? "구매할 수 없습니다." : paymentFailureMessage(paid));
@@ -195,10 +217,12 @@ export default function ShopProductPage({
               : p,
           ) ?? prev,
       );
-      setPurchaseDone({ quantity: res.quantity, amount: res.amount_spent });
+      const pointUsed = res.point_used ?? 0;
+      setPurchaseDone({ quantity: res.quantity, amount: res.amount_spent - pointUsed, pointUsed });
       // 재고가 바뀌면 응모 전환 가능 여부도 바뀐다
       loadDetail();
       setQty(1);
+      setPointUse(0);
       notifyPointsUpdated();
       notifyStorageUpdated();
     } catch (err) {
@@ -220,6 +244,7 @@ export default function ShopProductPage({
     }
     setPurchaseError(null);
     setPurchaseDone(null);
+    setPointUse(0);
     setModalOpen(true);
   };
   const closePurchaseModal = () => {
@@ -449,6 +474,7 @@ export default function ShopProductPage({
                 {formatStorePrice(product.pay_type, purchaseDone.amount)}
               </strong>
               {isCash ? " 결제 완료" : " 차감"}
+              {purchaseDone.pointUsed > 0 && ` (쌀포인트 ${purchaseDone.pointUsed.toLocaleString()}P 할인)`}
               <br />
               구매한 상품은 보관함에서 확인할 수 있어요.
             </div>
@@ -490,9 +516,57 @@ export default function ShopProductPage({
               <div className="ticket-info">
                 <span>남은 수량 {product.stock.toLocaleString()}개</span>
                 <span className="total">
-                  총 {formatStorePrice(product.pay_type, product.price * qty)}
+                  총 {formatStorePrice(product.pay_type, total)}
                 </span>
               </div>
+
+              {isCash && (
+                <div className="point-discount">
+                  <div className="point-discount-head">
+                    <span className="ticket-label" style={{ margin: 0 }}>쌀포인트 할인</span>
+                    <span>
+                      보유 {ssalPoint.toLocaleString()}P · 최대 {POINT_DISCOUNT_PERCENT}%
+                    </span>
+                  </div>
+                  <div className="point-discount-row">
+                    <div className="point-discount-input">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        aria-label="사용할 쌀포인트"
+                        value={pointApplied ? pointApplied.toLocaleString() : ""}
+                        placeholder="0"
+                        disabled={purchasing || pointLimit === 0}
+                        onChange={(e) => {
+                          const n = Number(e.target.value.replace(/[^0-9]/g, "")) || 0;
+                          setPointUse(Math.min(n, pointLimit));
+                        }}
+                      />
+                      <span>P</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="point-discount-max"
+                      disabled={purchasing || pointLimit === 0}
+                      onClick={() => setPointUse(pointApplied === pointLimit ? 0 : pointLimit)}
+                    >
+                      {pointApplied > 0 && pointApplied === pointLimit ? "사용 안 함" : "최대 사용"}
+                    </button>
+                  </div>
+                  {pointApplied > 0 ? (
+                    <div className="point-discount-summary">
+                      <div><span>쌀포인트 할인</span><span className="minus">−{pointApplied.toLocaleString()}원</span></div>
+                      <div className="final"><span>최종 결제 금액</span><span>{payAmount.toLocaleString()}원</span></div>
+                    </div>
+                  ) : (
+                    <div className="point-discount-hint">
+                      {pointLimit > 0
+                        ? `이번 구매에 ${pointLimit.toLocaleString()}P까지 쓸 수 있어요 (1P = 1원)`
+                        : "쓸 수 있는 쌀포인트가 없어요"}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="modal-notice">
@@ -522,7 +596,7 @@ export default function ShopProductPage({
               </button>
               <button className="btn-confirm" onClick={confirmPurchase} disabled={purchasing}>
                 <PayTypeIcon type={product.pay_type} size={15} />{" "}
-                {purchasing ? "처리 중..." : isCash ? "결제하기" : "구매하기"}
+                {purchasing ? "처리 중..." : isCash ? `${payAmount.toLocaleString()}원 결제하기` : "구매하기"}
               </button>
             </div>
           </div>

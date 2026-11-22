@@ -262,7 +262,7 @@ export default function StoragePage() {
 
   const handleCancelPurchase = async (item: StorageItemResponse) => {
     if (submitting) return
-    if (!window.confirm(`'${itemTitle(item)}' 구매를 취소할까요?\n카드 결제는 취소되고 환불까지 며칠 걸릴 수 있어요.`)) return
+    if (!window.confirm(`'${itemTitle(item)}' 구매를 취소할까요?\n카드 결제는 취소되고 환불까지 며칠 걸릴 수 있어요.\n할인에 쓴 쌀포인트는 바로 돌려드려요.`)) return
     const session = await getValidSession()
     if (!session) return
     setSubmitting(true)

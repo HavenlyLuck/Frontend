@@ -17,6 +17,9 @@ const REASON_LABEL: Record<PointTransactionReason, string> = {
   avatar_purchase: '아바타 아이템 구매',
   raffle_consolation: '낙첨 보상',
   admin_grant: '포인트 지급',
+  store_discount: '상점 구매 할인',
+  store_discount_refund: '구매 취소 반환',
+  withdrawal: '탈퇴로 소멸',
 }
 
 type Filter = 'all' | 'earn' | 'spend'

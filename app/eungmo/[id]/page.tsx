@@ -1,5 +1,6 @@
 "use client";
 
+import { trackViewContent } from "@/lib/metaPixel";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -75,6 +76,7 @@ export default function RaffleProductPage({
           list.find((rp) => rp.raffle_product_id === raffleId) ?? null;
         setProduct(found);
         if (found) {
+          trackViewContent("raffle", found.raffle_product_id, found.product_name, found.ticket_price);
           setRemaining(found.remaining_seconds);
         }
       })

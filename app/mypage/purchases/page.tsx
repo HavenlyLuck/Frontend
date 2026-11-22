@@ -174,6 +174,9 @@ export default function PurchaseHistoryPage() {
                           >
                             {entry.amount.toLocaleString()}원
                           </span>
+                          {!!entry.point_used && (
+                            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>쌀포인트 {entry.point_used.toLocaleString()}P 할인</span>
+                          )}
                           {refunded && <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>환불됨</span>}
                         </div>
                       </div>

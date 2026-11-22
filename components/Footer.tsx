@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BIZ_INFO } from "./PolicyDoc";
 import EscrowMark from "./EscrowMark";
+import AdMeasurementSettings from "./AdMeasurementSettings";
 import { Logo } from "./LogoMark";
 
 
@@ -26,6 +27,7 @@ export default function Footer() {
           <Link href="/terms">이용약관</Link>
           <Link href="/privacy" className="strong">개인정보처리방침</Link>
           <Link href="/refund">취소·환불 정책</Link>
+          <AdMeasurementSettings />
         </div>
 
         <div className="footer-biz">
