@@ -18,7 +18,8 @@ type TabId = 'hair' | WearSlot
 const TABS: { id: TabId; label: string }[] = [
   { id: 'hair', label: '머리' },
   // 상점 머리(hairItem)는 따로 탭을 두지 않고 머리 탭에서 무료 머리 모양과 함께 고른다
-  ...WEAR_SLOTS.filter(slot => slot !== 'hairItem').map(slot => ({ id: slot, label: SLOT_LABELS[slot] })),
+  // 파는 아이템이 아직 없는 칸(예: 코)은 탭을 숨긴다
+  ...WEAR_SLOTS.filter(slot => slot !== 'hairItem' && AVATAR_SHOP_ITEMS.some(i => i.slot === slot)).map(slot => ({ id: slot, label: SLOT_LABELS[slot] })),
 ]
 
 export default function AvatarPage() {
