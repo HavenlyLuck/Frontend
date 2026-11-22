@@ -9,13 +9,14 @@ import type { BackId } from './backs'
 // 착용 칸 — 칸마다 아이템 하나. 머리 모양은 무료라 상점 아이템 칸이 아니다.
 // 순서 = 캐릭터 꾸미기 탭 순서
 // hairItem = 상점에서 산 머리 (입으면 무료 머리 모양 대신 이 머리로 그린다)
-export type WearSlot = 'hairItem' | 'face' | 'tattoo' | 'top' | 'bottom' | 'hat' | 'shoes' | 'held' | 'back' | 'aura' | 'background'
+export type WearSlot = 'hairItem' | 'eyes' | 'mouth' | 'tattoo' | 'top' | 'bottom' | 'hat' | 'shoes' | 'held' | 'back' | 'aura' | 'background'
 export type HairId = 'buns' | 'short'
 
-export const WEAR_SLOTS: WearSlot[] = ['hairItem', 'face', 'tattoo', 'top', 'bottom', 'hat', 'shoes', 'held', 'back', 'aura', 'background']
+export const WEAR_SLOTS: WearSlot[] = ['hairItem', 'eyes', 'mouth', 'tattoo', 'top', 'bottom', 'hat', 'shoes', 'held', 'back', 'aura', 'background']
 export const SLOT_LABELS: Record<WearSlot, string> = {
   hairItem: '머리',
-  face: '표정',
+  eyes: '눈',
+  mouth: '입',
   tattoo: '문신',
   top: '상의',
   bottom: '하의',
@@ -27,8 +28,12 @@ export const SLOT_LABELS: Record<WearSlot, string> = {
   background: '배경',
 }
 
-// 그림을 겹치는 순서 (뒤 → 앞). 배경·등·오라는 그림 층이 아니라 캐릭터 방에 따로 그려서 빠진다. 머리(무료 머리 모양 또는 hairItem)는 상의와 모자 사이에 들어간다
-export const LAYER_ORDER: WearSlot[] = ['tattoo', 'face', 'bottom', 'shoes', 'top', 'hat', 'held']
+// 그림을 겹치는 순서 (뒤 → 앞). 배경·등·오라는 그림 층이 아니라 캐릭터 방에 따로 그려서 빠진다.
+// 머리(무료 머리 모양 또는 hairItem)는 상의와 눈·입 사이 — 앞머리가 눈썹을 덮어도 눈 아이템이 보이게.
+// 얼굴까지 통째로 바꾸는 머리(fullHead)를 입으면 문신·눈·입은 그리지 않는다 (compose.ts)
+export const LAYER_ORDER: WearSlot[] = ['tattoo', 'bottom', 'shoes', 'top', 'hairItem', 'eyes', 'mouth', 'hat', 'held']
+// 얼굴 부위 — 얼굴까지 바꾸는 머리를 입으면 숨긴다
+export const FACE_SLOTS: WearSlot[] = ['tattoo', 'eyes', 'mouth']
 
 // 머리 모양 — 누구나 고를 수 있다. layer가 null이면 기본 그림(똥머리) 그대로
 export const HAIRS: { id: HairId; name: string; layer: string | null }[] = [
@@ -45,7 +50,7 @@ export interface AvatarShopItem {
   room?: RoomBackgroundId // 배경 아이템만 — 캐릭터 방에 깔 배경
   aura?: AuraId // 오라 아이템만 — 캐릭터 둘레에 그릴 빛 효과 (auras.ts)
   back?: BackId // 등 아이템만 — 캐릭터 등에 다는 장식 (backs.ts)
-  fullHead?: boolean // 머리 아이템만 — 머리카락이 아니라 얼굴까지 통째로 바꾸는 머리 (표정·문신이 가려지고 눈을 깜빡이지 않는다)
+  fullHead?: boolean // 머리 아이템만 — 머리카락이 아니라 얼굴까지 통째로 바꾸는 머리 (눈·코·입·문신이 가려지고 눈을 깜빡이지 않는다)
 }
 
 export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
@@ -99,6 +104,13 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
     slot: 'top', // 하의·신발까지 한 그림이라 상의 칸에 넣는다
   },
   {
+    id: 'hat-red-beanie',
+    name: '빨간 방울 비니',
+    description: '포근한 빨간 니트 비니. 꼭대기에 하얀 방울이 달려 있어요.',
+    price: 2000,
+    slot: 'hat',
+  },
+  {
     id: 'hat-cap',
     name: '갈색 캡모자',
     description: '챙이 둥근 갈색 캡모자. 어떤 머리 모양에도 잘 어울려요.',
@@ -112,12 +124,28 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
     price: 1500,
     slot: 'held',
   },
+  // 해맑은 미소(face-smile)를 눈·입 두 아이템으로 나눴다 (2026-11, 표정 칸 → 눈·코·입)
   {
-    id: 'face-smile',
-    name: '해맑은 미소',
-    description: '눈웃음에 발그레한 볼, 보기만 해도 기분 좋아지는 표정이에요.',
-    price: 1000,
-    slot: 'face',
+    id: 'eyes-smile',
+    name: '눈웃음',
+    description: '반달처럼 휘어진 웃는 눈. 보기만 해도 기분 좋아져요.',
+    price: 600,
+    slot: 'eyes',
+  },
+  // 뾰족 원뿔 머리에 그려져 있던 눈을 떼어 또렷하게 다듬은 아이템
+  {
+    id: 'eyes-bright',
+    name: '또렷한 눈',
+    description: '짙은 눈썹에 또렷한 눈매. 원뿔 머리의 그 눈을 다듬었어요.',
+    price: 600,
+    slot: 'eyes',
+  },
+  {
+    id: 'mouth-smile',
+    name: '발그레 미소',
+    description: '살짝 웃는 입에 발그레한 볼터치.',
+    price: 600,
+    slot: 'mouth',
   },
   {
     id: 'tattoo-star',

@@ -6,7 +6,7 @@ import { AVATAR_H, AVATAR_W, avatarKey, composeAvatar, type AvatarConfig } from 
 // 원본을 정수배로 키워 저장해 두면 어디에 붙여도 흐려지지 않는다
 const EXPORT_SCALE = 6
 // 그림 형식이 바뀌면 접두어를 바꿔 예전 캐시를 안 쓰게 한다
-const STORAGE_PREFIX = 'avatar3-png:'
+const STORAGE_PREFIX = 'avatar4-png:'
 const MAX_STORED = 6
 
 const memory = new Map<string, string>()
