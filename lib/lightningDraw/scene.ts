@@ -4,7 +4,7 @@
  * 연출은 이미 정해진 당첨 결과를 보여주기만 한다 — 여기서 당첨자를 고르지 않는다.
  */
 
-import { AVATAR_FEET_ROW, AVATAR_H as AVATAR_H_PX, AVATAR_W, DEFAULT_AVATAR, avatarKey, composeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
+import { AVATAR_FEET_ROW, AVATAR_H as AVATAR_H_PX, AVATAR_TOP_PAD, AVATAR_W, DEFAULT_AVATAR, avatarKey, composeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 import { drawAura, type AuraAnchor } from '@/lib/avatar/auras'
 import { drawBack } from '@/lib/avatar/backs'
 import { AVATAR_SHOP_ITEMS } from '@/lib/avatar/shopItems'
@@ -128,7 +128,7 @@ export interface AvatarDrawOptions {
 
 
 // 오라·등 장식 — 캐릭터 그림 좌표(38×37칸)로 그린다. 캐릭터 방(AvatarRoom)과 같은 기준점
-const EFFECT_ANCHOR: AuraAnchor = { cx: AVATAR_W / 2, headY: 11, feetY: AVATAR_FEET_ROW }
+const EFFECT_ANCHOR: AuraAnchor = { cx: AVATAR_W / 2, headY: 11 + AVATAR_TOP_PAD, feetY: AVATAR_FEET_ROW }
 const auraOf = new Map(AVATAR_SHOP_ITEMS.filter(i => i.aura).map(i => [i.id, i.aura!]))
 const backOf = new Map(AVATAR_SHOP_ITEMS.filter(i => i.back).map(i => [i.id, i.back!]))
 

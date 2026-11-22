@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { AVATAR_FEET_ROW, AVATAR_H, AVATAR_W, avatarKey, composeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
+import { AVATAR_FEET_ROW, AVATAR_H, AVATAR_TOP_PAD, AVATAR_W, avatarKey, composeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 import { DEFAULT_ROOM_BACKGROUND, drawRoom, ROOM, ROOM_FLOOR_Y, type RoomBackgroundId } from '@/lib/avatar/rooms'
 import { AVATAR_SHOP_ITEMS } from '@/lib/avatar/shopItems'
 import { drawAura, type AuraAnchor } from '@/lib/avatar/auras'
@@ -21,7 +21,7 @@ const WORLD = ROOM * ROOM_SCALE
 const AVATAR_X = Math.round((WORLD - AVATAR_W) / 2)
 const AVATAR_Y = ROOM_FLOOR_Y * ROOM_SCALE - 1 - AVATAR_FEET_ROW
 // 오라·등 장식 기준점 — 머리 가운데(그림 11행쯤), 발바닥
-const AURA_ANCHOR: AuraAnchor = { cx: WORLD / 2, headY: AVATAR_Y + 11, feetY: AVATAR_Y + AVATAR_FEET_ROW }
+const AURA_ANCHOR: AuraAnchor = { cx: WORLD / 2, headY: AVATAR_Y + AVATAR_TOP_PAD + 11, feetY: AVATAR_Y + AVATAR_FEET_ROW }
 
 // 설정별로 뜬 눈 / 감은 눈 그림을 한 번만 만든다
 const sprites = new Map<string, HTMLCanvasElement>()

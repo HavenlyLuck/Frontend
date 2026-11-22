@@ -5,7 +5,8 @@
 // 원본 그림에는 잔디 발판이 붙어 있어서, 여기서 발판을 떼고 캐릭터만 남긴다 (stripTile).
 
 import { HD_BASE, HD_ITEMS, HD_PALETTE, HD_W } from './hd'
-import { AVATAR_SHOP_ITEMS, HAIRS, LAYER_ORDER, WEAR_SLOTS, type HairId, type WearSlot } from './shopItems'
+import { HD_EXTRA_ITEMS, HD_EXTRA_PALETTE, HD_EXTRA_TOP } from './hdExtra'
+import { AVATAR_SHOP_ITEMS, FACE_SLOTS, HAIRS, LAYER_ORDER, WEAR_SLOTS, type HairId, type WearSlot } from './shopItems'
 
 export type { HairId, WearSlot }
 export { WEAR_SLOTS }
@@ -15,7 +16,8 @@ export interface AvatarConfig {
   hair: HairId // 무료 머리 모양 (hairItem을 입으면 가려진다)
   // 칸마다 착용한 쌀포인트 상점 아이템 id (shopItems.ts). 없으면 기본 그림 그대로
   hairItem?: string
-  face?: string
+  eyes?: string
+  mouth?: string
   tattoo?: string
   top?: string
   bottom?: string
@@ -29,11 +31,19 @@ export interface AvatarConfig {
 
 // 발판을 뗀 캐릭터 그림 크기 — 37행(0~36)까지가 캐릭터, 그 아래는 원본의 잔디 발판이라 버린다
 export const AVATAR_W = HD_W
-export const AVATAR_H = 37
+// 그림 틀 위쪽 여유 — 높은 모자·위로 솟은 머리(변환 도구로 넣은 아이템)가 잘리지 않게 원래 그림 위에 6줄을 더 둔다.
+// 원래 그림(발판 뗀 37줄)은 이 아래에 그대로 그린다.
+export const AVATAR_TOP_PAD = HD_EXTRA_TOP
+const BODY_H = 37
+// 썸네일(PixelAvatar)은 몸 높이(BODY_H) 기준으로 크기를 맞추고, 위쪽 여유는 위로 삐져나오게 그린다
+export const AVATAR_BODY_H = BODY_H
+export const AVATAR_H = BODY_H + AVATAR_TOP_PAD
 // 발 바닥 행 — 받침대·선반 위에 세울 때 기준
-export const AVATAR_FEET_ROW = 35
+const BODY_FEET_ROW = 35
+export const AVATAR_FEET_ROW = BODY_FEET_ROW + AVATAR_TOP_PAD
 
-export const DEFAULT_AVATAR: AvatarConfig = { v: 3, hair: 'buns' }
+// 기본 캐릭터 = 짧은 머리 (2026-11 변경, 전엔 똥머리)
+export const DEFAULT_AVATAR: AvatarConfig = { v: 3, hair: 'short' }
 
 const HAIR_IDS = new Set<string>(HAIRS.map(h => h.id))
 const FULL_HEADS = new Set<string>(AVATAR_SHOP_ITEMS.filter(i => i.fullHead).map(i => i.id))
@@ -44,9 +54,11 @@ const itemSlot = new Map(AVATAR_SHOP_ITEMS.map(i => [i.id, i.slot]))
 export function normalizeAvatar(raw: unknown): AvatarConfig {
   const src = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   if (src.v !== 3) return { v: 3, hair: src.gender === 'm' ? 'short' : 'buns' }
-  const out: AvatarConfig = { v: 3, hair: typeof src.hair === 'string' && HAIR_IDS.has(src.hair) ? (src.hair as HairId) : 'buns' }
+  const out: AvatarConfig = { v: 3, hair: typeof src.hair === 'string' && HAIR_IDS.has(src.hair) ? (src.hair as HairId) : 'short' }
   // 예전 "옷" 칸(outfit)에 입던 아이템은 지금 상의 칸 아이템이다
-  const legacy = src.top == null && typeof src.outfit === 'string' ? { ...src, top: src.outfit } : src
+  let legacy: Record<string, unknown> = src.top == null && typeof src.outfit === 'string' ? { ...src, top: src.outfit } : src
+  // 예전 "표정" 칸의 해맑은 미소는 지금 눈웃음 + 발그레 미소
+  if (legacy.face === 'face-smile') legacy = { eyes: 'eyes-smile', mouth: 'mouth-smile', ...legacy }
   for (const slot of WEAR_SLOTS) {
     const id = legacy[slot]
     if (typeof id === 'string' && itemSlot.get(id) === slot) out[slot] = id
@@ -71,7 +83,12 @@ export function avatarKey(c: AvatarConfig): string {
 function layersOf(c: AvatarConfig): string[][] {
   // 상점 머리를 입었으면 무료 머리 모양 대신 그 머리를 그린다
   const hair = c.hairItem ?? HAIRS.find(h => h.id === c.hair)?.layer
-  const ids = LAYER_ORDER.flatMap(slot => (slot === 'hat' ? [hair, c.hat] : [c[slot]]))
+  const fullHead = FULL_HEADS.has(c.hairItem ?? '')
+  const ids = LAYER_ORDER.flatMap(slot => {
+    if (slot === 'hairItem') return [hair]
+    if (fullHead && FACE_SLOTS.includes(slot)) return []
+    return [c[slot]]
+  })
   return ids.filter((id): id is string => !!id && !!ITEMS[id]).map(id => ITEMS[id])
 }
 
@@ -82,7 +99,7 @@ function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
-const RGB: Record<string, [number, number, number]> = Object.fromEntries(Object.entries(HD_PALETTE).map(([k, v]) => [k, hexToRgb(v)]))
+const RGB: Record<string, [number, number, number]> = Object.fromEntries(Object.entries({ ...HD_PALETTE, ...HD_EXTRA_PALETTE }).map(([k, v]) => [k, hexToRgb(v)]))
 
 // ── 잔디 발판 떼기 ──
 // 원본 그림은 29행부터 다리와 잔디 발판이 겹친다. 다리는 가운데(14~23열)에만 있고, 발판은 초록 잔디·흙색이다.
@@ -97,19 +114,26 @@ const isGrass = (ch: string) => {
 }
 function stripTile(rows: string[], item: boolean): string[] {
   const [c0, c1] = item ? ITEM_COLS : LEG_COLS
-  return rows.slice(0, AVATAR_H).map((row, y) => {
+  return rows.slice(0, BODY_H).map((row, y) => {
     if (y < LEG_ROW || (item && y < LEG_ROW + 2)) return row // 손에 든 꽃다발처럼 옆으로 나온 건 그대로
-    if (!item && y > AVATAR_FEET_ROW) return '.'.repeat(row.length)
+    if (!item && y > BODY_FEET_ROW) return '.'.repeat(row.length)
     return [...row].map((ch, x) => (x >= c0 && x <= c1 && ch !== '-' && !isGrass(ch) ? ch : '.')).join('')
   })
 }
 const BASE = stripTile(HD_BASE, false)
-const ITEMS: Record<string, string[]> = Object.fromEntries(Object.entries(HD_ITEMS).map(([id, rows]) => [id, stripTile(rows, true)]))
+// 아이템 층은 모두 위쪽 여유까지 포함한 줄 수(AVATAR_H)로 맞춰 둔다 — hd.ts 아이템은 위쪽 여유가 비어 있고,
+// 변환 도구 아이템(hdExtra.ts)은 맨 위 HD_EXTRA_TOP줄이 위쪽 여유 자리다
+const EMPTY_TOP = Array.from({ length: AVATAR_TOP_PAD }, () => '.'.repeat(HD_W))
+const ITEMS: Record<string, string[]> = {
+  ...Object.fromEntries(Object.entries(HD_ITEMS).map(([id, rows]) => [id, [...EMPTY_TOP, ...stripTile(rows, true)]])),
+  ...Object.fromEntries(Object.entries(HD_EXTRA_ITEMS).map(([id, rows]) => [id, [...rows.slice(0, HD_EXTRA_TOP), ...stripTile(rows.slice(HD_EXTRA_TOP), true)]])),
+}
+const BASE_PADDED = [...EMPTY_TOP, ...BASE]
 
 // 눈 칸 (그림 좌표) — 양쪽 눈이 세로 4칸씩. 깜빡일 땐 위아래 칸을 피부색으로 덮고 한 줄만 남겨 감은 눈으로 만든다.
 const EYE_COLUMNS = [15, 22]
-const EYE_ROWS = [13, 14, 15, 16]
-const EYE_CLOSED_ROW = 15
+const EYE_ROWS = [13, 14, 15, 16].map(y => y + AVATAR_TOP_PAD)
+const EYE_CLOSED_ROW = 15 + AVATAR_TOP_PAD
 const SKIN = hexToRgb('#fde2cd')
 
 // RGBA 픽셀 (AVATAR_W × AVATAR_H). background면 연두색 배경을 깐다. blink면 눈을 감은 모습.
@@ -127,10 +151,10 @@ export function composeAvatar(c: AvatarConfig, { background = false, blink = fal
       set(x, y, ch === '-' ? null : RGB[ch])
     }
   })
-  paint(BASE)
+  paint(BASE_PADDED)
   layersOf(c).forEach(paint)
-  // 얼굴까지 바꾸는 머리는 눈 자리가 달라 깜빡이지 않는다
-  if (blink && !FULL_HEADS.has(c.hairItem ?? '')) for (const x of EYE_COLUMNS) for (const y of EYE_ROWS) if (y !== EYE_CLOSED_ROW) set(x, y, SKIN)
+  // 얼굴까지 바꾸는 머리, 눈 아이템을 입었을 땐 눈 모양이 달라 깜빡이지 않는다
+  if (blink && !FULL_HEADS.has(c.hairItem ?? '') && !c.eyes) for (const x of EYE_COLUMNS) for (const y of EYE_ROWS) if (y !== EYE_CLOSED_ROW) set(x, y, SKIN)
   if (background) {
     const bg = hexToRgb(AVATAR_BG)
     for (let i = 0; i < AVATAR_W * AVATAR_H; i++) if (px[i * 4 + 3] === 0) set(i % AVATAR_W, Math.floor(i / AVATAR_W), bg)

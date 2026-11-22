@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { avatarToDataUrl } from '@/lib/avatar/render'
-import { AVATAR_H, AVATAR_W, type AvatarConfig } from '@/lib/avatar/compose'
+import { AVATAR_BODY_H, AVATAR_H, AVATAR_W, type AvatarConfig } from '@/lib/avatar/compose'
 
 interface Props {
   config: AvatarConfig
@@ -23,7 +23,22 @@ export default function PixelAvatar({ config, size, alt = '', background = false
     setSrc(avatarToDataUrl(config, { background, persist }))
   }, [config, background, persist])
 
-  const width = Math.round((size * AVATAR_W) / AVATAR_H)
-  const box: React.CSSProperties = { width, height: size, display: 'block', imageRendering: 'pixelated', ...style }
-  return src ? <img src={src} alt={alt} width={width} height={size} style={box} draggable={false} /> : <span style={box} />
+  // size = 몸(원래 그림 37줄) 높이. 그림 틀 위쪽 여유(높은 모자 자리)는 칸 위로 삐져나오게 그려서,
+  // 틀을 넓혀도 썸네일 크기와 줄맞춤은 예전 그대로다
+  const width = Math.round((size * AVATAR_W) / AVATAR_BODY_H)
+  const fullH = Math.round((size * AVATAR_H) / AVATAR_BODY_H)
+  const box: React.CSSProperties = { width, height: size, display: 'block', position: 'relative', ...style }
+  if (!src) return <span style={box} />
+  return (
+    <span style={box}>
+      <img
+        src={src}
+        alt={alt}
+        width={width}
+        height={fullH}
+        style={{ position: 'absolute', left: 0, bottom: 0, width, height: fullH, maxWidth: 'none', imageRendering: 'pixelated' }}
+        draggable={false}
+      />
+    </span>
+  )
 }

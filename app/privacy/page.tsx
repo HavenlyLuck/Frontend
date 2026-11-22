@@ -113,8 +113,7 @@ export default function PrivacyPage() {
           <li>
             정보주체는 다음의 방법으로 행태정보의 수집 및 맞춤형 광고를 거부할 수 있습니다.
             <ul>
-              <li>웹사이트 하단의 &ldquo;광고 측정 설정&rdquo;에서 광고 측정을 끄는 방법 — 끄면 해당 브라우저에서 Meta 픽셀이 동작하지 않습니다.</li>
-              <li>웹 브라우저의 추적 거부 기능(Global Privacy Control 또는 Do Not Track)을 켜는 방법 — 켜져 있으면 회사는 Meta 픽셀을 사용하지 않습니다.</li>
+              <li>웹사이트 하단의 &ldquo;광고 측정 설정&rdquo;에서 광고 측정을 끄는 방법 (끄는 즉시 해당 브라우저에서 Meta 픽셀 작동이 중단됩니다. 브라우저의 추적 거부 기능(Global Privacy Control 또는 Do Not Track)이 켜져 있어도 Meta 픽셀을 사용하지 않습니다. 측정을 꺼도 서비스 이용에는 제한이 없습니다.)</li>
               <li>웹 브라우저 설정에서 쿠키 저장을 차단하거나 시크릿 모드(InPrivate 창)를 이용하는 방법 (아래 &ldquo;개인정보 자동수집안내 및 거부방법&rdquo; 참고)</li>
               <li>Meta(Facebook·Instagram) 계정 센터의 &ldquo;광고 기본 설정&rdquo;에서 파트너 활동 정보를 활용한 광고 표시를 설정하는 방법</li>
               <li>다만, 쿠키 저장을 차단할 경우 로그인 유지 등 일부 서비스 이용에 어려움이 있을 수 있습니다.</li>
