@@ -1,6 +1,8 @@
 'use client'
 
 import { trackPixel } from '@/lib/metaPixel'
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
+import { ConfettiIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import LogoMark, { Logo } from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
@@ -42,6 +44,9 @@ function StatusMsg({ state, message }: { state: CheckState; message: string }) {
 
 export default function SignupPage() {
   const router = useRouter()
+  // 오픈 이벤트 쌀 응모권을 받았으면 축하 팝업을 띄우고, 확인을 누르면 이 주소(로그인)로 간다
+  const [welcomeNext, setWelcomeNext] = useState<string | null>(null)
+  useBodyScrollLock(welcomeNext !== null)
   const [form, setForm] = useState({ nickname: '', userId: '', password: '', confirm: '', email: '', referral: '' })
 
   const [checks, setChecks] = useState<{ nickname: CheckState; userId: CheckState; email: CheckState }>({
@@ -249,7 +254,7 @@ export default function SignupPage() {
 
     setSubmitting(true)
     try {
-      await signup({
+      const created = await signup({
         login_id: form.userId,
         nickname: form.nickname,
         email: form.email,
@@ -264,14 +269,19 @@ export default function SignupPage() {
         review_marketing_agreed: agree.reviewMarketing,
       })
       trackPixel('CompleteRegistration')
-      alert('회원가입이 완료되었습니다. 로그인해주세요.')
       // 가입 안내 창에서 넘어왔으면 로그인 뒤 보던 화면으로 돌아가게 주소를 이어 준다
       let next: string | null = null
       try {
         next = sessionStorage.getItem(SIGNUP_NEXT_KEY)
         sessionStorage.removeItem(SIGNUP_NEXT_KEY)
       } catch {}
-      router.push(next ? loginPath(next) : '/login')
+      const afterSignup = next ? loginPath(next) : '/login'
+      if (created.signup_event_ticket) {
+        setWelcomeNext(afterSignup)
+        return
+      }
+      alert('회원가입이 완료되었습니다. 로그인해주세요.')
+      router.push(afterSignup)
     } catch (err) {
       alert(err instanceof ApiError ? err.message : '회원가입 중 오류가 발생했습니다.')
     } finally {
@@ -531,6 +541,33 @@ export default function SignupPage() {
             이미 계정이 있으신가요? <Link href={loginHref}>로그인</Link>
           </p>
         </div>
+      </div>
+
+      {/* 오픈 이벤트 가입 축하 — 쌀 응모권 1장 지급 안내. 확인을 눌러야만 로그인으로 넘어간다 */}
+      <div className={`modal-overlay ${welcomeNext ? 'open' : ''}`}>
+        {welcomeNext && (
+          <div className="modal signup-welcome-modal" role="dialog" aria-modal="true" aria-label="회원가입 축하" style={{ margin: '0 16px' }}>
+            <div className="modal-icon celebrate">
+              <ConfettiIcon size={28} weight="fill" color="var(--gold)" />
+            </div>
+            <div className="modal-title">회원가입을 축하합니다!</div>
+            <div className="signup-welcome-ticket">
+              <span className="signup-welcome-badge">오픈 이벤트</span>
+              <strong>쌀 응모권 1장</strong>
+              <span>보관함에 지급되었어요</span>
+            </div>
+            <div className="modal-sub">
+              원하는 응모 상품에 결제 없이 응모할 수 있어요.
+              <br />
+              로그인한 뒤 응모 상품에서 쌀 응모권으로 응모해 보세요.
+            </div>
+            <div className="modal-btn-row">
+              <button className="btn-confirm" onClick={() => router.push(welcomeNext)}>
+                로그인하러 가기
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -6714,6 +6714,36 @@ a.auth-submit {
   }
 }
 
+/* 회원가입 오픈 이벤트 축하 팝업 */
+.signup-welcome-modal {
+  text-align: center;
+}
+.signup-welcome-ticket {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 16px 0;
+  padding: 18px 16px;
+  background: var(--gold-tint);
+  border: 1px dashed var(--gold-tint-border);
+  border-radius: 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.signup-welcome-ticket strong {
+  font-size: 22px;
+  color: var(--gold);
+}
+.signup-welcome-badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #14151a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 /* 낙첨 결과 팝업 — 쌀포인트 환급 안내 카드 */
 .consolation-card {
   display: flex;
