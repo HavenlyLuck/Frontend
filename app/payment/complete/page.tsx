@@ -6,6 +6,7 @@ import { completePayment, ApiError, PaymentCompleteResponse } from '@/lib/api'
 import { getValidSession } from '@/lib/auth'
 import { paymentFailureMessage } from '@/lib/payment'
 import { notifyStorageUpdated } from '@/lib/storage'
+import { trackPurchase } from '@/lib/metaPixel'
 
 type View =
   | { kind: 'loading' }
@@ -47,6 +48,7 @@ export default function PaymentCompletePage() {
       if (!session) { setView({ kind: 'error', message: '로그인이 풀렸어요. 다시 로그인한 뒤 마이페이지에서 결제 결과를 확인해주세요.' }); return }
       try {
         const res = await completePayment(session.token, paymentId)
+        trackPurchase(res)
         notifyStorageUpdated()
         setView({ kind: 'done', res })
       } catch (err) {

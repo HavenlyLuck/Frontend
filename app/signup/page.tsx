@@ -1,5 +1,6 @@
 'use client'
 
+import { trackPixel } from '@/lib/metaPixel'
 import { useEffect, useState } from 'react'
 import LogoMark, { Logo } from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
@@ -262,6 +263,7 @@ export default function SignupPage() {
         age_14_confirmed: true,
         review_marketing_agreed: agree.reviewMarketing,
       })
+      trackPixel('CompleteRegistration')
       alert('회원가입이 완료되었습니다. 로그인해주세요.')
       // 가입 안내 창에서 넘어왔으면 로그인 뒤 보던 화면으로 돌아가게 주소를 이어 준다
       let next: string | null = null

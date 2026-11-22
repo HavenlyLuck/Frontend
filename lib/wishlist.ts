@@ -1,5 +1,6 @@
 // 찜한 상품 — 일반(결제) 상점 상품과 응모 상품을 찜할 수 있고, 회원별로 서버에 저장된다
 import { request } from '@/lib/api'
+import { contentId, trackPixel } from '@/lib/metaPixel'
 import type { RaffleProductResponse, StorePayType } from '@/lib/api'
 
 export interface WishlistItem {
@@ -18,11 +19,13 @@ export function getMyWishlist(token: string) {
   })
 }
 
-export function addToWishlist(token: string, storeProductId: number) {
-  return request<null>(`/wishlist/${storeProductId}`, {
+export async function addToWishlist(token: string, storeProductId: number) {
+  await request<null>(`/wishlist/${storeProductId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
   })
+  trackPixel('AddToWishlist', { content_ids: [contentId('store', storeProductId)], content_type: 'product' })
+  return null
 }
 
 export function removeFromWishlist(token: string, storeProductId: number) {
@@ -39,11 +42,13 @@ export function getMyRaffleWishlist(token: string) {
   })
 }
 
-export function addRaffleToWishlist(token: string, raffleProductId: number) {
-  return request<null>(`/wishlist/raffles/${raffleProductId}`, {
+export async function addRaffleToWishlist(token: string, raffleProductId: number) {
+  await request<null>(`/wishlist/raffles/${raffleProductId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
   })
+  trackPixel('AddToWishlist', { content_ids: [contentId('raffle', raffleProductId)], content_type: 'product' })
+  return null
 }
 
 export function removeRaffleFromWishlist(token: string, raffleProductId: number) {

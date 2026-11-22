@@ -1,5 +1,6 @@
 'use client'
 
+import { trackViewContent } from '@/lib/metaPixel'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -36,7 +37,11 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
   const [product, setProduct] = useState<KujiProduct | null | undefined>(undefined)
   useEffect(() => {
     let cancelled = false
-    fetchKujiProduct(Number(params.id)).then(p => { if (!cancelled) setProduct(p) })
+    fetchKujiProduct(Number(params.id)).then(p => {
+      if (cancelled) return
+      setProduct(p)
+      if (p) trackViewContent('kuji', p.id, p.title, p.pricePerTicket)
+    })
     return () => { cancelled = true }
   }, [params.id])
 
