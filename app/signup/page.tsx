@@ -433,6 +433,7 @@ export default function SignupPage() {
                 <p className="signup-guardian-title">만 19세 미만은 보호자 동의가 필요해요</p>
                 <p className="field-hint">
                   부모님 등 법정대리인이 직접 본인인증을 하고 가입에 동의해야 가입할 수 있어요.
+                  만 19세 미만은 응모권·쿠지·상점 결제가 한 달에 합계 10만 원까지예요.
                   보호자의 이름·휴대폰 번호는 동의 확인 기록으로만 보관돼요.
                 </p>
                 <div className="field-row">
@@ -452,8 +453,9 @@ export default function SignupPage() {
                 <label className="signup-guardian-consent">
                   <input type="checkbox" checked={guardianConsent} onChange={(e) => setGuardianConsent(e.target.checked)} />
                   <span>
-                    <b>(필수)</b> 보호자(법정대리인)로서 {identity.name ? `${identity.name}님의` : '가입자의'} 천운 회원가입과
-                    이용약관·개인정보 수집·이용에 동의합니다
+                    <b>(필수)</b> 본인은 {identity.name ? `${identity.name}님` : '위 회원'}의 법정대리인(부모 또는 후견인)으로서 천운 회원가입과
+                    서비스 이용(월 결제 한도 10만 원), 이용약관·개인정보 수집·이용에 동의합니다. 법정대리인이 아닌 사람이 대신 동의하거나
+                    인증할 수 없으며, 이 경우 계약을 취소할 수 없고 이용이 제한될 수 있음을 확인합니다.
                   </span>
                 </label>
               </div>

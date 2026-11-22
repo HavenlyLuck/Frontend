@@ -9,6 +9,7 @@ import {
   ProhibitIcon,
   TicketIcon,
   TruckIcon,
+  TrophyIcon,
   UsersIcon,
 } from '@phosphor-icons/react'
 import PixelAvatar from '@/components/PixelAvatar'
@@ -86,7 +87,7 @@ export function RaffleDiagram() {
   const STRIKE = 10
   const RESULT = 11
   return (
-    <Row n={4} label="응모 진행 그림: 1,000원 응모권을 사고, 다 팔리면 마감, 번개로 한 명이 당첨, 낙첨은 쌀포인트">
+    <Row n={4} label="응모 진행 그림: 1,000원 응모권을 사고, 다 팔리면 마감, 산 응모권 수만큼 당첨 확률이 오르는 난수 추첨으로 한 명이 당첨, 낙첨은 쌀포인트">
       <Panel no={1} caption="1,000원 응모권을 사요" active={within(step, 1, 4)}>
         {PEOPLE.map((p, i) => (
           <Person key={i} config={p}>
@@ -100,7 +101,7 @@ export function RaffleDiagram() {
         </div>
         <div className={`gd-count${sold === 8 ? ' full' : ''}`}>{sold === 8 ? '매진!' : `${sold} / 8장`}</div>
       </Panel>
-      <Panel no={3} caption="번개로 한 명을 뽑아요" active={step === STRIKE} stageClass={step === STRIKE ? 'is-flash' : ''}>
+      <Panel no={3} caption="응모권 수만큼 확률이 오르는 난수 추첨" active={step === STRIKE} stageClass={step === STRIKE ? 'is-flash' : ''}>
         {PEOPLE.map((p, i) => (
           <Person key={i} config={p} className={i === WINNER && step >= STRIKE ? 'is-glow' : ''}>
             {i === WINNER && <span className={`gd-bolt${step === STRIKE ? ' on' : ''}`}><LightningIcon size={26} weight="fill" /></span>}
@@ -182,7 +183,7 @@ export function PointDiagram() {
           <span className={`gd-pop gd-chip${step >= 5 ? ' on' : ''}`}>-3,500P</span>
         </Person>
       </Panel>
-      <Panel no={3} caption={<>일반 상점 상품도 할인받아요 <span className="gd-soon">곧 열려요</span></>} active={within(step, 6, 7)} stageClass="gd-col">
+      <Panel no={3} caption="일반 상점 상품도 할인받아요" active={within(step, 6, 7)} stageClass="gd-col">
         <StorePriceTag discounted={step >= 7} />
       </Panel>
       <Panel no={4} caption="현금으로는 못 바꿔요" active={step >= 8}>
@@ -221,7 +222,7 @@ export function StoreDiagram() {
         <ArrowRightIcon size={18} className={`gd-arrow${step >= 1 ? ' on' : ''}`} />
         <span className={`gd-pop gd-chip static${step >= 2 ? ' on' : ''}`}><CreditCardIcon size={13} weight="fill" /> 카드 결제</span>
       </Panel>
-      <Panel no={2} caption={<>쌀포인트로 할인받아요 <span className="gd-soon">곧 열려요</span></>} active={within(step, 3, 4)} stageClass="gd-col">
+      <Panel no={2} caption="쌀포인트로 할인받아요" active={within(step, 3, 4)} stageClass="gd-col">
         <StorePriceTag discounted={step >= 4} />
       </Panel>
       <Panel no={3} caption="쌀포인트 상점은 쌀포인트로만" active={step >= 5}>
@@ -319,6 +320,52 @@ export function StorageDiagram() {
         <span className="gd-icon"><EmojiIcon name="box" /></span>
         <ArrowRightIcon size={18} className={`gd-arrow${step >= 9 ? ' on' : ''}`} />
         <span className={`gd-icon gd-swap${step >= 10 ? ' on' : ''}`}><EmojiIcon name="rice" /></span>
+      </Panel>
+    </Row>
+  )
+}
+
+// ── 아바타 ──
+// 0 · 1~2 꾸미기 · 3~4 쌀포인트 아이템 · 5~6 추첨·쿠지 화면에 등장 · 7~9 컨텐츠·이벤트 보상
+const LOOKS: AvatarConfig[] = [
+  { v: 3, hair: 'short' },
+  { v: 3, hair: 'buns', top: 'top-cat-hoodie' },
+  { v: 3, hair: 'short', hat: 'hat-cap', held: 'held-balloon' },
+]
+const SHELF: AvatarConfig[] = [
+  { v: 3, hair: 'short', hat: 'hat-cap' },
+  { v: 3, hair: 'buns', top: 'top-cat-hoodie' },
+  { v: 3, hair: 'short', held: 'held-balloon' },
+]
+export function AvatarDiagram() {
+  const step = useStep(11)
+  const look = step >= 1 && step <= 2 ? LOOKS[step] : LOOKS[0]
+  const dressed: AvatarConfig = { v: 3, hair: 'buns', hairItem: 'hair-pink-buns', hat: 'hat-crown', top: 'top-wizard-robe' }
+  return (
+    <Row n={4} label="아바타 그림: 무료로 꾸미고, 쌀포인트로 아이템을 사고, 추첨·쿠지 화면에 내 아바타가 나오고, 컨텐츠·이벤트로 쌀 응모권이나 상품을 받아요">
+      <Panel no={1} caption="나만의 아바타를 꾸며보세요!" active={within(step, 1, 2)}>
+        <Person config={look} />
+      </Panel>
+      <Panel no={2} caption="쌀포인트로 특별 아이템을 사요" active={within(step, 3, 4)}>
+        <Person config={step >= 4 ? dressed : LOOKS[0]}>
+          <span className={`gd-pop gd-chip${step >= 4 ? ' on' : ''}`}>-3,500P</span>
+        </Person>
+      </Panel>
+      <Panel no={3} caption="추첨·쿠지 화면에 내 아바타가 나와요" active={within(step, 5, 6)}>
+        <Person config={SHELF[0]} className={step >= 5 ? 'is-dim' : ''} />
+        <Person config={dressed} className={step >= 5 ? 'is-glow' : ''}>
+          <span className={`gd-pop gd-chip gold${step >= 6 ? ' on' : ''}`}>나</span>
+        </Person>
+        <Person config={SHELF[1]} className={step >= 5 ? 'is-dim' : ''} />
+      </Panel>
+      <Panel no={4} caption="컨텐츠·이벤트로 응모권·상품을 받아요" active={step >= 7}>
+        <Person config={dressed}>
+          <span className={`gd-pop gd-trophy${step >= 7 ? ' on' : ''}`}><TrophyIcon size={18} weight="fill" /></span>
+        </Person>
+        <div className="gd-stack">
+          <span className={`gd-pop gd-icon-pop${step >= 8 ? ' on' : ''}`}><EmojiIcon name="ssal-ticket" /></span>
+          <span className={`gd-pop gd-icon-pop${step >= 9 ? ' on' : ''}`}><EmojiIcon name="box" /></span>
+        </div>
       </Panel>
     </Row>
   )

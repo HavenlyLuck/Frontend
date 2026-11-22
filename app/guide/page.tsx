@@ -1,7 +1,7 @@
 'use client'
 
 import { CONTENTS_OPEN } from '@/lib/features'
-import { FundingDiagram, KujiDiagram, PointDiagram, RaffleDiagram, SsalTicketDiagram, StorageDiagram, StoreDiagram } from '@/components/GuideDiagrams'
+import { AvatarDiagram, FundingDiagram, KujiDiagram, PointDiagram, RaffleDiagram, SsalTicketDiagram, StorageDiagram, StoreDiagram } from '@/components/GuideDiagrams'
 import { SHIPPING_FEE_TEXT, SHIP_WITHIN_BUSINESS_DAYS } from '@/lib/shipping'
 import { STORAGE_CONVERT_PERCENT_TEXT, STORAGE_KEEP_DAYS } from '@/lib/storageExpiry'
 import {
@@ -21,12 +21,12 @@ import EmojiIcon from '@/components/EmojiIcon'
 
 // 바로가기 — id는 다른 페이지의 "도움이 필요하다면?" 링크(/guide#응모 등)가 쓰므로 바꾸지 않는다
 const SECTIONS = [
-  { id: '포인트', label: '포인트', icon: CoinsIcon },
+  { id: '포인트', label: '쌀포인트', icon: CoinsIcon },
   { id: '쌀응모권', label: '쌀 응모권', icon: TicketIcon },
   { id: '응모', label: '응모', icon: TicketIcon },
   { id: '쿠지', label: '쿠지', icon: GiftIcon },
   { id: '상점', label: '상점', icon: StorefrontIcon },
-  { id: '캐릭터', label: '캐릭터', icon: PaintBrushIcon },
+  { id: '캐릭터', label: '아바타', icon: PaintBrushIcon },
   { id: '컨텐츠', label: '컨텐츠', icon: SparkleIcon },
   { id: '보관함', label: '보관함·배송', icon: ArchiveIcon },
   { id: '유의사항', label: '꼭 알아두세요', icon: WarningIcon },
@@ -97,25 +97,17 @@ export default function GuidePage() {
 
       {/* 포인트 */}
       <section id="포인트" className="guide-section">
-        <SectionTitle icon={CoinsIcon} title="포인트" summary="응모권 · 쿠지 · 일반 상점은 카드로 바로 결제해요. 포인트는 보상으로 받는 쌀포인트와 쌀 응모권이 있어요." />
+        <SectionTitle icon={CoinsIcon} title="쌀포인트" summary="응모·쿠지에서 낙첨되면 받는 포인트예요. 쌀포인트 상점에서 쓰거나 일반 상점 상품을 할인받을 수 있어요." />
         <PointDiagram />
         <details className="guide-more">
           <summary>자세히 보기</summary>
           <div className="guide-more-body">
-            <div className="guide-table-wrap">
-              <table className="guide-table">
-                <thead>
-                  <tr><th></th><th><EmojiIcon name="rice" /> 쌀포인트</th><th><EmojiIcon name="ssal-ticket" /> 쌀 응모권</th></tr>
-                </thead>
-                <tbody>
-                  <tr><th>얻는 방법</th><td>응모 낙첨 시 지급</td><td>이벤트 · 친구 추천인 등록</td></tr>
-                  <tr><th>쓰는 곳</th><td>쌀포인트 상점, 캐릭터 아이템, 일반 상점 할인 (곧 열려요)</td><td>응모 (1장 = 응모권 1장)</td></tr>
-                  <tr><th>현금으로 돌려받기</th><td className="is-no">불가</td><td className="is-no">불가</td></tr>
-                  <tr><th>낙첨 시 쌀포인트</th><td>-</td><td className="is-no">지급 안 됨</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <Callout>쌀 응모권은 보상으로 무료로 드리는 응모권이라, 낙첨돼도 쌀포인트가 지급되지 않아요. 돈으로는 살 수 없어요.</Callout>
+            <Rules items={[
+              <><b>얻는 방법</b> · 응모에 낙첨되면 카드로 산 응모권 1장당 1,000 쌀포인트를 받아요. (쌀 응모권으로 응모한 장수는 제외) 쿠지에서 낙첨돼도 쌀포인트를 받아요. (받는 양은 쿠지마다 달라요)</>,
+              <><b>쓰는 곳</b> · 쌀포인트 상점(쿠폰·굿즈·아바타 아이템), 일반 상점 상품 할인 (상품마다 할인 한도가 달라요)</>,
+              <><b>1포인트 = 1원</b>의 가치로 상품 가격에 적용돼요.</>,
+              <>현금으로 바꾸거나 다른 회원에게 줄 수 없고, 탈퇴하면 사라져요.</>,
+            ]} />
           </div>
         </details>
       </section>
@@ -193,7 +185,8 @@ export default function GuidePage() {
               <>상위상(A상·B상 등) 남은 수량은 쿠지판에서 실시간으로 확인할 수 있어요.</>,
               <>고르는 사이 다른 분이 같은 번호를 먼저 뽑으면, 그 번호만 풀리고 다시 고를 수 있어요. 이미 결제했다면 결제는 자동으로 취소돼요.</>,
               <>상위상이 모두 나가고 라스트원상만 남은 쿠지판은 조기 마감되거나 특별 이벤트가 열릴 수 있어요.</>,
-              <><b>결제와 동시에 결과가 정해져서 결제 후에는 취소·환불할 수 없어요.</b></>,
+              <>낙첨되면 쌀포인트를 받아요. 받는 양은 쿠지마다 달라요.</>,
+          <><b>결제와 동시에 결과가 정해져서 결제 후에는 취소·환불할 수 없어요.</b></>,
             ]} />
             <Callout>
               <b><LightningIcon size={14} weight="fill" /> 라스트원상</b> — 쿠지판의 <b>마지막 1장을 뽑은 분</b>께 추가로 드리는 특별한 상이에요. 상위상이 다 나가도 끝까지 노려볼 이유가 돼요.
@@ -218,7 +211,7 @@ export default function GuidePage() {
                 <Rules items={[
                   '피규어 · 굿즈 · 카드',
                   '카드로 바로 결제해요.',
-                  '쌀포인트로 일부를 할인받아 살 수 있어요. (곧 열려요 · 상품마다 할인 한도가 달라요)',
+                  '쌀포인트로 일부를 할인받아 살 수 있어요. (상품마다 할인 한도가 달라요)',
                   '배송 전에는 보관함에서 바로 취소할 수 있어요.',
                   '받은 날부터 7일 안에 반품할 수 있어요. 단, 상자·포장을 개봉해 상품 가치가 떨어지면 반품이 어려워요. 단순 변심 반품의 왕복 배송비는 고객님 부담이에요.',
                 ]} />
@@ -244,13 +237,20 @@ export default function GuidePage() {
 
       {/* 캐릭터 */}
       <section id="캐릭터" className="guide-section">
-        <SectionTitle icon={PaintBrushIcon} title="캐릭터" summary="나만의 픽셀 캐릭터를 꾸며서 추첨 화면에 등장시켜 보세요." />
-        <Rules items={[
-          <>마이페이지 › <b>캐릭터 꾸미기</b>에서 머리, 옷, 피부색을 자유롭게 바꿀 수 있어요 (무료).</>,
-          <>무기·모자·망토·스킨 같은 특별 아이템은 <b>쌀포인트 상점 › 아바타</b>에서 살 수 있어요.</>,
-          <>꾸민 캐릭터는 응모 <b>번개 추첨 화면</b>과 쿠지 뽑기 화면에 그대로 나와요.</>,
-          <>"추첨영상 미리보기"로 추첨 화면에서 어떻게 보일지 미리 확인할 수 있어요.</>,
-        ]} />
+        <SectionTitle icon={PaintBrushIcon} title="아바타" summary="나만의 픽셀 아바타를 꾸며서 추첨 화면에 등장시키고, 컨텐츠·이벤트에서 보상도 받아 보세요." />
+        <AvatarDiagram />
+        <details className="guide-more">
+          <summary>자세히 보기</summary>
+          <div className="guide-more-body">
+            <Rules items={[
+              <>마이페이지 › <b>캐릭터 꾸미기</b>에서 나만의 아바타를 꾸밀 수 있어요.</>,
+              <>모자·옷·머리·표정·문신·손 아이템, 등 장식, 오라, 배경은 <b>쌀포인트 상점 › 아바타</b>에서 살 수 있어요. 산 아이템만 입을 수 있어요.</>,
+              <>꾸민 아바타는 응모 <b>추첨 화면</b>과 쿠지 뽑기 화면에 그대로 나와요. 다른 응모자들도 내 아바타를 봐요.</>,
+              <>"추첨영상 미리보기"로 추첨 화면에서 어떻게 보일지 미리 확인할 수 있어요.</>,
+              <>컨텐츠·이벤트에 참여하면 쌀 응모권이나 상품을 받을 수 있어요. 열리면 공지사항으로 알려 드려요.</>,
+            ]} />
+          </div>
+        </details>
       </section>
 
       {/* 컨텐츠 */}
@@ -291,14 +291,14 @@ export default function GuidePage() {
         <SectionTitle icon={WarningIcon} title="꼭 알아두세요" summary="결제 전에 꼭 확인해 주세요. 자세한 기준은 이용약관과 취소·환불 정책을 따라요." />
         <Rules items={[
           <><b>응모</b> · 매진되어 추첨이 시작되면 취소·환불할 수 없어요. 제한 시간 안에 매진되지 않으면 자동 전액 환불돼요.</>,
-          <><b>낙첨 보상</b> · 카드로 산 응모권 1장당 1,000 쌀포인트. 쌀 응모권으로 응모한 장수는 보상이 없어요. 당첨되면 상품만 드려요.</>,
+          <><b>낙첨 보상</b> · 응모는 카드로 산 응모권 1장당 1,000 쌀포인트(쌀 응모권으로 응모한 장수는 보상 없음, 당첨되면 상품만). 쿠지 낙첨 보상은 쿠지마다 달라요.</>,
           <><b>쿠지</b> · 결제와 동시에 결과가 정해져서 결제 후 취소·환불할 수 없어요.</>,
           <><b>상점</b> · 카드 구매는 배송 전 취소, 받은 날부터 7일 안 반품(개봉 시 제한). 쌀포인트 구매는 취소할 수 없어요.</>,
           <><b>쌀포인트·쌀 응모권</b> · 현금으로 바꾸거나 남에게 줄 수 없고, 탈퇴하면 사라져요.</>,
           <><b>배송비</b> · 배송 신청 1건당 {SHIPPING_FEE_TEXT}(묶음 배송), 영업일 기준 {SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송, 발송 전 취소 시 환불.</>,
           <><b>보관 기간</b> · 응모 당첨·쿠지 상품은 {STORAGE_KEEP_DAYS}일 안에 배송 신청하지 않으면 쌀포인트로 바뀌어요.</>,
           <><b>탈퇴</b> · 남은 쌀포인트·쌀 응모권과 배송 신청하지 않은 보관함 상품은 모두 사라지고 되돌릴 수 없어요.</>,
-          <><b>가입</b> · 만 14세 이상만 가입할 수 있고, 본인인증으로 1인 1계정만 만들 수 있어요.</>,
+          <><b>가입</b> · 만 14세 이상만 가입할 수 있고, 본인인증으로 1인 1계정만 만들 수 있어요. 만 19세 미만은 보호자(법정대리인) 인증과 동의가 필요하고, 응모권·쿠지·상점 결제는 한 달에 합계 10만 원까지예요.</>,
         ]} />
         <p className="guide-policy-links">
           <a href="/terms">이용약관</a> · <a href="/refund">취소·환불 정책</a> · <a href="/privacy">개인정보처리방침</a>
