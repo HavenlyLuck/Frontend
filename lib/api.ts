@@ -59,6 +59,8 @@ export interface SignupResponse {
   login_id: string
   nickname: string
   email: string
+  // 오픈 이벤트로 쌀 응모권 1장을 보관함에 넣었는지 — true면 가입 축하 팝업을 띄운다
+  signup_event_ticket?: boolean
 }
 
 export interface LoginPayload {
@@ -1185,10 +1187,11 @@ export function registerReferral(token: string, referralCode: string) {
   })
 }
 
-// first_purchase: 첫 구매 선물 응모권(related = 나를 추천한 사람), referral: 추천 응모권(related = 내가 추천한 사람)
+// first_purchase: 첫 구매 선물 응모권(related = 나를 추천한 사람), referral: 추천 응모권(related = 내가 추천한 사람),
+// signup_event: 오픈 이벤트 가입 선물
 export interface FreeTicketResponse {
   free_ticket_id: number
-  kind: 'first_purchase' | 'referral'
+  kind: 'first_purchase' | 'referral' | 'signup_event'
   related_nickname: string | null
   created_at: string
 }
