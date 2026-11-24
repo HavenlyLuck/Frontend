@@ -88,6 +88,7 @@ export default function AdminProductsPage() {
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [deadlineDays, setDeadlineDays] = useState(1)
   const [storeCategory, setStoreCategory] = useState<StoreCategory | null>(null)
+  const [fundingDisabled, setFundingDisabled] = useState(false)   // 결제 상점: 응모 전환 막기 (랜덤 상품 등)
   const [raffleSubmitting, setRaffleSubmitting] = useState(false)
   const [raffleSubmitError, setRaffleSubmitError] = useState<string | null>(null)
   const autoMaxTickets = Math.floor((Number(newP.price.replace(/[^0-9]/g, '')) || 0) / 1000)
@@ -104,14 +105,15 @@ export default function AdminProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAddForm, adminToken])
 
-  // 고른 품목으로 상품명·원가·사진을 채운다 (사진은 등록할 때 파일로 바꿔 올린다)
+  // 고른 품목으로 상품명·원가·사진·설명을 채운다 (사진은 등록할 때 파일로 바꿔 올린다)
   const pickForProduct = (item: InventoryItem | null) => {
     setPickedItemId(item?.item_id ?? null)
     if (!item) {
       setNewP(p => ({ ...p, cost: '' }))
       return
     }
-    setNewP(p => ({ ...p, title: item.name, cost: String(item.avg_unit_cost), img: item.image_url ?? p.img }))
+    // 설명(상품 설명 · 상품정보제공고시)도 재고에 적어 둔 게 있으면 그대로 가져온다
+    setNewP(p => ({ ...p, title: item.name, cost: String(item.avg_unit_cost), img: item.image_url ?? p.img, description: item.description ?? p.description }))
     if (item.image_url) setNewImageFile(null)
   }
 
@@ -293,6 +295,7 @@ export default function AdminProductsPage() {
     setNewImageFile(null)
     setDeadlineDays(1)
     setStoreCategory(null)
+    setFundingDisabled(false)
     setKujiItems([{ name: '', img: '', count: '1', cost: '' }])
     setLowerItems([{ name: '', img: '', count: '1', cost: '' }])
     setLastOneItem({ name: '', img: '', cost: '' })
@@ -637,7 +640,7 @@ export default function AdminProductsPage() {
                 // 상품은 재고에서만 만든다 — 재고에 없으면 먼저 입고해야 원가·수량이 손익과 맞는다
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>
-                    재고에서 고르기 * (이름·사진·원가가 채워지고, 등록하면 {productTab === '응모' ? '1개가' : '올린 수량만큼'} 판매 중으로 넘어가요)
+                    재고에서 고르기 * (이름·사진·원가·설명이 채워지고, 등록하면 {productTab === '응모' ? '1개가' : '올린 수량만큼'} 판매 중으로 넘어가요)
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
                     <InventoryPicker items={invItems} selectedId={pickedItemId} onSelect={pickForProduct} />
@@ -701,6 +704,13 @@ export default function AdminProductsPage() {
                     ))}
                   </div>
                 </div>
+              )}
+              {productTab === '상점(일반)' && (
+                // 랜덤 상품처럼 응모로 돌리면 안 되는 상품 — 상세 화면에 "응모 전환" 칸이 안 나온다
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={fundingDisabled} onChange={e => setFundingDisabled(e.target.checked)} />
+                  응모 전환 막기 (랜덤 상품처럼 응모로 돌리면 안 되는 상품)
+                </label>
               )}
               {productTab !== '쿠지' && (
                 <div>
@@ -974,6 +984,7 @@ export default function AdminProductsPage() {
                       category: storeCategory,
                       image: newImageFile ?? await urlToBlob(newP.img),
                       inventory_item_id: pickedItem?.item_id,
+                      funding_disabled: productTab === '상점(일반)' && fundingDisabled,
                     })
                     setStoreProducts(prev => [created, ...prev])
                     resetNewProductForm()

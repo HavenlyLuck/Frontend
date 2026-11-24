@@ -1,5 +1,6 @@
 'use client'
 
+import { kstToday } from '@/lib/date'
 import { useEffect, useState } from 'react'
 import { CaretDownIcon, CopyIcon, DownloadSimpleIcon, MagnifyingGlassIcon, PackageIcon, XIcon } from '@phosphor-icons/react'
 import { ApiError } from '@/lib/api'
@@ -63,7 +64,7 @@ export default function AdminShippingPage() {
         description="같은 고객이 같은 배송지로 신청한 상품은 발송 전까지 한 박스로 묶여요. 송장번호를 넣고 발송 처리하면 고객 보관함에도 보여요."
         actions={status === 'requested' && boxes && boxes.length > 0 && (
           <button
-            onClick={() => downloadCsv(`배송대기_${new Date().toISOString().slice(0, 10)}.csv`, boxesToCsv(boxes))}
+            onClick={() => downloadCsv(`배송대기_${kstToday()}.csv`, boxesToCsv(boxes))}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >
             <DownloadSimpleIcon size={15} weight="bold" /> 택배 접수용 엑셀

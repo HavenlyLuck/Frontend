@@ -1,19 +1,21 @@
 'use client'
 
+import { kstToday } from '@/lib/date'
 import { useEffect, useMemo, useState } from 'react'
 import { CaretDownIcon, MagnifyingGlassIcon, PackageIcon, PlusIcon } from '@phosphor-icons/react'
 import { ApiError, type InventoryReceiptResponse as InventoryReceipt } from '@/lib/api'
 import {
-  PRODUCT_TYPE_LABEL, addInventoryReceipt, averageCost, editInventoryReceipt, fetchInventoryItem, fetchInventoryItems, removeInventoryReceipt,
+  PRODUCT_TYPE_LABEL, addInventoryReceipt, averageCost, editInventoryItemDescription, editInventoryReceipt, fetchInventoryItem, fetchInventoryItems, removeInventoryReceipt,
   type InventoryItem, type InventoryItemDetail,
 } from '@/lib/inventory'
+import { productInfoTemplate } from '@/lib/productInfo'
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16, boxShadow: 'var(--shadow-sm)' }
 const lightInput: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text)', padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
 const label: React.CSSProperties = { color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }
 
 const won = (n: number) => `${n.toLocaleString()}원`
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => kstToday()   // 지출·입고 날짜 기본값 — 한국 날짜
 
 // 재고 · 판매 중 · 판매 완료 색 (목록 막대와 숫자가 같이 쓴다)
 const STOCK_COLOR = { available: 'var(--success)', reserved: 'var(--gold)', sold: 'var(--text-tertiary)' }
@@ -335,6 +337,7 @@ function ItemRow({ item, token, open, onToggle, onRestock, onChanged }: {
             <div style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>불러오는 중...</div>
           ) : (
             <>
+              <ItemDescription key={item.description ?? ''} item={item} token={token} onChanged={onChanged} />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>입고 기록</div>
                 <button
@@ -387,6 +390,86 @@ function ItemRow({ item, token, open, onToggle, onRestock, onChanged }: {
   )
 }
 
+// 상품 설명 · 상품정보제공고시 입력칸 — 상품 등록 화면과 같은 "고시 양식 넣기"를 쓴다.
+// 여기 적은 내용은 상품 추가에서 이 품목을 "재고에서 고르기"로 고르면 상품 설명란에 그대로 복사된다.
+function DescriptionField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+        <span style={{ ...label, marginBottom: 0 }}>상품 설명 · 상품정보제공고시 (상품 등록 때 그대로 복사돼요)</span>
+        <button
+          type="button"
+          onClick={() => { if (!value.includes('품명 및 모델명:')) onChange((value ? value.trimEnd() + '\n\n' : '') + productInfoTemplate()) }}
+          style={{ border: '1px solid var(--border-strong)', background: 'var(--surface)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0 }}
+        >
+          고시 양식 넣기
+        </button>
+      </div>
+      <textarea
+        style={{ ...lightInput, minHeight: 110, resize: 'vertical', fontFamily: 'inherit' }}
+        placeholder={'소개 글을 먼저 쓰고, "고시 양식 넣기"로 상품정보제공고시 항목을 채워 주세요.\n(예: 크기·중량: 높이 약 15cm)'}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+      />
+    </div>
+  )
+}
+
+// 품목 펼친 화면의 설명 — 보기 / 고치기
+function ItemDescription({ item, token, onChanged }: { item: InventoryItem; token: string; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(item.description ?? '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const save = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      await editInventoryItemDescription(token, item.item_id, draft)
+      setEditing(false)
+      onChanged()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '설명 저장 중 오류가 발생했어요.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const btn: React.CSSProperties = { border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 8, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: busy ? 'default' : 'pointer' }
+
+  if (editing) {
+    return (
+      <div style={{ marginBottom: 16 }}>
+        <DescriptionField value={draft} onChange={setDraft} />
+        {error && <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 6 }}>{error}</div>}
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', marginTop: 8 }}>
+          <button type="button" disabled={busy} style={{ ...btn, color: 'var(--text-secondary)' }} onClick={() => { setDraft(item.description ?? ''); setEditing(false); setError('') }}>취소</button>
+          <button type="button" disabled={busy} style={{ ...btn, background: 'var(--accent)', borderColor: 'var(--accent)', color: '#fff' }} onClick={save}>{busy ? '저장 중...' : '설명 저장'}</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>상품 설명 · 상품정보제공고시</div>
+        <button type="button" style={btn} onClick={() => { setDraft(item.description ?? ''); setEditing(true) }}>
+          {item.description ? '고치기' : '적기'}
+        </button>
+      </div>
+      {item.description ? (
+        <div style={{ whiteSpace: 'pre-wrap', fontSize: 13, lineHeight: 1.6, color: 'var(--text-secondary)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', maxHeight: 220, overflowY: 'auto' }}>
+          {item.description}
+        </div>
+      ) : (
+        <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>아직 적지 않았어요. 적어 두면 상품 등록 때 설명란에 그대로 들어가요.</div>
+      )}
+    </div>
+  )
+}
+
 // 입고 등록 — 새 품목이면 이름·사진, 이미 있는 품목이면 골라서 추가 입고
 function ReceiptForm({ items, initialItemId, onCancel, onSubmit }: {
   items: InventoryItem[]
@@ -398,6 +481,7 @@ function ReceiptForm({ items, initialItemId, onCancel, onSubmit }: {
   const [itemId, setItemId] = useState<number | null>(initialItemId)
   const [name, setName] = useState('')
   const [image, setImage] = useState<File | null>(null)
+  const [description, setDescription] = useState('')
   const [quantity, setQuantity] = useState('')
   const [unitCost, setUnitCost] = useState('')
   const [receivedAt, setReceivedAt] = useState(today())
@@ -430,7 +514,7 @@ function ReceiptForm({ items, initialItemId, onCancel, onSubmit }: {
     setSaving(true)
     try {
       await onSubmit({
-        ...(mode === 'existing' ? { item_id: itemId! } : { name: name.trim(), image: image ?? undefined }),
+        ...(mode === 'existing' ? { item_id: itemId! } : { name: name.trim(), image: image ?? undefined, description: description.trim() || undefined }),
         quantity: qty,
         unit_cost: cost,
         received_at: receivedAt,
@@ -478,6 +562,9 @@ function ReceiptForm({ items, initialItemId, onCancel, onSubmit }: {
             <div style={{ gridColumn: '1 / -1' }}>
               <div style={label}>사진 (선택 — 상품 등록할 때 그대로 가져다 써요)</div>
               <input type="file" accept="image/*" onChange={e => setImage(e.target.files?.[0] ?? null)} style={{ fontSize: 13, color: 'var(--text-secondary)' }} />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <DescriptionField value={description} onChange={setDescription} />
             </div>
           </>
         ) : (
