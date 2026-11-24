@@ -96,6 +96,20 @@ export function createInquiry(token: string, payload: { title: string; content: 
   return request<InquiryResponse>('/inquiries', { method: 'POST', headers: auth(token), body: JSON.stringify(payload) })
 }
 
+// 내 문의 수정 — 답변이 달리기 전에만 된다
+export function updateInquiry(token: string, inquiryId: number, payload: { title: string; content: string; is_private: boolean }) {
+  return request<InquiryResponse>(`/inquiries/${inquiryId}`, { method: 'PUT', headers: auth(token), body: JSON.stringify(payload) })
+}
+
+// 문의 삭제 — 쓴 사람, 또는 관리자(스팸 등)
+export async function deleteInquiry(token: string, inquiryId: number): Promise<void> {
+  const res = await fetch(`${API_URL}/inquiries/${inquiryId}`, { method: 'DELETE', headers: auth(token) })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    throw new ApiError(res.status, typeof data?.detail === 'string' ? data.detail : '문의를 지우지 못했습니다.')
+  }
+}
+
 export function getAdminInquiries(token: string, answered?: boolean) {
   return request<InquiryResponse[]>(`/inquiries/admin${answered === undefined ? '' : `?answered=${answered}`}`, { headers: auth(token) })
 }

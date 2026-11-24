@@ -1,5 +1,5 @@
 import {
-  createInventoryReceipt, deleteInventoryReceipt, getInventoryItem, getInventoryItemForProduct, getInventoryItems, updateInventoryReceipt,
+  createInventoryReceipt, deleteInventoryReceipt, getInventoryItem, getInventoryItemForProduct, getInventoryItems, updateInventoryItem, updateInventoryReceipt,
   type CreateInventoryReceiptPayload, type InventoryAllocationResponse,
   type InventoryItemDetailResponse, type InventoryItemResponse, type InventoryLinkType, type InventoryReceiptResponse,
   type UpdateInventoryReceiptPayload,
@@ -27,6 +27,10 @@ export function fetchInventoryItem(token: string, itemId: number): Promise<Inven
 
 export async function addInventoryReceipt(token: string, payload: CreateInventoryReceiptPayload): Promise<void> {
   await createInventoryReceipt(token, payload)
+}
+
+export async function editInventoryItemDescription(token: string, itemId: number, description: string): Promise<void> {
+  await updateInventoryItem(token, itemId, { description: description.trim() || null })
 }
 
 export async function editInventoryReceipt(token: string, receiptId: number, patch: UpdateInventoryReceiptPayload): Promise<void> {

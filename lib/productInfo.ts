@@ -31,17 +31,36 @@ export function productInfoTemplate(): string {
 
 const FIELD_SET = new Set<string>(PRODUCT_INFO_FIELDS)
 
-// 설명을 소개 글과 고시 표로 나눈다. 고시 항목 이름으로 시작하는 줄만 표로 간다 (소개 글에 ":"가 있어도 섞이지 않게)
-export function parseProductDescription(text: string): { intro: string; info: [string, string][] } {
+// 설명을 소개 글 · 고시 표 · 접는 안내 칸으로 나눈다.
+//   고시 항목 이름으로 시작하는 줄만 표로 간다 (소개 글에 ":"가 있어도 섞이지 않게)
+//   "[랜덤 상품 안내]"처럼 대괄호 제목만 있는 줄부터 다음 제목 전까지는 그 제목의 접는 칸이 된다
+export function parseProductDescription(text: string): {
+  intro: string
+  info: [string, string][]
+  sections: { title: string; body: string }[]
+} {
   const intro: string[] = []
   const info: [string, string][] = []
+  const sections: { title: string; lines: string[] }[] = []
   for (const line of text.split(/\r?\n/)) {
     const m = line.match(/^\s*([^:：]{1,30}?)\s*[:：]\s*(.*)$/)
     if (m && FIELD_SET.has(m[1].trim())) {
       if (m[2].trim()) info.push([m[1].trim(), m[2].trim()])
       continue
     }
-    intro.push(line)
+    const heading = line.match(/^\s*\[([^\[\]]{1,40})\]\s*$/)
+    if (heading) {
+      sections.push({ title: heading[1].trim(), lines: [] })
+      continue
+    }
+    if (sections.length > 0) sections[sections.length - 1].lines.push(line)
+    else intro.push(line)
   }
-  return { intro: intro.join('\n').trim(), info }
+  return {
+    intro: intro.join('\n').trim(),
+    info,
+    sections: sections
+      .map(s => ({ title: s.title, body: s.lines.join('\n').trim() }))
+      .filter(s => s.body),
+  }
 }

@@ -9,6 +9,7 @@ import {
   CaretDownIcon,
   ChatCircleIcon,
   LockIcon,
+  PencilSimpleIcon,
   QuestionIcon,
   StarIcon,
   TrashIcon,
@@ -19,7 +20,7 @@ import { ApiError } from '@/lib/api'
 import { getValidSession, loginPath } from '@/lib/auth'
 import { formatKstDate } from '@/lib/date'
 import {
-  createInquiry, createReview, deleteReview, getInquiries, getReviewableItems, getReviews,
+  createInquiry, createReview, deleteInquiry, deleteReview, getInquiries, getReviewableItems, getReviews, updateInquiry,
   productBadge,
   type InquiryResponse, type ReviewableItem, type ReviewResponse,
 } from '@/lib/reviews'
@@ -66,6 +67,8 @@ export default function ReviewPage() {
   const [reviewable, setReviewable] = useState<ReviewableItem[] | null>(null)
   const [reviewForm, setReviewForm] = useState(EMPTY_REVIEW)
   const [inquiryForm, setInquiryForm] = useState(EMPTY_INQUIRY)
+  // 내 문의를 고치는 중이면 그 문의 id (모달을 수정 모드로 쓴다)
+  const [editingInquiryId, setEditingInquiryId] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -125,6 +128,36 @@ export default function ReviewPage() {
     setFormError(null)
     setReviewForm(EMPTY_REVIEW)
     setInquiryForm(EMPTY_INQUIRY)
+    setEditingInquiryId(null)
+  }
+
+  async function openInquiryEdit(q: InquiryResponse) {
+    const session = await getValidSession()
+    if (!session) {
+      router.push(loginPath())
+      return
+    }
+    setToken(session.token)
+    setFormError(null)
+    setInquiryForm({ title: q.title, content: q.content ?? '', isPrivate: q.is_private })
+    setEditingInquiryId(q.inquiry_id)
+    setShowModal(true)
+  }
+
+  async function removeInquiry(q: InquiryResponse) {
+    if (!confirm(q.answered ? '이 문의를 지울까요? 달린 답변도 함께 지워져요.' : '이 문의를 지울까요?')) return
+    const session = await getValidSession()
+    if (!session) {
+      router.push(loginPath())
+      return
+    }
+    try {
+      await deleteInquiry(session.token, q.inquiry_id)
+      setInquiries(prev => prev?.filter(x => x.inquiry_id !== q.inquiry_id) ?? prev)
+      if (openId === q.inquiry_id) setOpenId(null)
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : '문의를 지우지 못했어요.')
+    }
   }
 
   async function submit() {
@@ -148,14 +181,22 @@ export default function ReviewPage() {
         })
         setReviews(prev => [created, ...(prev ?? [])])
       } else {
-        const created = await createInquiry(token, {
+        const payload = {
           title: inquiryForm.title.trim(),
           content: inquiryForm.content.trim(),
           is_private: inquiryForm.isPrivate,
-        })
-        setInquiries(prev => [created, ...(prev ?? [])])
-        setOpenId(created.inquiry_id)
+        }
+        if (editingInquiryId !== null) {
+          const updated = await updateInquiry(token, editingInquiryId, payload)
+          setInquiries(prev => prev?.map(x => (x.inquiry_id === updated.inquiry_id ? updated : x)) ?? prev)
+          setOpenId(updated.inquiry_id)
+        } else {
+          const created = await createInquiry(token, payload)
+          setInquiries(prev => [created, ...(prev ?? [])])
+          setOpenId(created.inquiry_id)
+        }
       }
+      setEditingInquiryId(null)
       setSubmitting(false)
       setShowModal(false)
       setReviewForm(EMPTY_REVIEW)
@@ -307,6 +348,20 @@ export default function ReviewPage() {
                       {!q.answered && (
                         <div className="inquiry-pending-note">답변을 준비 중입니다. 조금만 기다려주세요 <EmojiIcon name="pending" /></div>
                       )}
+                      {q.is_mine && (
+                        <div className="inquiry-owner-actions">
+                          {q.answered
+                            ? <span className="inquiry-owner-hint">답변이 달린 문의는 수정할 수 없어요</span>
+                            : (
+                              <button type="button" onClick={() => openInquiryEdit(q)}>
+                                <PencilSimpleIcon size={12} /> 수정
+                              </button>
+                            )}
+                          <button type="button" onClick={() => removeInquiry(q)}>
+                            <TrashIcon size={12} /> 삭제
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -325,7 +380,7 @@ export default function ReviewPage() {
           <div className="review-modal">
             <div className="review-modal-head">
               <div className="review-modal-title">
-                {tab === '후기' ? '후기 올리기' : '문의하기'}
+                {tab === '후기' ? '후기 올리기' : editingInquiryId !== null ? '문의 수정' : '문의하기'}
               </div>
               <button className="review-modal-close" onClick={closeModal} aria-label="닫기"><XIcon size={20} /></button>
             </div>
@@ -470,7 +525,7 @@ export default function ReviewPage() {
             <div className="review-modal-actions">
               {!noReviewable && !(tab === '후기' && reviewable === null) && (
                 <button className="review-modal-submit" onClick={submit} disabled={submitting}>
-                  {submitting ? '올리는 중...' : tab === '후기' ? '후기 올리기' : '문의 제출'}
+                  {submitting ? '올리는 중...' : tab === '후기' ? '후기 올리기' : editingInquiryId !== null ? '수정 완료' : '문의 제출'}
                 </button>
               )}
               <button className="review-modal-cancel" onClick={closeModal} disabled={submitting}>{noReviewable ? '닫기' : '취소'}</button>

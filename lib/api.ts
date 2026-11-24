@@ -459,6 +459,7 @@ export interface StoreProductResponse {
   price: number
   stock: number
   image_url: string | null
+  funding_disabled?: boolean   // 응모 전환 막기 (랜덤 상품 등) — 상세에 응모 전환 칸이 안 나온다
   created_at: string
   // 상점 세부 탭 분류 — 결제 상점: figure | goods | card / 쌀포인트 상점: coupon | goods | avatar
   // 분류 도입 전에 등록된 상품은 null
@@ -670,6 +671,7 @@ export interface InventoryItemResponse {
   name: string
   image_url: string | null
   memo: string | null
+  description: string | null   // 상품 설명 · 상품정보제공고시 — 상품 등록 때 "재고에서 고르기"로 복사된다
   total_received: number   // 지금까지 입고된 수량
   reserved: number         // 응모·쿠지·상점에 걸려 있는(판매 중) 수량
   sold: number             // 팔려서 나간 수량
@@ -706,6 +708,7 @@ export interface CreateInventoryReceiptPayload {
   item_id?: number         // 기존 품목에 추가 입고할 때
   name?: string            // 새 품목일 때
   image?: Blob             // 새 품목일 때 (선택)
+  description?: string     // 새 품목일 때 (선택) — 상품 설명 · 상품정보제공고시
   quantity: number
   unit_cost: number
   received_at: string
@@ -730,6 +733,7 @@ export async function createInventoryReceipt(token: string, payload: CreateInven
   if (payload.item_id != null) formData.append('item_id', String(payload.item_id))
   if (payload.name) formData.append('name', payload.name)
   if (payload.image) formData.append('image', payload.image)
+  if (payload.description) formData.append('description', payload.description)
   formData.append('quantity', String(payload.quantity))
   formData.append('unit_cost', String(payload.unit_cost))
   formData.append('received_at', payload.received_at)
@@ -747,6 +751,15 @@ export async function createInventoryReceipt(token: string, payload: CreateInven
     throw new ApiError(res.status, typeof detail === 'string' ? detail : '입고 등록 중 오류가 발생했습니다.')
   }
   return data as InventoryItemDetailResponse
+}
+
+// 품목 설명 고치기 — 이미 등록한 상품은 그대로, 다음에 이 품목으로 만드는 상품에 복사된다
+export function updateInventoryItem(token: string, itemId: number, payload: { description: string | null }) {
+  return request<InventoryItemDetailResponse>(`/inventory/items/${itemId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  })
 }
 
 // 입고 기록 고치기·지우기 — 이미 상품에 올렸거나 팔린 수량보다 적게 만들 수는 없다(서버가 막아야 함)
@@ -893,6 +906,7 @@ export interface CreateStoreProductPayload {
   image?: Blob
   // 재고 품목에서 고른 경우 — 서버가 stock만큼 그 품목을 이 상품에 묶는다
   inventory_item_id?: number
+  funding_disabled?: boolean   // 결제 상점만 — 응모 전환 막기
 }
 
 export async function createStoreProduct(token: string, payload: CreateStoreProductPayload) {
@@ -905,6 +919,7 @@ export async function createStoreProduct(token: string, payload: CreateStoreProd
   formData.append('category', payload.category)
   if (payload.image) formData.append('image', payload.image)
   if (payload.inventory_item_id != null) formData.append('inventory_item_id', String(payload.inventory_item_id))
+  if (payload.funding_disabled) formData.append('funding_disabled', 'true')
 
   const res = await fetch(`${API_URL}/store-products`, {
     method: 'POST',

@@ -1228,6 +1228,12 @@ a.product-card-home.is-soldout { cursor: pointer; }
   gap: 48px;
   align-items: start;
 }
+/* PC: 오른쪽 정보 칸이 두 줄을 차지하고, 사진 바로 아래(왼쪽 둘째 줄)에 접는 안내 칸이 붙는다.
+   둘째 줄을 1fr로 둬야 긴 정보 칸 높이가 첫 줄(사진)로 번지지 않아 안내 칸이 사진에 바로 붙는다 */
+.product-layout:has(> .product-notices) { grid-template-rows: auto 1fr; row-gap: 0; }
+.product-layout > .product-notices { grid-column: 1; grid-row: 2; margin-top: 6px; }
+.product-layout:has(> .product-notices) > .info-panel { grid-column: 2; grid-row: 1 / span 2; }
+.product-notices:empty { display: none; }
 
 .main-image {
   width: 100%;
@@ -4546,6 +4552,10 @@ a.product-card-home.is-soldout { cursor: pointer; }
   .product-layout {
     grid-template-columns: 1fr;
   }
+  /* 모바일: 사진 → 정보·구매 → 접는 안내 칸 순서로 쌓는다 */
+  .product-layout:has(> .product-notices) { grid-template-rows: none; row-gap: 48px; }
+  .product-layout > .product-notices { grid-column: auto; grid-row: auto; margin-top: -34px; }
+  .product-layout:has(> .product-notices) > .info-panel { grid-column: auto; grid-row: auto; }
   .product-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -6714,6 +6724,34 @@ a.auth-submit {
   }
 }
 
+/* 후기/문의 — 내 문의 수정·삭제 */
+.inquiry-owner-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 10px;
+}
+.inquiry-owner-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.inquiry-owner-actions button:hover {
+  color: var(--text);
+}
+.inquiry-owner-hint {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
 /* 회원가입 오픈 이벤트 축하 팝업 */
 .signup-welcome-modal {
   text-align: center;
@@ -7811,6 +7849,17 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
 }
 .product-info-notice .policy-table { margin: 0; border: none; border-radius: 0; }
 .product-info-notice .policy-table th { width: 38%; white-space: normal; }
+.product-info-notice + .product-info-notice { margin-top: 8px; }
+/* 설명의 "[제목]" 칸 (랜덤 상품 안내 · 교환·반품 안내 등) */
+.product-info-section {
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  white-space: pre-line;
+  word-break: keep-all;
+  border-top: 1px solid var(--border);
+}
 
 /* 보관함 보관 기간 (lib/storageExpiry.ts) */
 .storage-expiry-note {

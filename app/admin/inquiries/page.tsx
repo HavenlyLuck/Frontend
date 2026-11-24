@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { ChatCircleIcon, LockIcon, QuestionIcon } from '@phosphor-icons/react'
 import { ApiError } from '@/lib/api'
 import { AdminPageHeader, useAdminToken, useRefreshAdminBadges } from '@/components/admin/AdminShell'
-import { answerInquiry, getAdminInquiries, type InquiryResponse } from '@/lib/reviews'
+import { answerInquiry, deleteInquiry, getAdminInquiries, type InquiryResponse } from '@/lib/reviews'
 import { formatKstDateTime } from '@/lib/date'
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 12, boxShadow: 'var(--shadow-sm)' }
@@ -62,6 +62,21 @@ export default function AdminInquiriesPage() {
     }
   }
 
+  // 스팸·장난 문의 정리 — 고객 화면에서도 사라진다
+  const remove = async (q: InquiryResponse) => {
+    if (!confirm(`'${q.title}' 문의를 지울까요? 고객 화면에서도 사라지고 되돌릴 수 없어요.`)) return
+    setBusyId(q.inquiry_id)
+    try {
+      await deleteInquiry(adminToken, q.inquiry_id)
+      setList(prev => prev?.filter(x => x.inquiry_id !== q.inquiry_id) ?? prev)
+      refreshBadges()
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : '문의를 지우지 못했습니다.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   return (
     <div>
       <AdminPageHeader
@@ -101,6 +116,13 @@ export default function AdminInquiriesPage() {
                 <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-tertiary)' }}>
                   {q.nickname} · {formatKstDateTime(q.created_at)}
                 </span>
+                <button
+                  style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', fontSize: 12, cursor: 'pointer', padding: 0 }}
+                  disabled={busyId === q.inquiry_id}
+                  onClick={() => remove(q)}
+                >
+                  삭제
+                </button>
               </div>
               <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <QuestionIcon size={15} color="var(--accent)" /> {q.title}

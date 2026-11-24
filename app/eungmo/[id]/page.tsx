@@ -358,7 +358,7 @@ export default function RaffleProductPage({
             <div className="divider" />
 
             {product.description && (
-              <ProductDescription text={product.description} />
+              <ProductDescription text={product.description} part="intro" />
             )}
 
             <div className="raffle-section">
@@ -478,6 +478,13 @@ export default function RaffleProductPage({
 
             <RefundNotice kind="raffle" />
           </div>
+
+          {/* 상품정보제공고시 · [랜덤 상품 안내] 같은 접는 칸 — PC는 사진 아래, 모바일은 구매 영역 아래 */}
+          {product.description && (
+            <div className="product-notices">
+              <ProductDescription text={product.description} part="notices" />
+            </div>
+          )}
         </div>
       </div>
 

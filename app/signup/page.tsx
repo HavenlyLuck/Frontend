@@ -25,6 +25,8 @@ const DUPL_CHECK_FIELDS: Record<'nickname' | 'userId' | 'email', DuplCheckField>
 
 // 모바일 본인인증은 페이지를 떠났다가 돌아오므로, 입력하던 값(비밀번호 제외)을 잠시 보관한다
 const SIGNUP_DRAFT_KEY = 'signup-draft'
+// 본인인증하러 간 사이 보관한 입력값(비밀번호 포함)을 믿고 쓰는 시간
+const DRAFT_TTL_MS = 30 * 60 * 1000
 
 const USER_ID_REGEX = /^[A-Za-z0-9]{5,20}$/
 const EMAIL_REGEX =/^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -93,7 +95,7 @@ export default function SignupPage() {
     let pendingGuardianOf: Identity | null = null
     try {
       const draft = JSON.parse(sessionStorage.getItem(SIGNUP_DRAFT_KEY) ?? 'null')
-      if (draft) {
+      if (draft && typeof draft.savedAt === 'number' && Date.now() - draft.savedAt <= DRAFT_TTL_MS) {
         setForm(prev => ({ ...prev, ...draft.form }))
         setChecks(draft.checks)
         setCheckMessages(draft.checkMessages)
@@ -144,12 +146,17 @@ export default function SignupPage() {
     }
   }
 
-  // 모바일 본인인증은 페이지를 떠나므로 입력값(비밀번호 제외)을 보관해 둔다.
+  // 모바일 본인인증은 페이지를 떠나므로 입력값을 보관해 둔다 (이 탭에서만 보이고, 돌아오면 바로 지운다).
+  // 비밀번호도 같이 보관해야 돌아왔을 때 다시 입력하지 않는다 — 인증에서 돌아오지 않은 경우를 위해 DRAFT_TTL_MS가 지나면 버린다.
   // 보호자 인증이면 가입자 본인인증 결과도 같이 보관한다 (돌아와서 보호자 확인에 쓴다)
   function saveDraft(pending: 'self' | 'guardian') {
     try {
       sessionStorage.setItem(SIGNUP_DRAFT_KEY, JSON.stringify({
-        form: { nickname: form.nickname, userId: form.userId, email: form.email, referral: form.referral },
+        savedAt: Date.now(),
+        form: {
+          nickname: form.nickname, userId: form.userId, email: form.email, referral: form.referral,
+          password: form.password, confirm: form.confirm,
+        },
         checks,
         checkMessages,
         agree,

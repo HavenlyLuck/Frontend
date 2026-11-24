@@ -1,3 +1,4 @@
+import { formatDateTime } from './date'
 import { getAdminShippingItems, markItemsShipped, type AdminShippingItemResponse } from './api'
 
 /*
@@ -77,7 +78,7 @@ export function boxesToCsv(boxes: ShippingBox[]): string {
     b.items.map(i => `${i.product_name} x${i.quantity}`).join(' / '),
     String(b.items.reduce((n, i) => n + i.quantity, 0)),
     b.nickname,
-    b.requestedAt ? new Date(b.requestedAt).toLocaleString('ko-KR') : '',
+    b.requestedAt ? formatDateTime(b.requestedAt) : '',
   ])
   const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)
   return '﻿' + [header, ...rows].map(r => r.map(esc).join(',')).join('\r\n')
