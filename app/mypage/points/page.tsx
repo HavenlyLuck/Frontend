@@ -20,6 +20,8 @@ const REASON_LABEL: Record<PointTransactionReason, string> = {
   store_discount: '상점 구매 할인',
   store_discount_refund: '구매 취소 반환',
   withdrawal: '탈퇴로 소멸',
+  kuji_prize: '쿠지 당첨',
+  storage_convert: '보관함 기한 전환',
 }
 
 type Filter = 'all' | 'earn' | 'spend'

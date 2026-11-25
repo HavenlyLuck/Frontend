@@ -27,16 +27,14 @@ const TAB_ICON: Record<StoreTab, React.ReactNode> = {
 };
 
 // 상점별 세부 탭 — 일반 상점의 "전체"는 분류가 없는 상품까지 모두 보여준다.
-// 쌀포인트 상점은 "전체"를 두지 않는다 (상품 대부분이 아바타 아이템이라 "전체"가 비어 보였음). 아바타가 기본 탭
+// 쌀포인트 상점은 "전체"를 두지 않는다 (상품 대부분이 아바타 아이템이라 "전체"가 비어 보였음).
+// 쿠폰 / 피규어·굿즈 / 아바타 순서, 쿠폰이 기본 탭
 type SubTab = "all" | StoreCategory;
 const SUB_TABS: Record<StoreTab, { id: SubTab; label: string }[]> = {
   일반: [{ id: "all", label: "전체" }, ...STORE_CATEGORIES.cash],
-  쌀포인트: [
-    ...STORE_CATEGORIES.ssal.filter((c) => c.id === "avatar"),
-    ...STORE_CATEGORIES.ssal.filter((c) => c.id !== "avatar"),
-  ],
+  쌀포인트: STORE_CATEGORIES.ssal,
 };
-const DEFAULT_SUB: Record<StoreTab, SubTab> = { 일반: "all", 쌀포인트: "avatar" };
+const DEFAULT_SUB: Record<StoreTab, SubTab> = { 일반: "all", 쌀포인트: "coupon" };
 
 // 주소에 지금 탭을 남긴다 (/shop?tab=ssal&sub=goods) — 새로고침·뒤로 가기·링크 공유해도 같은 탭이 열린다.
 // 아바타 탭 안의 분류(cat)·아이템(item)은 AvatarShop이 따로 관리하므로 아바타 탭일 때만 남겨 둔다
@@ -62,7 +60,8 @@ export default function ShopPage() {
   useEffect(() => {
     const qs = new URLSearchParams(window.location.search);
     const tab: StoreTab = qs.get("tab") === "ssal" ? "쌀포인트" : "일반";
-    const sub = qs.get("sub");
+    // 아바타 분류·아이템(cat·item)만 있는 주소(캐릭터 꾸미기의 "상점 둘러보기" 등)는 아바타 탭으로 연다
+    const sub = qs.get("sub") ?? (tab === "쌀포인트" && (qs.has("cat") || qs.has("item")) ? "avatar" : null);
     setStoreTab(tab);
     setSubTab(SUB_TABS[tab].some((t) => t.id === sub) ? (sub as SubTab) : DEFAULT_SUB[tab]);
     setUrlRead(true);

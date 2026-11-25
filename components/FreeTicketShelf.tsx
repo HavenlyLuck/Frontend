@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ConfettiIcon, GiftIcon, StorefrontIcon, TicketIcon, UsersThreeIcon } from '@phosphor-icons/react'
+import { ArchiveIcon, ConfettiIcon, GiftIcon, LightbulbIcon, StorefrontIcon, TicketIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { getMyFreeTickets, type FreeTicketResponse } from '@/lib/api'
 import { getValidSession } from '@/lib/auth'
 import { formatKstDate } from '@/lib/date'
@@ -12,6 +12,8 @@ const KIND = {
   referral: { label: '쌀 응모권', Icon: UsersThreeIcon, from: (n: string | null) => (n ? `${n}님이 나를 추천인으로 등록했어요` : '친구 추천 보상') },
   signup_event: { label: '쌀 응모권', Icon: ConfettiIcon, from: () => '오픈 이벤트 가입 선물' },
   store_purchase: { label: '쌀 응모권', Icon: StorefrontIcon, from: () => '쌀포인트 상점에서 구매' },
+  idea_contest: { label: '쌀 응모권', Icon: LightbulbIcon, from: () => '천운 아바타 아이디어 공모전 수상' },
+  storage_convert: { label: '쌀 응모권', Icon: ArchiveIcon, from: () => '보관 기한이 지난 상품에서 바뀌었어요' },
 } as const
 
 // 보관함 맨 위 — 아직 쓰지 않은 쌀 응모권. 응모 상품에서 결제 대신 쓸 수 있다

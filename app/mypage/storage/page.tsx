@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { SHIPPING_FEE_TEXT, SHIP_WITHIN_BUSINESS_DAYS } from '@/lib/shipping'
-import { STORAGE_EXPIRY_NOTICE, convertPoints, daysLeft, expiresFor } from '@/lib/storageExpiry'
+import { STORAGE_EXPIRY_NOTICE, convertTickets, daysLeft, expiresFor } from '@/lib/storageExpiry'
 import { ArchiveIcon, CalendarIcon, ConfettiIcon, MagnifyingGlassIcon, MapPinIcon, PackageIcon, ShoppingBagIcon, TrashIcon, TruckIcon, XIcon } from '@phosphor-icons/react'
 import { useStorage } from '@/hooks/useStorage'
 import { notifyStorageUpdated } from '@/lib/storage'
@@ -378,10 +378,10 @@ export default function StoragePage() {
                 </div>
                 {expiresFor(item) && (() => {
                   const left = daysLeft(item)
-                  const pts = convertPoints(item)
+                  const tickets = convertTickets(item)
                   return (
                     <div className={`storage-expiry${left <= 7 ? ' is-soon' : ''}`}>
-                      {left > 0 ? `D-${left}` : '오늘'} · 지나면 {pts != null ? `${pts.toLocaleString()} 쌀포인트` : '쌀포인트'}로 바뀌어요
+                      {left > 0 ? `D-${left}` : '오늘'} · 지나면 쌀 응모권{tickets != null ? ` ${tickets.toLocaleString()}장` : ''}으로 바뀌어요
                     </div>
                   )
                 })()}
