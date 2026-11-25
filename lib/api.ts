@@ -8,9 +8,12 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
+  // 서버가 detail을 { code, message }로 줄 때의 code — 예: otp_required, mfa_setup_required
+  code?: string
+  constructor(status: number, message: string, code?: string) {
     super(message)
     this.status = status
+    this.code = code
   }
 }
 
@@ -31,8 +34,11 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
       ? detail
       : Array.isArray(detail)
         ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join(', ')
-        : '요청 처리 중 오류가 발생했습니다.'
-    throw new ApiError(res.status, message)
+        : typeof detail?.message === 'string'
+          ? detail.message
+          : '요청 처리 중 오류가 발생했습니다.'
+    const code = typeof detail?.code === 'string' ? detail.code : undefined
+    throw new ApiError(res.status, message, code)
   }
 
   return data as T
@@ -66,6 +72,8 @@ export interface SignupResponse {
 export interface LoginPayload {
   login_id: string
   password: string
+  // 관리자 2단계 인증 코드 — 서버가 otp_required로 요청했을 때만 보낸다
+  otp_code?: string
 }
 
 export interface LoginResponse {
@@ -168,6 +176,23 @@ export function checkDuplicate(field: DuplCheckField, value: string) {
 export function verifyAdmin(token: string) {
   return request<{ is_admin: boolean }>('/admin/verify', {
     headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 관리자 2단계 인증(OTP) 등록 1단계 — OTP 앱에 넣을 키와 등록 링크를 받는다
+export function setupAdminTotp(token: string) {
+  return request<{ secret: string; otpauth_uri: string }>('/users/me/2fa/setup', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 관리자 2단계 인증(OTP) 등록 2단계 — 앱에 뜬 코드가 맞으면 2단계 인증을 거친 새 토큰을 준다
+export function enableAdminTotp(token: string, code: string) {
+  return request<LoginResponse>('/users/me/2fa/enable', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ code }),
   })
 }
 
@@ -935,8 +960,11 @@ export async function createStoreProduct(token: string, payload: CreateStoreProd
       ? detail
       : Array.isArray(detail)
         ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join(', ')
-        : '요청 처리 중 오류가 발생했습니다.'
-    throw new ApiError(res.status, message)
+        : typeof detail?.message === 'string'
+          ? detail.message
+          : '요청 처리 중 오류가 발생했습니다.'
+    const code = typeof detail?.code === 'string' ? detail.code : undefined
+    throw new ApiError(res.status, message, code)
   }
 
   return data as StoreProductResponse
@@ -1069,8 +1097,11 @@ export async function createKujiSet(token: string, payload: CreateKujiSetPayload
       ? detail
       : Array.isArray(detail)
         ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join(', ')
-        : '요청 처리 중 오류가 발생했습니다.'
-    throw new ApiError(res.status, message)
+        : typeof detail?.message === 'string'
+          ? detail.message
+          : '요청 처리 중 오류가 발생했습니다.'
+    const code = typeof detail?.code === 'string' ? detail.code : undefined
+    throw new ApiError(res.status, message, code)
   }
 
   return data as KujiSetAdminResponse
@@ -1099,8 +1130,11 @@ export async function createRaffleProduct(token: string, payload: CreateRafflePr
       ? detail
       : Array.isArray(detail)
         ? detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join(', ')
-        : '요청 처리 중 오류가 발생했습니다.'
-    throw new ApiError(res.status, message)
+        : typeof detail?.message === 'string'
+          ? detail.message
+          : '요청 처리 중 오류가 발생했습니다.'
+    const code = typeof detail?.code === 'string' ? detail.code : undefined
+    throw new ApiError(res.status, message, code)
   }
 
   return data as RaffleProductResponse
@@ -1221,5 +1255,44 @@ export function enterRaffleWithFreeTickets(token: string, raffleProductId: numbe
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ ticket_count: ticketCount }),
+  })
+}
+
+// ── 관리자 알림톡 (솔라피) ──
+export type AlimtalkKind = 'raffle_entered' | 'raffle_sold_out' | 'raffle_failed' | 'shipped'
+export type AlimtalkStatus = 'pending' | 'sending' | 'sent' | 'failed' | 'skipped'
+
+export interface AlimtalkMessageResponse {
+  message_id: number
+  user_id: number
+  nickname: string | null
+  kind: AlimtalkKind
+  data: Record<string, string | number | boolean | null>
+  status: AlimtalkStatus
+  attempts: number
+  solapi_message_id: string | null
+  error: string | null
+  created_at: string
+  sent_at: string | null
+}
+
+export interface AlimtalkOverviewResponse {
+  configured: boolean
+  templates: { kind: AlimtalkKind; label: string; configured: boolean }[]
+  counts: Partial<Record<AlimtalkStatus, number>>
+  messages: AlimtalkMessageResponse[]
+}
+
+export function getAlimtalkOverview(token: string, status?: AlimtalkStatus) {
+  return request<AlimtalkOverviewResponse>(`/admin/alimtalk${status ? `?status=${status}` : ''}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 실패했거나 보내지 않은 알림톡을 다시 보낸다 (서버가 10초 안에 보낸다)
+export function retryAlimtalk(token: string, messageId: number) {
+  return request<AlimtalkMessageResponse>(`/admin/alimtalk/${messageId}/retry`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
   })
 }

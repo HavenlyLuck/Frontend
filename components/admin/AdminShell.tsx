@@ -3,11 +3,12 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ChatCircleIcon, CoinsIcon, HouseIcon, PackageIcon, TruckIcon } from '@phosphor-icons/react'
+import { BellRingingIcon, ChatCircleIcon, CoinsIcon, HouseIcon, PackageIcon, TruckIcon } from '@phosphor-icons/react'
 import { verifyAdmin, ApiError } from '@/lib/api'
 import { getValidSession, clearAuth, loginPath } from '@/lib/auth'
 import { fetchShippingBoxes } from '@/lib/adminShipping'
 import { getAdminInquiries } from '@/lib/reviews'
+import AdminTotpSetup from './AdminTotpSetup'
 
 /*
  * 관리자 공통 틀 — 관리자 확인을 한 번만 하고, 왼쪽 메뉴(모바일은 위쪽 탭)로 관리자 화면끼리 바로 오간다.
@@ -40,6 +41,7 @@ const NAV = [
   { href: '/admin/finance', label: '재고·자금', icon: CoinsIcon, match: (p: string) => p.startsWith('/admin/finance') || p.startsWith('/admin/inventory') },
   { href: '/admin/shipping', label: '배송', icon: TruckIcon, badge: 'shipping', match: (p: string) => p.startsWith('/admin/shipping') },
   { href: '/admin/inquiries', label: '문의', icon: ChatCircleIcon, badge: 'inquiries', match: (p: string) => p.startsWith('/admin/inquiries') },
+  { href: '/admin/alimtalk', label: '알림톡', icon: BellRingingIcon, match: (p: string) => p.startsWith('/admin/alimtalk') },
 ] as const
 
 type BadgeKey = 'shipping' | 'inquiries'
@@ -48,6 +50,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const router = useRouter()
   const pathname = usePathname() ?? '/admin'
   const [token, setToken] = useState<string | null>(null)
+  // OTP를 아직 등록하지 않은 관리자의 토큰 — 이 값이 있으면 관리자 화면 대신 OTP 등록 화면을 보여준다
+  const [setupToken, setSetupToken] = useState<string | null>(null)
   // 배송: 배송 대기 묶음 수(배송 화면의 '배송 대기' 탭과 같은 기준), 문의: 답변 대기 수
   const [badges, setBadges] = useState<Record<BadgeKey, number>>({ shipping: 0, inquiries: 0 })
 
@@ -84,6 +88,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         .then(() => { if (!cancelled) setToken(session.token) })
         .catch((err) => {
           if (cancelled) return
+          // 관리자 2단계 인증 — 아직 OTP를 등록하지 않았으면 등록 화면, OTP 없이 받은 예전 토큰이면 다시 로그인
+          if (err instanceof ApiError && err.code === 'mfa_setup_required') {
+            setSetupToken(session.token)
+            return
+          }
+          if (err instanceof ApiError && err.code === 'mfa_required') {
+            clearAuth()
+            router.replace(loginPath())
+            return
+          }
           if (err instanceof ApiError && (err.status === 401 || err.status === 403)) clearAuth()
           router.replace('/')
         })
@@ -117,6 +131,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [token, router])
+
+  if (setupToken) {
+    return (
+      <AdminTotpSetup
+        token={setupToken}
+        onDone={(accessToken) => {
+          setSetupToken(null)
+          setToken(accessToken)
+        }}
+      />
+    )
+  }
 
   if (!token) return null
 
