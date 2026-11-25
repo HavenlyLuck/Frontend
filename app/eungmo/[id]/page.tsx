@@ -31,6 +31,7 @@ import { cloudinarySized } from "@/lib/image";
 import { notifyPointsUpdated } from "@/hooks/useMyPoints";
 import { addRaffleToWishlist, getMyRaffleWishlist, removeRaffleFromWishlist } from "@/lib/wishlist";
 import EmojiIcon from '@/components/EmojiIcon'
+import { maskNickname } from "@/lib/mask";
 
 function formatCountdown(seconds: number): string {
   if (seconds <= 0) return "마감";
@@ -83,14 +84,18 @@ export default function RaffleProductPage({
       .catch(() => setProduct(null));
   }, [raffleId]);
 
+  // 매진·추첨 완료·취소된 응모는 마감 시각까지 셀 필요가 없다 — 타이머를 돌리지 않는다
+  const raffleClosed =
+    !!product &&
+    (product.status !== "open" || product.sold_out_at != null || product.sold_slots >= product.total_slots);
   useEffect(() => {
-    if (!product) return;
+    if (!product || raffleClosed) return;
     const timer = setInterval(
       () => setRemaining((prev) => Math.max(0, prev - 1)),
       1000,
     );
     return () => clearInterval(timer);
-  }, [product]);
+  }, [product, raffleClosed]);
 
 
   // 찜 상태 — 서버에 저장된 내 찜 목록에 이 응모가 있는지
@@ -156,7 +161,7 @@ export default function RaffleProductPage({
     );
   }
 
-  const urgent = remaining > 0 && remaining < 3600;
+  const urgent = !raffleClosed && remaining > 0 && remaining < 3600;
 
   const soldCount = product.sold_slots;
   const maxPurchasable = Math.max(0, product.total_slots - soldCount);
@@ -366,16 +371,27 @@ export default function RaffleProductPage({
                 <div className="raffle-title">
                   <TicketIcon size={16} weight="fill" /> 응모 현황
                 </div>
-                <div
-                  className={`raffle-countdown ${urgent ? "urgent-cd" : ""}`}
-                >
-                  {urgent ? (
-                    <FlameIcon size={14} weight="fill" />
-                  ) : (
+                {raffleClosed ? (
+                  <div className="raffle-countdown">
                     <ClockIcon size={14} weight="bold" />
-                  )}
-                  {formatCountdown(remaining)}
-                </div>
+                    {product.status === "completed"
+                      ? "추첨 완료"
+                      : product.status === "cancelled"
+                        ? "응모 취소"
+                        : "응모 마감 · 추첨 대기"}
+                  </div>
+                ) : (
+                  <div
+                    className={`raffle-countdown ${urgent ? "urgent-cd" : ""}`}
+                  >
+                    {urgent ? (
+                      <FlameIcon size={14} weight="fill" />
+                    ) : (
+                      <ClockIcon size={14} weight="bold" />
+                    )}
+                    {formatCountdown(remaining)}
+                  </div>
+                )}
               </div>
 
               <div className="progress-wrap">
@@ -425,7 +441,10 @@ export default function RaffleProductPage({
                   fontWeight: 700,
                 }}
               >
-                <EmojiIcon name="trophy" /> 당첨 응모 번호: #{product.winner_entry_number}
+                <EmojiIcon name="trophy" /> 당첨자:{" "}
+                {product.winner_nickname
+                  ? `${maskNickname(product.winner_nickname)}님`
+                  : `${product.winner_entry_number}번 응모자`}
               </div>
             )}
 
