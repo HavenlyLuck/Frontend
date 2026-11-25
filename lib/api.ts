@@ -1168,7 +1168,7 @@ export async function createRaffleProduct(token: string, payload: CreateRafflePr
 export type PaymentOrder =
   | { order_type: 'raffle_entry'; target_id: number; quantity: number }
   | { order_type: 'kuji_draw'; target_id: number; ticket_numbers: number[] }
-  // point_use: 쌀포인트 할인 (구매 금액의 10%까지, 1P = 1원)
+  // point_use: 쌀포인트 할인 (구매 금액의 20%까지, 1P = 1원)
   | { order_type: 'store_purchase'; target_id: number; quantity: number; point_use?: number }
   | { order_type: 'store_funding'; target_id: number; quantity: number }  // target_id = 상점 상품
   | { order_type: 'shipping_fee'; target_id: number; storage_item_ids: number[] }  // target_id = 배송지

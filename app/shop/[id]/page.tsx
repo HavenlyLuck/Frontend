@@ -33,7 +33,7 @@ import { cloudinarySized } from "@/lib/image";
 import { ConfettiIcon, HeartIcon, WarningIcon } from "@phosphor-icons/react";
 
 // 일반 상점 구매 때 쌀포인트로 할인받을 수 있는 최대 비율 — 서버(STORE_POINT_DISCOUNT_RATE_PERCENT)와 같아야 한다
-const POINT_DISCOUNT_PERCENT = 10;
+const POINT_DISCOUNT_PERCENT = 20;
 
 // 상점 상품 상세 — 관련 상품 섹션 때문에 목록을 받아 id로 찾는다.
 export default function ShopProductPage({
@@ -114,7 +114,7 @@ export default function ShopProductPage({
   // 구매 팝업 안에서 보여줄 결과 — 실패 문구, 또는 완료 카드(산 개수·금액)
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [purchaseDone, setPurchaseDone] = useState<{ quantity: number; amount: number; pointUsed: number; tickets: number } | null>(null);
-  // 일반 상점: 쌀포인트 할인 (구매 금액의 10%까지, 1P = 1원)
+  // 일반 상점: 쌀포인트 할인 (구매 금액의 20%까지, 1P = 1원)
   const [pointUse, setPointUse] = useState(0);
   const { ssalPoint } = useMyPoints();
   useBodyScrollLock(modalOpen);
@@ -185,7 +185,7 @@ export default function ShopProductPage({
   };
 
   const total = product.price * qty;
-  // 쓸 수 있는 쌀포인트 — 구매 금액의 10%와 보유 쌀포인트 중 작은 쪽. 수량을 줄이면 입력값도 같이 줄어든다
+  // 쓸 수 있는 쌀포인트 — 구매 금액의 20%와 보유 쌀포인트 중 작은 쪽. 수량을 줄이면 입력값도 같이 줄어든다
   const pointLimit = isCash ? Math.min(Math.floor((total * POINT_DISCOUNT_PERCENT) / 100), ssalPoint) : 0;
   const pointApplied = Math.min(pointUse, pointLimit);
   const payAmount = total - pointApplied;
