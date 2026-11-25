@@ -11,19 +11,20 @@ import {
   PaperclipIcon,
   TicketIcon,
 } from '@phosphor-icons/react'
-import { ApiError, getRaffleProducts, createRaffleProduct, type RaffleProductResponse, getStoreProducts, createStoreProduct, getKujiSetsAdmin, createKujiSet, type KujiSetAdminResponse, STORE_CATEGORIES, type StoreCategory, type StoreProductResponse } from '@/lib/api'
+import { ApiError, closeKujiSet, getRaffleProducts, createRaffleProduct, type RaffleProductResponse, getStoreProducts, createStoreProduct, getKujiSetsAdmin, createKujiSet, type KujiSetAdminResponse, STORE_CATEGORIES, type StoreCategory, type StoreProductResponse } from '@/lib/api'
+import { isRegular, isSoldOut } from '@/lib/storeStock'
 import { AdminPageHeader, useAdminToken } from '@/components/admin/AdminShell'
 import {
   PRODUCT_TABS,
   type ProductType, type KujiItem, type Product,
 } from '@/lib/adminProducts'
-import { fetchInventoryItemForProduct, fetchInventoryItems, type InventoryItem } from '@/lib/inventory'
+import { fetchCatalog, type CatalogItem } from '@/lib/catalog'
 import { cancelRaffle, closeKuji, deleteStore, setStoreStock } from '@/lib/productActions'
-import InventoryPicker from '@/components/admin/InventoryPicker'
+import CatalogPicker from '@/components/admin/CatalogPicker'
 
 type KujiTier = 'upper' | 'lower'
 
-// 미리보기용 사진 주소(data URL 또는 재고 품목 사진 URL)를 업로드할 파일로 바꾼다
+// 미리보기용 사진 주소(data URL 또는 등록 상품 사진 URL)를 업로드할 파일로 바꾼다
 const urlToBlob = async (url: string) => (url ? await (await fetch(url)).blob() : undefined)
 
 const TAB_ICON: Record<ProductType, React.ReactNode> = {
@@ -35,7 +36,8 @@ const TAB_ICON: Record<ProductType, React.ReactNode> = {
 const ADMIN_PAGE_SIZE = 10
 const lightInput: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text)', padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
 
-// ── 상품 관리 ─────────────────────────────────────────────
+// ── 상품 게시 ─────────────────────────────────────────────
+// "상품 등록"(app/admin/catalog)에 올려 둔 상품을 골라 응모 · 쿠지 · 상점에 올린다. 재고 수량 · 원가는 사이트에서 관리하지 않는다.
 // 관리자 확인은 app/admin/layout.tsx(AdminShell)가 한다
 export default function AdminProductsPage() {
   const adminToken: string | null = useAdminToken()
@@ -84,47 +86,55 @@ export default function AdminProductsPage() {
   const [saleFilter, setSaleFilter] = useState<'selling' | 'done'>('selling')
   const [productPage, setProductPage] = useState(1)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newP, setNewP] = useState({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000원', description: '' })
+  const [newP, setNewP] = useState({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000원', description: '' })
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [deadlineDays, setDeadlineDays] = useState(1)
   const [storeCategory, setStoreCategory] = useState<StoreCategory | null>(null)
   const [fundingDisabled, setFundingDisabled] = useState(false)   // 결제 상점: 응모 전환 막기 (랜덤 상품 등)
+  // 상점(결제·쌀포인트): 판매 방식 — 한정(올린 개수만큼, 다 팔리면 매진) / 일반(개수 없이 계속 판매). lib/storeStock.ts
+  const [saleMode, setSaleMode] = useState<'limited' | 'regular'>('limited')
   const [raffleSubmitting, setRaffleSubmitting] = useState(false)
   const [raffleSubmitError, setRaffleSubmitError] = useState<string | null>(null)
   const autoMaxTickets = Math.floor((Number(newP.price.replace(/[^0-9]/g, '')) || 0) / 1000)
 
-  // 재고에서 고르기 — 응모·상점은 품목 하나, 쿠지는 상 한 줄마다(KujiItem.itemId)
-  const [invItems, setInvItems] = useState<InventoryItem[] | null>(null)
+  // 등록 상품에서 고르기 — 응모·상점은 상품 하나, 쿠지는 상 한 줄마다(KujiItem.itemId)
+  const [catalog, setCatalog] = useState<CatalogItem[] | null>(null)
   const [pickedItemId, setPickedItemId] = useState<number | null>(null)
-  const pickedItem = invItems?.find(i => i.item_id === pickedItemId) ?? null
-  const reloadInventory = () => {
-    if (adminToken) fetchInventoryItems(adminToken).then(setInvItems).catch(() => setInvItems([]))
-  }
+  const pickedItem = catalog?.find(i => i.id === pickedItemId) ?? null
   useEffect(() => {
-    if (showAddForm && invItems === null) reloadInventory()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAddForm, adminToken])
+    if (showAddForm && catalog === null && adminToken) fetchCatalog(adminToken).then(setCatalog).catch(() => setCatalog([]))
+  }, [showAddForm, adminToken, catalog])
 
-  // 고른 품목으로 상품명·원가·사진·설명을 채운다 (사진은 등록할 때 파일로 바꿔 올린다)
-  const pickForProduct = (item: InventoryItem | null) => {
-    setPickedItemId(item?.item_id ?? null)
-    if (!item) {
-      setNewP(p => ({ ...p, cost: '' }))
-      return
-    }
-    // 설명(상품 설명 · 상품정보제공고시)도 재고에 적어 둔 게 있으면 그대로 가져온다
-    setNewP(p => ({ ...p, title: item.name, cost: String(item.avg_unit_cost), img: item.image_url ?? p.img, description: item.description ?? p.description }))
-    if (item.image_url) setNewImageFile(null)
+  // 고른 상품으로 상품명·사진·설명을 채운다 (사진은 게시할 때 파일로 바꿔 올린다).
+  // 설명 칸 = 등록 상품 설명(상품정보제공고시) — 게시할 상품에만 붙일 부가 설명은 그 위에 적으면 된다
+  const pickForProduct = (item: CatalogItem | null) => {
+    setPickedItemId(item?.id ?? null)
+    if (!item) return
+    setNewP(p => ({ ...p, title: item.name, img: item.imageUrl ?? p.img, description: item.description || p.description }))
+    if (item.imageUrl) setNewImageFile(null)
   }
 
-  // 판매 종료 · 수량 조정 — 남은 물건은 재고로 돌아간다 (lib/productActions.ts)
+  // "상품 등록"의 "게시하기"로 들어오면 (?item=id) 바로 그 상품을 고른 채로 게시 폼을 연다
+  const [linkedItemId, setLinkedItemId] = useState<number | null>(null)
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get('item'))
+    if (id > 0) { setLinkedItemId(id); setShowAddForm(true) }
+  }, [])
+  useEffect(() => {
+    if (linkedItemId == null || !catalog) return
+    const item = catalog.find(i => i.id === linkedItemId)
+    if (item) pickForProduct(item)
+    setLinkedItemId(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedItemId, catalog])
+
+  // 판매 종료 · 수량 조정 (lib/productActions.ts)
   const [actionBusy, setActionBusy] = useState<string | null>(null)
   const runProductAction = async (key: string, fn: () => Promise<void>) => {
     if (!adminToken || actionBusy) return
     setActionBusy(key)
     try {
       await fn()
-      reloadInventory()
     } catch (err) {
       alert(err instanceof Error ? err.message : '처리 중 오류가 발생했어요.')
     } finally {
@@ -179,11 +189,11 @@ export default function AdminProductsPage() {
     const category = STORE_CATEGORIES[sp.pay_type].find(c => c.id === sp.category)?.label
     return {
       meta: `${sp.pay_type === 'cash' ? `${sp.price.toLocaleString()}원` : `${sp.price.toLocaleString()} 쌀포인트`}${category ? ` · ${category}` : ''}`,
-      figure: `${sp.stock}개`,
-      sub: sp.stock > 0 ? '판매 중' : '품절 · 판매 종료',
+      figure: isRegular(sp) ? '일반' : `${sp.stock}개`,
+      sub: isRegular(sp) ? '수량 제한 없이 판매 중' : sp.stock > 0 ? '한정 · 판매 중' : '매진 · 판매 종료',
       progress: null,
-      tone: sp.stock === 0 ? 'var(--danger)' : sp.stock <= 3 ? 'var(--gold)' : 'var(--text)',
-      ended: sp.stock === 0,
+      tone: isRegular(sp) ? 'var(--text)' : sp.stock === 0 ? 'var(--danger)' : sp.stock <= 3 ? 'var(--gold)' : 'var(--text)',
+      ended: isSoldOut(sp),
     }
   }
 
@@ -199,7 +209,7 @@ export default function AdminProductsPage() {
           disabled={!!actionBusy}
           style={actionBtn(true)}
           onClick={() => {
-            if (!confirm(`"${rp.product_name}" 응모를 취소할까요?\n\n지금까지 응모권을 산 ${rp.sold_slots}장은 모두 전액 환불되고, 물건은 재고로 돌아가요. 되돌릴 수 없어요.`)) return
+            if (!confirm(`"${rp.product_name}" 응모를 취소할까요?\n\n지금까지 응모권을 산 ${rp.sold_slots}장은 모두 전액 환불돼요. 되돌릴 수 없어요.`)) return
             runProductAction(key, async () => {
               const updated = await cancelRaffle(adminToken!, rp)
               setRaffleProducts(prev => prev.map(r => (r.raffle_product_id === rp.raffle_product_id ? updated : r)))
@@ -219,7 +229,7 @@ export default function AdminProductsPage() {
           disabled={!!actionBusy}
           style={actionBtn(true)}
           onClick={() => {
-            if (!confirm(`"${ks.title}" 쿠지 판매를 끝낼까요?\n\n남은 제비 ${ks.remaining_tickets}장에 해당하는 상품과 라스트원상은 재고로 돌아가요. 이미 뽑힌 상품은 그대로예요. 되돌릴 수 없어요.`)) return
+            if (!confirm(`"${ks.title}" 쿠지 판매를 끝낼까요?\n\n남은 제비 ${ks.remaining_tickets}장은 더 팔지 않아요. 이미 뽑힌 상품은 그대로예요. 되돌릴 수 없어요.`)) return
             runProductAction(key, async () => {
               const updated = await closeKuji(adminToken!, ks)
               setKujiSets(prev => prev.map(k => (k.kuji_set_id === ks.kuji_set_id ? updated : k)))
@@ -236,53 +246,51 @@ export default function AdminProductsPage() {
       const updated = await setStoreStock(adminToken!, sp, next)
       setStoreProducts(prev => prev.map(s => (s.store_product_id === sp.store_product_id ? updated : s)))
     })
+    const regular = isRegular(sp)
     return (
       <>
-        <button
-          disabled={!!actionBusy}
-          style={actionBtn(false)}
-          onClick={async () => {
-            const linked = await fetchInventoryItemForProduct(adminToken!, 'store', sp.store_product_id).catch(() => null)
-            const max = sp.stock + (linked?.available ?? 0)
-            const input = prompt(
-              `"${sp.product_name}" 판매 수량을 몇 개로 바꿀까요?\n지금 ${sp.stock}개 · ${linked ? `재고에 ${linked.available}개 더 있어서 최대 ${max}개` : '재고 연결 정보 없음'}\n줄이면 줄인 만큼 재고로 돌아가요.`,
-              String(sp.stock),
-            )
-            if (input == null) return
-            const next = Number(input.replace(/[^0-9]/g, ''))
-            if (!Number.isInteger(next) || input.trim() === '') return alert('숫자로 적어주세요.')
-            if (linked && next > max) return alert(`재고가 모자라요. 최대 ${max}개까지 올릴 수 있어요.`)
-            if (next === sp.stock) return
-            changeStock(next)
-          }}
-        >
-          {actionBusy === key ? '바꾸는 중...' : '수량 조정'}
-        </button>
-        {sp.stock > 0 && (
+        {/* 한정 상품만 개수가 있다 — 일반 상품은 개수 없이 팔다가 내리고 싶으면 삭제 */}
+        {!regular && (
+          <button
+            disabled={!!actionBusy}
+            style={actionBtn(false)}
+            onClick={() => {
+              const input = prompt(`"${sp.product_name}" 남은 수량을 몇 개로 바꿀까요?\n지금 ${sp.stock}개 (0 = 판매 종료)`, String(sp.stock))
+              if (input == null) return
+              const next = Number(input.replace(/[^0-9]/g, ''))
+              if (!Number.isInteger(next) || input.trim() === '') return alert('숫자로 적어주세요.')
+              if (next === sp.stock) return
+              changeStock(next)
+            }}
+          >
+            {actionBusy === key ? '바꾸는 중...' : '수량 조정'}
+          </button>
+        )}
+        {!regular && sp.stock > 0 && (
           <button
             disabled={!!actionBusy}
             style={actionBtn(true)}
             onClick={() => {
-              if (!confirm(`"${sp.product_name}" 판매를 끝낼까요?\n남은 ${sp.stock}개는 재고로 돌아가요.`)) return
+              if (!confirm(`"${sp.product_name}" 판매를 끝낼까요?\n남은 ${sp.stock}개를 더 팔지 않아요.`)) return
               changeStock(0)
             }}
           >
             판매 종료
           </button>
         )}
-        {sp.stock === 0 && (
+        {(regular || sp.stock === 0) && (
           <button
             disabled={!!actionBusy}
             style={actionBtn(true)}
             onClick={() => {
-              if (!confirm(`"${sp.product_name}" 상품을 삭제할까요?\n상점 목록에서 사라지고, 이미 구매한 사람의 보관함 내역은 그대로 남아요. 되돌릴 수 없어요.`)) return
+              if (!confirm(`"${sp.product_name}" 상품을 상점에서 내릴까요?\n상점 목록에서 사라지고, 이미 구매한 사람의 보관함 내역은 그대로 남아요. 등록 상품은 남아 있어서 다음에 다시 게시할 수 있어요.`)) return
               runProductAction(`${key}-delete`, async () => {
                 await deleteStore(adminToken!, sp)
                 setStoreProducts(prev => prev.filter(s => s.store_product_id !== sp.store_product_id))
               })
             }}
           >
-            {actionBusy === `${key}-delete` ? '삭제 중...' : '삭제'}
+            {actionBusy === `${key}-delete` ? '내리는 중...' : regular ? '판매 종료' : '삭제'}
           </button>
         )}
       </>
@@ -291,16 +299,16 @@ export default function AdminProductsPage() {
 
   function resetNewProductForm() {
     setPickedItemId(null)
-    setNewP({ title: '', price: '', cost: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000원', description: '' })
+    setNewP({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000원', description: '' })
+    setSaleMode('limited')
     setNewImageFile(null)
     setDeadlineDays(1)
     setStoreCategory(null)
     setFundingDisabled(false)
-    setKujiItems([{ name: '', img: '', count: '1', cost: '' }])
-    setLowerItems([{ name: '', img: '', count: '1', cost: '' }])
-    setLastOneItem({ name: '', img: '', cost: '' })
+    setKujiItems([{ name: '', img: '', count: '1' }])
+    setLowerItems([{ name: '', img: '', count: '1' }])
+    setLastOneItem({ name: '', img: '' })
     setRaffleSubmitError(null)
-    reloadInventory()
   }
 
   function raffleToProduct(rp: RaffleProductResponse): Product {
@@ -336,7 +344,7 @@ export default function AdminProductsPage() {
     }
   }
   function kujiToProduct(ks: KujiSetAdminResponse): Product {
-    const toItem = (p: KujiSetAdminResponse['prizes'][number]) => ({ name: p.name, img: p.image_url ?? '', count: String(p.quantity), cost: String(p.cost) })
+    const toItem = (p: KujiSetAdminResponse['prizes'][number]) => ({ name: p.name, img: p.image_url ?? '', count: String(p.quantity) })
     const lower = ks.prizes.filter(p => p.tier === 'lower')
     return {
       id: ks.kuji_set_id,
@@ -351,51 +359,36 @@ export default function AdminProductsPage() {
       kujiItems: ks.prizes.filter(p => p.tier === 'upper').map(toItem),
       lowerItems: lower.map(toItem),
       lowerCount: lower.reduce((sum, p) => sum + p.quantity, 0),
-      lastOne: ks.last_one_name ? { name: ks.last_one_name, img: ks.last_one_image_url ?? '', cost: String(ks.last_one_cost ?? 0) } : undefined,
+      lastOne: ks.last_one_name ? { name: ks.last_one_name, img: ks.last_one_image_url ?? '' } : undefined,
     }
   }
 
-  // 쿠지 구성 — 상위상·하위상 모두 상품명·사진·개수·원가를 한 줄씩
-  const [kujiItems, setKujiItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1', cost: '' }])
-  const [lowerItems, setLowerItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1', cost: '' }])
+  // 쿠지 구성 — 상위상·하위상 모두 상품명·사진·개수를 한 줄씩 (등록 상품에서 고르거나 직접 적기)
+  const [kujiItems, setKujiItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1' }])
+  const [lowerItems, setLowerItems] = useState<KujiItem[]>([{ name: '', img: '', count: '1' }])
   const toNum = (s: string) => Number(s.replace(/[^0-9]/g, '')) || 0
   const filledItems = (list: KujiItem[]) => list.filter(it => it.name.trim())
+  // 쌀포인트 상 이름 — "쌀포인트 500P" (숫자를 안 적었으면 빈 이름 → 빈 줄로 본다)
+  const pointPrizeName = (points: string) => (toNum(points) > 0 ? `쌀포인트 ${toNum(points).toLocaleString()}P` : '')
   const sumCount = (list: KujiItem[]) => filledItems(list).reduce((sum, it) => sum + (Number(it.count) || 1), 0)
-  const sumCost = (list: KujiItem[]) => filledItems(list).reduce((sum, it) => sum + (Number(it.count) || 1) * toNum(it.cost), 0)
   const kujiItemCount = sumCount(kujiItems)
   const kujiLowerCount = sumCount(lowerItems)
   const kujiTotalPapers = kujiItemCount + kujiLowerCount
-  // 원가 책정용 — 총 원가, 예상 매출(총 장수 × 1장 가격), 마진
-  // 라스트원상 — 제비가 아니라 마지막 장을 뽑은 사람에게 추가로 주는 상이라 장수에는 안 들어가고 원가에만 더한다
-  const [lastOneItem, setLastOneItem] = useState<{ name: string; img: string; cost: string; itemId?: number }>({ name: '', img: '', cost: '' })
-
-  // 쿠지에서 같은 재고 품목을 여러 줄(+라스트원)에 나눠 쓸 수 있으니 품목별로 합쳐서 재고와 비교한다
-  const kujiItemUsage = new Map<number, number>()
-  for (const it of [...filledItems(kujiItems), ...filledItems(lowerItems)]) {
-    if (it.itemId != null) kujiItemUsage.set(it.itemId, (kujiItemUsage.get(it.itemId) ?? 0) + (Number(it.count) || 1))
-  }
-  if (lastOneItem.itemId != null && lastOneItem.name.trim()) kujiItemUsage.set(lastOneItem.itemId, (kujiItemUsage.get(lastOneItem.itemId) ?? 0) + 1)
-  const kujiShortage = (itemId: number | undefined) => {
-    if (itemId == null) return 0
-    const available = invItems?.find(i => i.item_id === itemId)?.available ?? 0
-    return Math.max(0, (kujiItemUsage.get(itemId) ?? 0) - available)
-  }
-  const lastOneCost = toNum(lastOneItem.cost)
+  // 라스트원상 — 제비가 아니라 마지막 장을 뽑은 사람에게 추가로 주는 상이라 장수에는 안 들어간다
+  const [lastOneItem, setLastOneItem] = useState<{ name: string; img: string; itemId?: number }>({ name: '', img: '' })
   const kujiTicketPrice = toNum(newP.ticketPrice) || 10000
-  const kujiTotalCost = sumCost(kujiItems) + sumCost(lowerItems) + lastOneCost
   const kujiRevenue = kujiTotalPapers * kujiTicketPrice
-  const kujiMargin = kujiRevenue - kujiTotalCost
-  const kujiMarginRate = kujiRevenue > 0 ? Math.round((kujiMargin / kujiRevenue) * 1000) / 10 : 0
 
   // 상위상 ↔ 하위상 끌어서 옮기기 — 줄 왼쪽 손잡이를 잡고 다른 줄 위(그 자리 앞) 또는 목록 빈 곳(맨 뒤)에 놓는다
   const [draggingKuji, setDraggingKuji] = useState<{ tier: KujiTier; idx: number } | null>(null)
   const [kujiDropTarget, setKujiDropTarget] = useState<{ tier: KujiTier; idx: number } | null>(null)
-  const isBlankKujiRow = (it: KujiItem) => !it.name.trim() && !it.img && !it.cost.trim()
+  const isBlankKujiRow = (it: KujiItem) => !it.name.trim() && !it.img
 
   function moveKujiItem(from: KujiTier, fromIdx: number, to: KujiTier, toIdx: number) {
     const lists = { upper: kujiItems, lower: lowerItems }
     const setters = { upper: setKujiItems, lower: setLowerItems }
     const src = [...lists[from]]
+    if (to === 'upper' && lists[from][fromIdx]?.kind === 'point') return   // 쌀포인트 상은 하위상에만
     const [item] = src.splice(fromIdx, 1)
     if (!item) return
     if (from === to) {
@@ -406,7 +399,7 @@ export default function AdminProductsPage() {
     // 받는 쪽이 빈 줄 하나뿐이면 그 줄을 대신한다
     const dst = lists[to].length === 1 && isBlankKujiRow(lists[to][0]) ? [] : [...lists[to]]
     dst.splice(Math.min(toIdx, dst.length), 0, item)
-    setters[from](src.length ? src : [{ name: '', img: '', count: '1', cost: '' }])
+    setters[from](src.length ? src : [{ name: '', img: '', count: '1' }])
     setters[to](dst)
   }
 
@@ -447,7 +440,7 @@ export default function AdminProductsPage() {
           <button
             type="button"
             aria-label={`${label.split(' ')[0]} 추가`}
-            onClick={() => setList(prev => [...prev, { name: '', img: '', count: '1', cost: '' }])}
+            onClick={() => setList(prev => [...prev, { name: '', img: '', count: '1' }])}
             style={{ border: '1px solid var(--accent-tint-border)', background: 'var(--accent-tint)', color: 'var(--accent-fg)', borderRadius: 8, width: 24, height: 24, fontSize: 15, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
           >+</button>
         </div>
@@ -497,29 +490,65 @@ export default function AdminProductsPage() {
               <span style={{ flexShrink: 0, minWidth: 34, textAlign: 'center', fontSize: 12, fontWeight: 800, color: 'var(--gold)', background: 'var(--gold-tint)', border: '1px solid var(--gold-tint-border)', borderRadius: 6, padding: '4px 6px' }}>
                 {String.fromCharCode(65 + gradeStart + idx)}상
               </span>
-              {item.img ? (
-                <img src={item.img} alt="미리보기" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-              ) : (
-                <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-subtle)', flexShrink: 0 }} />
-              )}
-              <input
-                style={{ ...lightInput, flex: 1, minWidth: 140 }}
-                placeholder={placeholder}
-                value={item.name}
-                onChange={e => update(idx, { name: e.target.value })}
-              />
-              <InventoryPicker
-                compact
-                items={invItems}
-                selectedId={item.itemId}
-                onSelect={inv => update(idx, inv
-                  ? { itemId: inv.item_id, name: inv.name, img: inv.image_url ?? item.img, cost: String(inv.avg_unit_cost) }
-                  : { itemId: undefined, cost: '' })}
-              />
-              {kujiShortage(item.itemId) > 0 && (
-                <span style={{ flexBasis: '100%', fontSize: 12, color: 'var(--danger)' }}>
-                  이 품목은 재고가 {kujiShortage(item.itemId)}개 모자라요 (이 판 전체에서 같은 품목을 쓴 개수 기준)
+              {tier === 'lower' && (
+                // 하위상만 — 실물 상품 대신 쌀포인트로 줄 수 있다
+                <span role="group" aria-label="상 종류" style={{ display: 'inline-flex', flexShrink: 0, border: '1px solid var(--border-strong)', borderRadius: 8, overflow: 'hidden' }}>
+                  {([['item', '상품'], ['point', '쌀포인트']] as const).map(([k, label]) => {
+                    const on = (item.kind ?? 'item') === k
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => update(idx, k === 'point'
+                          ? { kind: 'point', itemId: undefined, img: '', name: pointPrizeName(item.points ?? '') }
+                          : { kind: 'item', name: '', points: undefined })}
+                        style={{ border: 'none', padding: '6px 9px', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: on ? 'var(--accent-tint)' : 'var(--surface)', color: on ? 'var(--accent-fg)' : 'var(--text-tertiary)' }}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
                 </span>
+              )}
+              {item.kind === 'point' ? (
+                <>
+                  <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--gold-tint)', color: 'var(--gold)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <GrainsIcon size={20} weight="fill" />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 140 }}>
+                    <input
+                      style={{ ...lightInput, textAlign: 'right' }}
+                      type="number"
+                      min="1"
+                      placeholder="예: 500"
+                      aria-label="쌀포인트"
+                      value={item.points ?? ''}
+                      onChange={e => update(idx, { points: e.target.value, name: pointPrizeName(e.target.value) })}
+                    />
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)', flexShrink: 0 }}>P 적립</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {item.img ? (
+                    <img src={item.img} alt="미리보기" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-subtle)', flexShrink: 0 }} />
+                  )}
+                  <input
+                    style={{ ...lightInput, flex: 1, minWidth: 140 }}
+                    placeholder={placeholder}
+                    value={item.name}
+                    onChange={e => update(idx, { name: e.target.value })}
+                  />
+                  <CatalogPicker
+                    compact
+                    items={catalog}
+                    selectedId={item.itemId}
+                    onSelect={c => update(idx, c ? { itemId: c.id, name: c.name, img: c.imageUrl ?? item.img } : { itemId: undefined })}
+                  />
+                </>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                 <input
@@ -533,13 +562,7 @@ export default function AdminProductsPage() {
                 />
                 <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>개</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                {/* 원가는 재고 평균 원가로만 — 손으로 고치지 않는다 */}
-                <span title="개당 원가 (재고 평균 원가)" style={{ ...lightInput, width: 'auto', minWidth: 84, textAlign: 'center', padding: '8px 8px', background: 'var(--bg-subtle)', color: item.itemId != null ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 13 }}>
-                  {item.itemId != null ? `${toNum(item.cost).toLocaleString()}원` : '원가 -'}
-                </span>
-              </div>
-              <label style={{ ...lightInput, width: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: item.img ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 12, padding: '8px 10px' }}>
+              {item.kind !== 'point' && <label style={{ ...lightInput, width: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: item.img ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 12, padding: '8px 10px' }}>
                 <PaperclipIcon size={12} /> 사진
                 <input
                   type="file"
@@ -553,7 +576,7 @@ export default function AdminProductsPage() {
                     reader.readAsDataURL(file)
                   }}
                 />
-              </label>
+              </label>}
               {list.length > 1 && (
                 <button type="button" onClick={() => setList(prev => prev.filter((_, i) => i !== idx))} style={{ border: 'none', background: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>삭제</button>
               )}
@@ -565,13 +588,13 @@ export default function AdminProductsPage() {
     )
   }
 
-  // 탭별 상품 + 판매중 여부 (응모: 아직 응모권을 팔고 있음 / 상점·쿠지: 재고 있음)
+  // 탭별 상품 + 판매중 여부 (응모: 아직 응모권을 팔고 있음 / 쿠지: 남은 장수 있음 / 상점: 일반이거나 한정 수량이 남음)
   const tabItems: { product: Product; selling: boolean }[] = productTab === '응모'
     ? raffleProducts.map(rp => ({ product: raffleToProduct(rp), selling: rp.status === 'open' && rp.is_open && rp.remaining_slots > 0 }))
     : productTab === '상점(일반)' || productTab === '상점(쌀포인트)'
       ? storeProducts
           .filter(sp => sp.pay_type === (productTab === '상점(일반)' ? 'cash' : 'ssal'))
-          .map(sp => ({ product: storeToProduct(sp), selling: sp.stock > 0 }))
+          .map(sp => ({ product: storeToProduct(sp), selling: !isSoldOut(sp) }))
       : kujiSets.map(ks => ({ product: kujiToProduct(ks), selling: ks.status === 'open' && ks.remaining_tickets > 0 }))
   const sellingCount = tabItems.filter(x => x.selling).length
   const doneCount = tabItems.length - sellingCount
@@ -585,10 +608,10 @@ export default function AdminProductsPage() {
   return (
     <div>
       <AdminPageHeader
-        title="상품"
-        description="응모 · 쿠지 · 상점 상품을 재고에서 골라 등록하고, 판매를 끝내거나 수량을 조정해요."
+        title="상품 게시"
+        description="상품 등록에 올려 둔 상품을 골라 응모 · 쿠지 · 상점에 올리고, 판매를 끝내거나 수량을 조정해요."
         actions={!showAddForm && (
-          <button onClick={() => setShowAddForm(true)} className="admin-primary-btn">+ 새 {productTab} 상품</button>
+          <button onClick={() => setShowAddForm(true)} className="admin-primary-btn">+ {productTab}에 게시</button>
         )}
       />
 
@@ -634,59 +657,28 @@ export default function AdminProductsPage() {
 
         {showAddForm && (
           <div style={{ border: '1px solid var(--border)', borderRadius: 14, background: 'var(--surface)', padding: '24px 24px 20px', boxShadow: 'var(--shadow-md)', marginBottom: 20 }}>
-            <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>{TAB_ICON[productTab]} {productTab} 상품 추가</div>
+            <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: 16, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>{TAB_ICON[productTab]} {productTab}에 게시</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {productTab !== '쿠지' && (
-                // 상품은 재고에서만 만든다 — 재고에 없으면 먼저 입고해야 원가·수량이 손익과 맞는다
+                // 게시는 "상품 등록"에 올려 둔 상품에서 고른다 — 상품명·사진·설명(상품정보제공고시)이 채워진다
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>
-                    재고에서 고르기 * (이름·사진·원가·설명이 채워지고, 등록하면 {productTab === '응모' ? '1개가' : '올린 수량만큼'} 판매 중으로 넘어가요)
+                    게시할 상품 * (상품명·사진·설명이 채워져요)
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-                    <InventoryPicker items={invItems} selectedId={pickedItemId} onSelect={pickForProduct} />
-                    <Link href="/admin/finance?tab=inventory" style={{ color: 'var(--accent-fg)', fontSize: 12 }}>재고에 없으면 먼저 입고하기 →</Link>
+                    <CatalogPicker items={catalog} selectedId={pickedItemId} onSelect={pickForProduct} />
+                    <Link href="/admin/catalog" style={{ color: 'var(--accent-fg)', fontSize: 12 }}>목록에 없으면 먼저 상품 등록 →</Link>
                   </div>
-                </div>
-              )}
-              {/* 상점은 재고 중 몇 개를 올릴지 정한다 — 나머지는 재고에 남아 다른 상품에 쓸 수 있다 */}
-              {productTab !== '응모' && productTab !== '쿠지' && (
-                <div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>
-                    판매 수량 *{pickedItem && ` (재고 ${pickedItem.available}개 중 몇 개를 올릴지 — 나머지는 재고에 남아요)`}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                      style={lightInput}
-                      placeholder="올릴 수량 입력 (예: 10)"
-                      type="number"
-                      min="1"
-                      max={pickedItem?.available}
-                      value={newP.stock}
-                      onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))}
-                    />
-                    {pickedItem && pickedItem.available > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setNewP(p => ({ ...p, stock: String(pickedItem.available) }))}
-                        style={{ flexShrink: 0, padding: '0 14px', borderRadius: 8, border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-                      >
-                        전부 ({pickedItem.available}개)
-                      </button>
-                    )}
-                  </div>
-                  {pickedItem && Number(newP.stock) > pickedItem.available && (
-                    <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 5 }}>재고가 {pickedItem.available}개뿐이에요.</div>
-                  )}
                 </div>
               )}
               <div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>{productTab === '쿠지' ? '쿠지 이름 *' : '상품명 * (재고 이름과 다르게 보여주고 싶으면 고치세요)'}</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>{productTab === '쿠지' ? '쿠지 이름 *' : '상품명 * (등록 이름과 다르게 보여주고 싶으면 고치세요)'}</div>
                 <input style={lightInput} placeholder={productTab === '쿠지' ? '예: 주술회전 나오야 젠인 쿠지' : '상품 이름 입력'} value={newP.title} onChange={e => setNewP(p => ({ ...p, title: e.target.value }))} />
               </div>
               {productTab === '쿠지' && (
                 <div style={{ color: 'var(--text-tertiary)', fontSize: 12, lineHeight: 1.6 }}>
-                  상위상·하위상·라스트원상은 줄마다 <b style={{ color: 'var(--text-secondary)' }}>재고</b> 버튼으로 품목을 골라야 해요. 이름·사진·원가가 채워지고, 등록하면 개수만큼 재고에서 판매 중으로 넘어가요.
-                  {' '}<Link href="/admin/finance?tab=inventory" style={{ color: 'var(--accent-fg)' }}>재고에 먼저 입고하기 →</Link>
+                  상위상·하위상·라스트원상은 줄마다 <b style={{ color: 'var(--text-secondary)' }}>고르기</b> 버튼으로 등록 상품을 고르거나, 이름과 사진을 직접 넣어도 돼요.
+                  {' '}<Link href="/admin/catalog" style={{ color: 'var(--accent-fg)' }}>상품 등록 →</Link>
                 </div>
               )}
               {(productTab === '상점(일반)' || productTab === '상점(쌀포인트)') && (
@@ -705,6 +697,39 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
               )}
+              {(productTab === '상점(일반)' || productTab === '상점(쌀포인트)') && (
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>판매 방식 *</div>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    {([
+                      ['limited', '한정', '올린 개수만큼 팔아요. 남은 개수가 보이고, 다 팔리면 매진 (구하기 힘든 상품)'],
+                      ['regular', '일반', '개수 없이 계속 팔아요. 남은 개수도 안 보여요 (구하기 쉬운 상품)'],
+                    ] as const).map(([id, name, desc]) => (
+                      <label key={id} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 13,
+                        border: `1px solid ${saleMode === id ? 'var(--accent-tint-border)' : 'var(--border-strong)'}`,
+                        background: saleMode === id ? 'var(--accent-tint)' : 'var(--surface)',
+                      }}>
+                        <input type="radio" name="sale-mode" checked={saleMode === id} onChange={() => setSaleMode(id)} style={{ marginTop: 3 }} />
+                        <span><b style={{ color: 'var(--text)' }}>{name}</b> <span style={{ color: 'var(--text-tertiary)' }}>— {desc}</span></span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(productTab === '상점(일반)' || productTab === '상점(쌀포인트)') && saleMode === 'limited' && (
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>판매 수량 *</div>
+                  <input
+                    style={lightInput}
+                    placeholder="올릴 개수 (예: 10)"
+                    type="number"
+                    min="1"
+                    value={newP.stock}
+                    onChange={e => setNewP(p => ({ ...p, stock: e.target.value }))}
+                  />
+                </div>
+              )}
               {productTab === '상점(일반)' && (
                 // 랜덤 상품처럼 응모로 돌리면 안 되는 상품 — 상세 화면에 "응모 전환" 칸이 안 나온다
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -716,14 +741,6 @@ export default function AdminProductsPage() {
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>판매가격 *</div>
                   <input style={lightInput} placeholder={productTab === '응모' ? '예: 650000 (숫자만)' : '예: 50000 (숫자만)'} value={newP.price} onChange={e => setNewP(p => ({ ...p, price: e.target.value }))} />
-                </div>
-              )}
-              {productTab !== '쿠지' && (
-                <div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 5 }}>제품 원가 (재고 평균 원가)</div>
-                  <div style={{ ...lightInput, background: 'var(--bg-subtle)', color: pickedItem ? 'var(--text)' : 'var(--text-tertiary)' }}>
-                    {pickedItem ? `${pickedItem.avg_unit_cost.toLocaleString()}원` : '재고에서 고르면 자동으로 채워져요'}
-                  </div>
                 </div>
               )}
               {(
@@ -759,7 +776,7 @@ export default function AdminProductsPage() {
               )}
               {productTab === '쿠지' && renderKujiRows({
                 tier: 'upper',
-                label: '상위상 (상품명·사진·개수·원가) *',
+                label: '상위상 (상품명·사진·개수) *',
                 list: kujiItems,
                 setList: setKujiItems,
                 gradeStart: 0,
@@ -767,7 +784,7 @@ export default function AdminProductsPage() {
               })}
               {productTab === '쿠지' && renderKujiRows({
                 tier: 'lower',
-                label: '하위상 (상품명·사진·개수·원가) *',
+                label: '하위상 (상품명·사진·개수, 또는 쌀포인트) *',
                 list: lowerItems,
                 setList: setLowerItems,
                 gradeStart: kujiItems.length,
@@ -776,7 +793,7 @@ export default function AdminProductsPage() {
               {productTab === '쿠지' && (
                 <div>
                   <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 8 }}>
-                    라스트원상 (선택 · 마지막 1장을 뽑은 분께 추가로, 장수에는 안 들어가고 원가에는 들어가요)
+                    라스트원상 (선택 · 마지막 1장을 뽑은 분께 추가로, 장수에는 안 들어가요)
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, border: '1px solid #8b5cf6', borderRadius: 10, padding: 10 }}>
                     <span className="kuji-last-badge" style={{ position: 'static', transform: 'none', flexShrink: 0 }}>LAST ONE</span>
@@ -791,24 +808,12 @@ export default function AdminProductsPage() {
                       value={lastOneItem.name}
                       onChange={e => setLastOneItem(v => ({ ...v, name: e.target.value }))}
                     />
-                    <InventoryPicker
+                    <CatalogPicker
                       compact
-                      items={invItems}
+                      items={catalog}
                       selectedId={lastOneItem.itemId}
-                      onSelect={inv => setLastOneItem(v => (inv
-                        ? { ...v, itemId: inv.item_id, name: inv.name, img: inv.image_url ?? v.img, cost: String(inv.avg_unit_cost) }
-                        : { ...v, itemId: undefined, cost: '' }))}
+                      onSelect={c => setLastOneItem(v => (c ? { ...v, itemId: c.id, name: c.name, img: c.imageUrl ?? v.img } : { ...v, itemId: undefined }))}
                     />
-                    {kujiShortage(lastOneItem.itemId) > 0 && (
-                      <span style={{ flexBasis: '100%', fontSize: 12, color: 'var(--danger)' }}>
-                        이 품목은 재고가 {kujiShortage(lastOneItem.itemId)}개 모자라요
-                      </span>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                      <span title="라스트원상 원가 (재고 평균 원가)" style={{ ...lightInput, width: 'auto', minWidth: 84, textAlign: 'center', padding: '8px 8px', background: 'var(--bg-subtle)', color: lastOneItem.itemId != null ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 13 }}>
-                        {lastOneItem.itemId != null ? `${lastOneCost.toLocaleString()}원` : '원가 -'}
-                      </span>
-                    </div>
                     <label style={{ ...lightInput, width: 'auto', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: lastOneItem.img ? 'var(--text)' : 'var(--text-tertiary)', fontSize: 12, padding: '8px 10px' }}>
                       <PaperclipIcon size={12} /> 사진
                       <input
@@ -830,7 +835,7 @@ export default function AdminProductsPage() {
               {productTab !== '쿠지' && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>상품 설명 · 상품정보제공고시</span>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>부가 설명 · 상품정보제공고시 (등록 상품 설명이 채워져요. 이번 게시에만 붙일 말은 위에 덧붙이세요)</span>
                     {/* "항목: 값" 줄은 상품 상세에서 표로 보인다. 값을 비운 줄은 안 보인다 */}
                     <button
                       type="button"
@@ -883,22 +888,15 @@ export default function AdminProductsPage() {
                 </div>
               )}
               {productTab === '쿠지' && (
-                // 원가 책정용 자동 계산 — 구성·원가·가격을 바꾸면 바로 다시 계산된다
+                // 구성·가격을 바꾸면 바로 다시 계산된다 (원가·마진은 사이트 밖에서 계산)
                 <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', background: 'var(--bg-subtle)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
                   {[
                     { label: '총 장수', value: kujiTotalPapers ? `${kujiTotalPapers.toLocaleString()}장` : '-', sub: `상위 ${kujiItemCount} · 하위 ${kujiLowerCount}` },
-                    { label: '총 원가', value: kujiTotalCost ? `${kujiTotalCost.toLocaleString()}원` : '-', sub: lastOneCost ? `개수 × 원가 합 + 라스트원 ${lastOneCost.toLocaleString()}원` : '개수 × 원가 합' },
-                    { label: '예상 매출', value: kujiRevenue ? `${kujiRevenue.toLocaleString()}P` : '-', sub: `${kujiTicketPrice.toLocaleString()}P × ${kujiTotalPapers}장` },
-                    {
-                      label: '예상 마진',
-                      value: kujiRevenue ? `${kujiMargin.toLocaleString()}` : '-',
-                      sub: kujiRevenue ? `마진율 ${kujiMarginRate}%` : '',
-                      color: kujiRevenue ? (kujiMargin < 0 ? 'var(--danger)' : 'var(--success)') : undefined,
-                    },
+                    { label: '예상 매출', value: kujiRevenue ? `${kujiRevenue.toLocaleString()}원` : '-', sub: `${kujiTicketPrice.toLocaleString()}원 × ${kujiTotalPapers}장` },
                   ].map(s => (
                     <div key={s.label}>
                       <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>{s.label}</div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: s.color ?? 'var(--text)' }}>{s.value}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{s.value}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{s.sub}</div>
                     </div>
                   ))}
@@ -909,10 +907,10 @@ export default function AdminProductsPage() {
               <button disabled={raffleSubmitting} onClick={async () => {
                 if (productTab === '응모') {
                   if (!pickedItem) {
-                    setRaffleSubmitError('재고에서 품목을 골라주세요. 재고에 없으면 재고·자금 관리에서 먼저 입고해 주세요.')
+                    setRaffleSubmitError('게시할 상품을 골라주세요. 목록에 없으면 상품 등록에서 먼저 올려 주세요.')
                     return
                   }
-                  // 재고 품목 사진을 그대로 쓴다 (따로 올린 사진이 있으면 그걸로)
+                  // 등록 상품 사진을 그대로 쓴다 (따로 올린 사진이 있으면 그걸로)
                   if (!newP.title.trim() || !newP.price.trim() || (!newImageFile && !newP.img) || !adminToken) {
                     setRaffleSubmitError('상품명, 가격, 이미지를 모두 입력해주세요.')
                     return
@@ -920,10 +918,6 @@ export default function AdminProductsPage() {
                   const priceNum = Number(newP.price.replace(/[^0-9]/g, ''))
                   if (!priceNum) {
                     setRaffleSubmitError('가격은 숫자로 입력해주세요.')
-                    return
-                  }
-                  if (pickedItem && pickedItem.available < 1) {
-                    setRaffleSubmitError('고른 품목의 재고가 없어요.')
                     return
                   }
                   try {
@@ -937,20 +931,20 @@ export default function AdminProductsPage() {
                       price_krw: priceNum,
                       image,
                       duration_days: deadlineDays,
-                      inventory_item_id: pickedItem?.item_id,
                     })
                     setRaffleProducts(prev => [created, ...prev])
                     resetNewProductForm()
                     setShowAddForm(false)
                   } catch (err) {
-                    setRaffleSubmitError(err instanceof ApiError ? err.message : '등록 중 오류가 발생했습니다.')
+                    setRaffleSubmitError(err instanceof ApiError ? err.message : '게시 중 오류가 발생했습니다.')
                   } finally {
                     setRaffleSubmitting(false)
                   }
                   return
                 }
                 if (productTab === '상점(일반)' || productTab === '상점(쌀포인트)') {
-                  if (!newP.title.trim() || !newP.price.trim() || !newP.stock.trim() || !adminToken) {
+                  const regularMode = saleMode === 'regular'
+                  if (!newP.title.trim() || !newP.price.trim() || (!regularMode && !newP.stock.trim()) || !adminToken) {
                     setRaffleSubmitError('상품명, 가격, 수량을 모두 입력해주세요.')
                     return
                   }
@@ -959,17 +953,18 @@ export default function AdminProductsPage() {
                     return
                   }
                   if (!pickedItem) {
-                    setRaffleSubmitError('재고에서 품목을 골라주세요. 재고에 없으면 재고·자금 관리에서 먼저 입고해 주세요.')
+                    setRaffleSubmitError('게시할 상품을 골라주세요. 목록에 없으면 상품 등록에서 먼저 올려 주세요.')
                     return
                   }
                   const priceNum = Number(newP.price.replace(/[^0-9]/g, ''))
-                  const stockNum = Number(newP.stock)
+                  // 일반 상품은 개수가 없다 — 서버에는 0을 보내고 sale_mode로 구분한다
+                  const stockNum = regularMode ? 0 : Number(newP.stock)
                   if (!priceNum) {
                     setRaffleSubmitError('가격은 숫자로 입력해주세요.')
                     return
                   }
-                  if (pickedItem && stockNum > pickedItem.available) {
-                    setRaffleSubmitError(`고른 품목의 재고가 ${pickedItem.available}개뿐이에요.`)
+                  if (!regularMode && !(stockNum > 0)) {
+                    setRaffleSubmitError('판매 수량은 1개 이상 숫자로 입력해주세요.')
                     return
                   }
                   try {
@@ -983,14 +978,18 @@ export default function AdminProductsPage() {
                       stock: stockNum,
                       category: storeCategory,
                       image: newImageFile ?? await urlToBlob(newP.img),
-                      inventory_item_id: pickedItem?.item_id,
                       funding_disabled: productTab === '상점(일반)' && fundingDisabled,
+                      sale_mode: saleMode,
                     })
                     setStoreProducts(prev => [created, ...prev])
+                    // 서버가 판매 방식을 아직 모르면 일반으로 골라도 수량 0개 한정(=매진)으로 올라간다 — 조용히 넘어가지 않게 알린다
+                    if (regularMode && created.sale_mode !== 'regular') {
+                      alert('게시는 됐지만 서버가 아직 "일반" 판매 방식을 저장하지 못해 매진 상태로 올라갔어요.\n서버 작업이 끝나면 이 상품을 내리고 다시 게시해 주세요.')
+                    }
                     resetNewProductForm()
                     setShowAddForm(false)
                   } catch (err) {
-                    setRaffleSubmitError(err instanceof ApiError ? err.message : '등록 중 오류가 발생했습니다.')
+                    setRaffleSubmitError(err instanceof ApiError ? err.message : '게시 중 오류가 발생했습니다.')
                   } finally {
                     setRaffleSubmitting(false)
                   }
@@ -1006,7 +1005,7 @@ export default function AdminProductsPage() {
                   setRaffleSubmitError('상위상과 하위상을 각각 하나 이상 입력해주세요.')
                   return
                 }
-                if (!lastOneItem.name.trim() && (lastOneItem.cost.trim() || lastOneItem.img)) {
+                if (!lastOneItem.name.trim() && lastOneItem.img) {
                   setRaffleSubmitError('라스트원상 이름을 입력해주세요.')
                   return
                 }
@@ -1014,16 +1013,7 @@ export default function AdminProductsPage() {
                   setRaffleSubmitError('쿠지 대표 이미지를 올려주세요.')
                   return
                 }
-                if ([...filledItems(kujiItems), ...filledItems(lowerItems)].some(it => it.itemId == null)
-                  || (lastOneItem.name.trim() && lastOneItem.itemId == null)) {
-                  setRaffleSubmitError('상마다 재고에서 품목을 골라주세요. 재고에 없으면 재고·자금 관리에서 먼저 입고해 주세요.')
-                  return
-                }
-                if ([...kujiItemUsage.keys()].some(id => kujiShortage(id) > 0)) {
-                  setRaffleSubmitError('재고가 모자란 품목이 있어요. 개수를 줄이거나 재고에 먼저 입고해 주세요.')
-                  return
-                }
-                // 상품 사진은 미리보기용 data URL(또는 재고 품목 사진 URL)로 들고 있어서 파일로 바꿔 보낸다
+                // 상품 사진은 미리보기용 data URL(또는 등록 상품 사진 URL)로 들고 있어서 파일로 바꿔 보낸다
                 const toBlob = urlToBlob
                 try {
                   setRaffleSubmitting(true)
@@ -1033,9 +1023,10 @@ export default function AdminProductsPage() {
                       tier,
                       name: it.name.trim(),
                       quantity: Number(it.count) || 1,
-                      cost: toNum(it.cost),
-                      image: await toBlob(it.img),
-                      inventory_item_id: it.itemId,
+                      cost: 0,   // 원가는 사이트 밖에서 관리 (서버 칸은 남아 있어서 0)
+                      ...(it.kind === 'point'
+                        ? { point_amount: toNum(it.points ?? '') }
+                        : { image: await toBlob(it.img) }),
                     })))
                   const created = await createKujiSet(adminToken, {
                     title: newP.title.trim(),
@@ -1043,18 +1034,30 @@ export default function AdminProductsPage() {
                     image: newImageFile,
                     prizes: [...await toPrizes(kujiItems, 'upper'), ...await toPrizes(lowerItems, 'lower')],
                     last_one: lastOneItem.name.trim()
-                      ? { name: lastOneItem.name.trim(), cost: lastOneCost, image: await toBlob(lastOneItem.img), inventory_item_id: lastOneItem.itemId }
+                      ? { name: lastOneItem.name.trim(), cost: 0, image: await toBlob(lastOneItem.img) }
                       : undefined,
                   })
+                  // 서버가 쌀포인트 상을 아직 모르면 "쌀포인트 500P"라는 실물 상으로 저장된다 — 그대로 팔면 안 되니 바로 판매를 끝낸다
+                  const wantsPoints = filledItems(lowerItems).some(it => it.kind === 'point')
+                  if (wantsPoints && !created.prizes.some(p => (p.point_amount ?? 0) > 0)) {
+                    const closed = await closeKujiSet(adminToken, created.kuji_set_id).catch(() => null)
+                    setKujiSets(prev => [closed ?? created, ...prev])
+                    alert(closed
+                      ? '서버가 아직 쌀포인트 상을 지원하지 않아서, 방금 만든 쿠지는 바로 판매 종료했어요.\n서버 작업이 끝난 뒤 다시 만들어 주세요.'
+                      : '서버가 아직 쌀포인트 상을 지원하지 않아요. 방금 만든 쿠지를 목록에서 바로 "판매 종료"해 주세요.')
+                    resetNewProductForm()
+                    setShowAddForm(false)
+                    return
+                  }
                   setKujiSets(prev => [created, ...prev])
                   resetNewProductForm()
                   setShowAddForm(false)
                 } catch (err) {
-                  setRaffleSubmitError(err instanceof ApiError ? err.message : '등록 중 오류가 발생했습니다.')
+                  setRaffleSubmitError(err instanceof ApiError ? err.message : '게시 중 오류가 발생했습니다.')
                 } finally {
                   setRaffleSubmitting(false)
                 }
-              }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: raffleSubmitting ? 'default' : 'pointer', opacity: raffleSubmitting ? 0.6 : 1 }}>{raffleSubmitting ? '등록 중...' : '추가하기'}</button>
+              }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: raffleSubmitting ? 'default' : 'pointer', opacity: raffleSubmitting ? 0.6 : 1 }}>{raffleSubmitting ? '게시 중...' : '게시하기'}</button>
               <button onClick={() => { setShowAddForm(false); resetNewProductForm() }} style={{ padding: '11px 24px', borderRadius: 10, border: '1px solid var(--border-strong)', background: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: 14, cursor: 'pointer' }}>취소</button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { GiftIcon } from '@phosphor-icons/react'
+import { GiftIcon, GrainsIcon } from '@phosphor-icons/react'
 import type { KujiLastOne, KujiTier } from '@/lib/kujiData'
 
 export interface KujiRevealItem {
@@ -48,10 +48,13 @@ export default function KujiReveal({ items, revealed, onReveal, skipped, lastOne
                 <span className="kuji-card-img">
                   {item.tier.image
                     ? <img src={item.tier.image} alt="" />
-                    : <GiftIcon size={30} weight="fill" />}
+                    : item.tier.points
+                      ? <GrainsIcon size={30} weight="fill" color="var(--gold)" />
+                      : <GiftIcon size={30} weight="fill" />}
                 </span>
                 <span className="kuji-card-grade">{item.grade}상</span>
                 <span className="kuji-card-title">{item.tier.title}</span>
+                {item.tier.points && <span className="kuji-card-hint">쌀포인트 적립 완료</span>}
                 {top && <span className="kuji-card-shine" aria-hidden="true" />}
               </span>
             </span>

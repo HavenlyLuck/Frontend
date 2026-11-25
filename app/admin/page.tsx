@@ -6,7 +6,6 @@ import { CaretRightIcon } from '@phosphor-icons/react'
 import { getRaffleProducts, type RaffleProductResponse } from '@/lib/api'
 import { AdminPageHeader, useAdminToken } from '@/components/admin/AdminShell'
 import { fetchShippingBoxes } from '@/lib/adminShipping'
-import { fetchInventoryItems, type InventoryItem } from '@/lib/inventory'
 import { fetchPeriodFinance, todayKey, type PeriodFinance } from '@/lib/finance'
 
 const won = (n: number) => `${n.toLocaleString()}원`
@@ -16,19 +15,16 @@ const DAY = 86400
 export default function AdminHomePage() {
   const token = useAdminToken()
   const [shipping, setShipping] = useState<number | null>(null)
-  const [items, setItems] = useState<InventoryItem[] | null>(null)
   const [raffles, setRaffles] = useState<RaffleProductResponse[] | null>(null)
   const [month, setMonth] = useState<PeriodFinance | null>(null)
   const today = todayKey()
 
   useEffect(() => {
     fetchShippingBoxes(token, 'requested').then(b => setShipping(b.length)).catch(() => setShipping(0))
-    fetchInventoryItems(token).then(setItems).catch(() => setItems([]))
     getRaffleProducts('open').then(setRaffles).catch(() => setRaffles([]))
     fetchPeriodFinance(token, 'month', today.slice(0, 7)).then(setMonth).catch(() => setMonth(null))
   }, [token, today])
 
-  const outOfStock = items?.filter(i => i.available === 0) ?? []
   const closingSoon = raffles?.filter(r => r.remaining_slots > 0 && r.remaining_seconds > 0 && r.remaining_seconds < DAY) ?? []
   const waitingDraw = raffles?.filter(r => r.remaining_slots <= 0) ?? []
   const todayRevenue = month?.sales.filter(s => s.date === today).reduce((n, s) => n + s.revenue, 0)
@@ -52,16 +48,6 @@ export default function AdminHomePage() {
         ? `${closingSoon.slice(0, 2).map(r => `${r.product_name} ${r.sold_slots}/${r.total_slots}장`).join(' · ')}${closingSoon.length > 2 ? ' …' : ''} — 못 채우면 자동 취소·환불`
         : '못 채우면 자동 취소·환불돼요',
       urgent: true,
-    },
-    {
-      href: '/admin/finance?tab=inventory',
-      count: items ? outOfStock.length : null,
-      unit: '개',
-      label: '재고가 없는 품목',
-      sub: outOfStock.length > 0
-        ? `${outOfStock.slice(0, 3).map(i => i.name).join(' · ')}${outOfStock.length > 3 ? ' …' : ''} — 더 팔려면 입고해요`
-        : '상품에 올릴 수 있는 재고가 다 남아 있어요',
-      urgent: false,
     },
     {
       href: '/admin/products',
@@ -102,17 +88,10 @@ export default function AdminHomePage() {
       <section>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
           <h2 className="admin-section-title">매출</h2>
-          <Link href="/admin/finance" style={{ fontSize: 13, color: 'var(--accent-fg)', textDecoration: 'none', fontWeight: 600 }}>손익 자세히 →</Link>
         </div>
         <div className="admin-stat-grid">
           <Stat label="오늘 매출" value={wonOrDots(todayRevenue)} />
           <Stat label="이번 달 매출" value={wonOrDots(month?.summary.revenue)} />
-          <Stat
-            label="이번 달 순이익"
-            value={wonOrDots(month?.summary.netProfit)}
-            tone={month ? (month.summary.netProfit >= 0 ? 'good' : 'bad') : undefined}
-            sub={`매출 − 판매 원가 − 부대비용`}
-          />
         </div>
       </section>
     </div>

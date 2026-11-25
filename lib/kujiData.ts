@@ -6,6 +6,8 @@ export interface KujiTier {
   image: string | null
   count: number
   isTop: boolean
+  // 쌀포인트 상 — 뽑으면 이만큼 쌀포인트를 바로 적립 (실물 상이면 null)
+  points: number | null
 }
 
 export interface KujiProduct {
@@ -37,7 +39,7 @@ export function toKujiProduct(ks: KujiSetResponse): KujiProduct {
     pricePerTicket: ks.ticket_price,
     totalTickets: ks.total_tickets,
     open: ks.status === 'open' && ks.remaining_tickets > 0,
-    tiers: ks.prizes.map(p => ({ grade: p.grade, title: p.name, image: p.image_url, count: p.quantity, isTop: p.tier === 'upper' })),
+    tiers: ks.prizes.map(p => ({ grade: p.grade, title: p.name, image: p.image_url, count: p.quantity, isTop: p.tier === 'upper', points: (p.point_amount ?? 0) > 0 ? p.point_amount! : null })),
     lastOne: ks.last_one_name ? { title: ks.last_one_name, image: ks.last_one_image_url ?? ks.image_url ?? '' } : undefined,
   }
 }

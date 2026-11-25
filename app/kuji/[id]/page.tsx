@@ -8,6 +8,7 @@ import {
   CheckIcon,
   ConfettiIcon,
   GiftIcon,
+  GrainsIcon,
   LockIcon,
   TicketIcon,
 } from '@phosphor-icons/react'
@@ -15,6 +16,7 @@ import { fetchKujiProduct, type KujiLastOne, type KujiProduct, type KujiTier } f
 import { confirmKujiDraw, fetchKujiBoard, type KujiBoard } from '@/lib/kujiBoard'
 import { getValidSession, isLoggedIn, loginPath, promptSignup } from '@/lib/auth'
 import KujiReveal from '@/components/KujiReveal'
+import { notifyPointsUpdated } from '@/hooks/useMyPoints'
 import KujiAvatarScene from '@/components/KujiAvatarScene'
 import { ApiError, getMyProfile } from '@/lib/api'
 import { PaymentWindowError } from '@/lib/payment'
@@ -252,6 +254,8 @@ function KujiProductView({ product }: { product: KujiProduct }) {
       applyBoard(res.board, res.drawn.map(d => d.ticketId))
       setConflictIds([])
       setResults(res.drawn.map(d => ({ ...d, tier: product.tiers.find(t => t.grade === d.grade)! })))
+      // 쌀포인트 상을 뽑았으면 화면 위 포인트 숫자를 다시 불러온다
+      if (res.drawn.some(d => product.tiers.find(t => t.grade === d.grade)?.points)) notifyPointsUpdated()
       setLastOne(res.lastOne)
       setSelected([])
     } catch (err) {
@@ -272,9 +276,10 @@ function KujiProductView({ product }: { product: KujiProduct }) {
           {tier.image ? (
             <img src={tier.image} alt={tier.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: soldOut ? 'blur(2px) brightness(0.5)' : undefined }} />
           ) : (
-            // 사진 없이 등록한 상품
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
-              <GiftIcon size={36} weight="fill" />
+            // 사진 없이 등록한 상품 · 쌀포인트 상
+            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', justifyContent: 'center', color: tier.points ? 'var(--gold)' : 'var(--text-tertiary)', background: tier.points ? 'var(--gold-tint)' : undefined, filter: soldOut ? 'brightness(0.5)' : undefined }}>
+              {tier.points ? <GrainsIcon size={40} weight="fill" /> : <GiftIcon size={36} weight="fill" />}
+              {tier.points && <span style={{ fontSize: 18, fontWeight: 800 }}>{tier.points.toLocaleString()}P</span>}
             </div>
           )}
           {soldOut && (
@@ -288,6 +293,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{tier.title}</div>
           <div style={{ fontSize: 12, color: soldOut ? 'var(--text-tertiary)' : 'var(--text-secondary)' }}>
             {soldOut ? '모두 소진되었습니다' : `${left} / ${tier.count}개 남음`}
+            {tier.points && !soldOut && <span style={{ display: 'block', marginTop: 2, color: 'var(--gold)' }}>뽑으면 쌀포인트 바로 적립</span>}
           </div>
         </div>
       </div>

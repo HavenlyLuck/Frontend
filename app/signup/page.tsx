@@ -4,6 +4,7 @@ import { trackPixel } from '@/lib/metaPixel'
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { ConfettiIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
+import { storedReferralCode } from '@/lib/referralLink'
 import LogoMark, { Logo } from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -83,8 +84,8 @@ export default function SignupPage() {
       if (saved) setLoginHref(loginPath(saved))
     } catch {}
 
-    // 추천 링크(/signup?ref=코드)로 들어오면 추천인 코드를 미리 채워 둔다
-    const ref = new URLSearchParams(window.location.search).get('ref')
+    // 추천 링크(/signup?ref=코드)나 친구 초대 링크(상품 페이지?ref=코드)로 들어왔으면 추천인 코드를 미리 채워 둔다
+    const ref = new URLSearchParams(window.location.search).get('ref') ?? storedReferralCode()
     if (ref) setForm(prev => ({ ...prev, referral: ref.toUpperCase() }))
 
     // 모바일 본인인증 후 돌아온 경우: 보관해 둔 입력값을 복원하고 결과를 처리한다

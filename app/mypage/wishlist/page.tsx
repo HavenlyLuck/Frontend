@@ -15,6 +15,7 @@ import { getValidSession } from '@/lib/auth'
 import { formatStorePrice, PayTypeIcon } from '@/components/StoreProductCard'
 import RaffleCard from '@/components/RaffleCard'
 import CardImage from '@/components/CardImage'
+import { isSoldOut } from '@/lib/storeStock'
 
 type Tab = 'raffle' | 'shop'
 const TABS: { id: Tab; label: string }[] = [
@@ -129,7 +130,7 @@ export default function WishlistPage() {
       ) : (
         <div className="product-grid-home">
           {shopItems!.map(item => {
-            const soldOut = item.stock === 0
+            const soldOut = isSoldOut(item)
             return (
               <div key={item.store_product_id} className="wish-card">
                 <button onClick={() => removeShop(item.store_product_id)} aria-label="찜 해제" className="wish-heart liked">

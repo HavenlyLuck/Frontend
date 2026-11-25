@@ -10,6 +10,7 @@ export interface WishlistItem {
   pay_type: StorePayType
   price: number
   stock: number
+  sale_mode?: 'limited' | 'regular'   // TODO(백엔드): 찜 목록에도 판매 방식 (없으면 한정으로 봄)
   wished_at: string | null
 }
 

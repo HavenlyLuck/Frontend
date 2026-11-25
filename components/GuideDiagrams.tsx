@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import {
   ArrowRightIcon,
   CreditCardIcon,
@@ -26,15 +26,20 @@ import { STORAGE_KEEP_DAYS } from '@/lib/storageExpiry'
 
 const STEP_MS = 700
 
+// 박자를 밖에서 정해 줄 때 (인스타 릴스 영상 — reels/ 폴더의 Remotion이 프레임마다 박자를 넣는다). null이면 스스로 반복
+export const DiagramStepContext = createContext<number | null>(null)
+
 function useStep(total: number): number {
+  const forced = useContext(DiagramStepContext)
   const [step, setStep] = useState(total - 1)
   useEffect(() => {
+    if (forced != null) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     setStep(0)
     const id = window.setInterval(() => setStep((s) => (s + 1) % total), STEP_MS)
     return () => window.clearInterval(id)
-  }, [total])
-  return step
+  }, [total, forced])
+  return forced != null ? Math.min(total - 1, Math.max(0, forced)) : step
 }
 
 function Row({ n, label, children }: { n: 3 | 4; label: string; children: ReactNode }) {
