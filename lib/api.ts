@@ -474,6 +474,8 @@ export interface CreateRaffleProductPayload {
   duration_days: number
   // 재고 품목에서 고른 경우 — 서버가 그 품목 1개를 이 응모에 묶는다
   inventory_item_id?: number
+  // 등록 상품 연결(재고 확인·묶기 없이 "어떤 물건인지"만) — 주간 장부가 매입 원가를 찾는 데 쓴다. TODO(백엔드): 받기 전엔 무시됨
+  catalog_item_id?: number
 }
 
 export interface StoreProductResponse {
@@ -941,6 +943,7 @@ export interface CreateStoreProductPayload {
   inventory_item_id?: number
   funding_disabled?: boolean   // 결제 상점만 — 응모 전환 막기
   sale_mode?: 'limited' | 'regular'   // 한정 / 일반 (TODO(백엔드): 서버가 받기 전엔 무시됨)
+  catalog_item_id?: number   // 등록 상품 연결(재고 묶기 없음) — TODO(백엔드): 받기 전엔 무시됨
 }
 
 export async function createStoreProduct(token: string, payload: CreateStoreProductPayload) {
@@ -955,6 +958,7 @@ export async function createStoreProduct(token: string, payload: CreateStoreProd
   if (payload.inventory_item_id != null) formData.append('inventory_item_id', String(payload.inventory_item_id))
   if (payload.funding_disabled) formData.append('funding_disabled', 'true')
   if (payload.sale_mode) formData.append('sale_mode', payload.sale_mode)
+  if (payload.catalog_item_id != null) formData.append('catalog_item_id', String(payload.catalog_item_id))
 
   const res = await fetch(`${API_URL}/store-products`, {
     method: 'POST',
@@ -1027,6 +1031,7 @@ export interface CreateKujiPrize {
   image?: Blob
   // 재고 품목에서 고른 경우 — 서버가 quantity만큼 그 품목을 이 상에 묶는다
   inventory_item_id?: number
+  catalog_item_id?: number   // 등록 상품 연결(재고 묶기 없음) — TODO(백엔드): 받기 전엔 무시됨
 }
 
 export interface CreateKujiSetPayload {
@@ -1035,7 +1040,7 @@ export interface CreateKujiSetPayload {
   ticket_price: number
   image: Blob
   prizes: CreateKujiPrize[]
-  last_one?: { name: string; cost: number; image?: Blob; inventory_item_id?: number }
+  last_one?: { name: string; cost: number; image?: Blob; inventory_item_id?: number; catalog_item_id?: number }
 }
 
 export interface KujiBoardResponse {
@@ -1094,6 +1099,7 @@ export async function createKujiSet(token: string, payload: CreateKujiSetPayload
     formData.append('last_one_cost', String(payload.last_one.cost))
     if (payload.last_one.image) formData.append('last_one_image', payload.last_one.image)
     if (payload.last_one.inventory_item_id != null) formData.append('last_one_inventory_item_id', String(payload.last_one.inventory_item_id))
+    if (payload.last_one.catalog_item_id != null) formData.append('last_one_catalog_item_id', String(payload.last_one.catalog_item_id))
   }
 
   const res = await fetch(`${API_URL}/kuji`, {
@@ -1128,6 +1134,7 @@ export async function createRaffleProduct(token: string, payload: CreateRafflePr
   formData.append('image', payload.image)
   formData.append('duration_days', String(payload.duration_days))
   if (payload.inventory_item_id != null) formData.append('inventory_item_id', String(payload.inventory_item_id))
+  if (payload.catalog_item_id != null) formData.append('catalog_item_id', String(payload.catalog_item_id))
 
   const res = await fetch(`${API_URL}/raffles`, {
     method: 'POST',

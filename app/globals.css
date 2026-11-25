@@ -6409,6 +6409,8 @@ a.auth-submit {
   padding: 12px 16px;
 }
 .admin-prow + .admin-prow { border-top: 1px solid var(--border); }
+/* 상품 등록 목록 — 줄마다 매입 기록 패널이 붙어서 한 겹 더 감싼다 */
+.admin-prow-group + .admin-prow-group { border-top: 1px solid var(--border); }
 .admin-prow.is-ended .admin-prow-thumb,
 .admin-prow.is-ended .admin-prow-main { opacity: 0.55; }
 .admin-prow-thumb {
