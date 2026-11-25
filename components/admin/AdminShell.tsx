@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { BellRingingIcon, ChatCircleIcon, HouseIcon, PackageIcon, StorefrontIcon, TruckIcon } from '@phosphor-icons/react'
+import { BellRingingIcon, ChatCircleIcon, HouseIcon, PackageIcon, ReceiptIcon, StorefrontIcon, TruckIcon } from '@phosphor-icons/react'
 import { verifyAdmin, ApiError } from '@/lib/api'
 import { getValidSession, clearAuth, loginPath } from '@/lib/auth'
 import { fetchShippingBoxes } from '@/lib/adminShipping'
@@ -40,6 +40,7 @@ const NAV = [
   { href: '/admin/catalog', label: '상품 등록', icon: PackageIcon, match: (p: string) => p.startsWith('/admin/catalog') },
   { href: '/admin/products', label: '상품 게시', icon: StorefrontIcon, match: (p: string) => p.startsWith('/admin/products') },
   { href: '/admin/shipping', label: '배송', icon: TruckIcon, badge: 'shipping', match: (p: string) => p.startsWith('/admin/shipping') },
+  { href: '/admin/expenses', label: '비용', icon: ReceiptIcon, match: (p: string) => p.startsWith('/admin/expenses') },
   { href: '/admin/inquiries', label: '문의', icon: ChatCircleIcon, badge: 'inquiries', match: (p: string) => p.startsWith('/admin/inquiries') },
   { href: '/admin/alimtalk', label: '알림톡', icon: BellRingingIcon, match: (p: string) => p.startsWith('/admin/alimtalk') },
 ] as const

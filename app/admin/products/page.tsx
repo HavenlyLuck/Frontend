@@ -931,6 +931,7 @@ export default function AdminProductsPage() {
                       price_krw: priceNum,
                       image,
                       duration_days: deadlineDays,
+                      catalog_item_id: pickedItem.id,
                     })
                     setRaffleProducts(prev => [created, ...prev])
                     resetNewProductForm()
@@ -980,6 +981,7 @@ export default function AdminProductsPage() {
                       image: newImageFile ?? await urlToBlob(newP.img),
                       funding_disabled: productTab === '상점(일반)' && fundingDisabled,
                       sale_mode: saleMode,
+                      catalog_item_id: pickedItem.id,
                     })
                     setStoreProducts(prev => [created, ...prev])
                     // 서버가 판매 방식을 아직 모르면 일반으로 골라도 수량 0개 한정(=매진)으로 올라간다 — 조용히 넘어가지 않게 알린다
@@ -1026,7 +1028,7 @@ export default function AdminProductsPage() {
                       cost: 0,   // 원가는 사이트 밖에서 관리 (서버 칸은 남아 있어서 0)
                       ...(it.kind === 'point'
                         ? { point_amount: toNum(it.points ?? '') }
-                        : { image: await toBlob(it.img) }),
+                        : { image: await toBlob(it.img), ...(it.itemId != null ? { catalog_item_id: it.itemId } : {}) }),
                     })))
                   const created = await createKujiSet(adminToken, {
                     title: newP.title.trim(),
@@ -1034,7 +1036,7 @@ export default function AdminProductsPage() {
                     image: newImageFile,
                     prizes: [...await toPrizes(kujiItems, 'upper'), ...await toPrizes(lowerItems, 'lower')],
                     last_one: lastOneItem.name.trim()
-                      ? { name: lastOneItem.name.trim(), cost: 0, image: await toBlob(lastOneItem.img) }
+                      ? { name: lastOneItem.name.trim(), cost: 0, image: await toBlob(lastOneItem.img), catalog_item_id: lastOneItem.itemId }
                       : undefined,
                   })
                   // 서버가 쌀포인트 상을 아직 모르면 "쌀포인트 500P"라는 실물 상으로 저장된다 — 그대로 팔면 안 되니 바로 판매를 끝낸다

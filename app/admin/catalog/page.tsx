@@ -7,6 +7,7 @@ import { AdminPageHeader, useAdminToken } from '@/components/admin/AdminShell'
 import { ApiError } from '@/lib/api'
 import { createCatalogItem, deleteCatalogItem, fetchCatalog, updateCatalogItem, type CatalogItem } from '@/lib/catalog'
 import { PRODUCT_INFO_FIELDS, parseProductDescription, productInfoTemplate } from '@/lib/productInfo'
+import PurchasePanel from '@/components/admin/PurchasePanel'
 
 const lightInput: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text)', padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
 const smallBtn = (danger = false): React.CSSProperties => ({
@@ -32,6 +33,8 @@ export default function AdminCatalogPage() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
+  // 입고 패널을 연 상품 — adding: 바로 입고 입력 칸을 연 채로
+  const [openStock, setOpenStock] = useState<{ id: number; adding: boolean } | null>(null)
 
   const reload = () => fetchCatalog(token)
     .then(list => { setItems(list); setListError(null) })
@@ -84,7 +87,7 @@ export default function AdminCatalogPage() {
     <div>
       <AdminPageHeader
         title="상품 등록"
-        description="떼 온 상품을 사진 · 상품명 · 상품정보제공고시로 등록해 두세요. 응모 · 쿠지 · 상점에 올리는 건 상품 게시에서 해요."
+        description={'새 상품은 사진 · 상품명 · 상품정보제공고시로 한 번만 등록하고, 물건을 떼 올 때마다 그 상품의 "+ 입고"로 날짜 · 거래처 · 수량 · 원가를 남겨 주세요. 응모 · 쿠지 · 상점에 올리는 건 상품 게시에서 해요.'}
         actions={editing === null && <button onClick={openNew} className="admin-primary-btn">+ 새 상품 등록</button>}
       />
 
@@ -168,20 +171,32 @@ export default function AdminCatalogPage() {
         <div className="admin-plist">
           {shown.map(it => {
             const filled = parseProductDescription(it.description).info.length
+            const stockOpen = openStock?.id === it.id
             return (
-              <div key={it.id} className="admin-prow no-status">
+              <div key={it.id} className="admin-prow-group">
+              <div className="admin-prow no-status">
                 <div className="admin-prow-thumb">{it.imageUrl ? <img src={it.imageUrl} alt="" /> : null}</div>
                 <div className="admin-prow-main">
                   <div className="admin-prow-title">{it.name}</div>
-                  <div className="admin-prow-meta" style={{ color: filled === 0 ? 'var(--gold)' : undefined }}>
-                    {filled === 0 ? '상품정보제공고시 비어 있음' : `상품정보제공고시 ${filled} / ${PRODUCT_INFO_FIELDS.length}항목`}
+                  <div className="admin-prow-meta">
+                    <span style={{ color: filled === 0 ? 'var(--gold)' : undefined }}>
+                      {filled === 0 ? '상품정보제공고시 비어 있음' : `상품정보제공고시 ${filled} / ${PRODUCT_INFO_FIELDS.length}항목`}
+                    </span>
+                    {' · '}
+                    <span style={{ color: it.purchasedQty === 0 ? 'var(--gold)' : undefined }}>
+                      {it.purchasedQty === 0 ? '입고 기록 없음' : `입고 ${it.purchasedQty}개 · 평균 원가 ${it.avgUnitCost.toLocaleString()}원`}
+                    </span>
                   </div>
                 </div>
                 <div className="admin-prow-actions">
+                  <button style={smallBtn()} onClick={() => setOpenStock({ id: it.id, adding: true })}>+ 입고</button>
+                  <button style={smallBtn()} onClick={() => setOpenStock(stockOpen ? null : { id: it.id, adding: false })}>{stockOpen ? '입고 기록 닫기' : '입고 기록'}</button>
                   <Link href={`/admin/products?item=${it.id}`} style={smallBtn()}>게시하기</Link>
                   <button style={smallBtn()} onClick={() => openEdit(it)}>고치기</button>
                   <button style={smallBtn(true)} disabled={busyId === it.id} onClick={() => remove(it)}>{busyId === it.id ? '지우는 중...' : '삭제'}</button>
                 </div>
+              </div>
+              {stockOpen && <PurchasePanel key={`${it.id}-${openStock?.adding}`} token={token} item={it} startAdding={openStock?.adding ?? false} onChanged={reload} onClose={() => setOpenStock(null)} />}
               </div>
             )
           })}
