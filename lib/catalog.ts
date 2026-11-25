@@ -44,7 +44,8 @@ export interface PurchaseInput {
   date: string          // 매입일 YYYY-MM-DD (돈 낸 날)
   supplier: string      // 매입처 (가게 · 사이트 · 거래처)
   quantity: number
-  unitCost: number      // 1개당 단가(원, 부가세 포함)
+  unitCost: number      // 1개당 실제로 낸 돈(원) — 과세면 부가세 포함, 면세면 그대로
+  taxFree: boolean      // 부가세 면세로 떼 온 것 (계산서 · 면세 영수증)
   memo: string
 }
 
@@ -54,12 +55,23 @@ export interface PurchaseRecord {
   supplier: string
   quantity: number
   unitCost: number
+  taxFree: boolean
   memo: string
 }
 
+/*
+ * 면세 여부는 서버 입고 기록에 칸이 없어서 메모 앞에 "[면세]"로 붙인다 — 장부가 이걸 보고 과세분만 부가세를 나눈다.
+ * TODO(백엔드): 입고 기록에 tax_free(bool) — 생기면 메모 대신 그 칸을 쓴다 (POST 때 tax_free 필드는 이미 같이 보냄).
+ */
+const TAX_FREE_TAG = /^\[면세\]\s*/
+
 function toPurchase(r: InventoryReceiptResponse): PurchaseRecord {
-  return { id: r.receipt_id, date: r.received_at, supplier: r.supplier ?? '', quantity: r.quantity, unitCost: r.unit_cost, memo: r.memo ?? '' }
+  const memo = r.memo ?? ''
+  const taxFree = r.tax_free ?? TAX_FREE_TAG.test(memo)
+  return { id: r.receipt_id, date: r.received_at, supplier: r.supplier ?? '', quantity: r.quantity, unitCost: r.unit_cost, taxFree, memo: memo.replace(TAX_FREE_TAG, '') }
 }
+
+const memoWithTax = (p: Pick<PurchaseInput, 'memo' | 'taxFree'>) => [p.taxFree ? '[면세]' : '', p.memo.trim()].filter(Boolean).join(' ')
 
 export async function fetchPurchases(token: string, itemId: number): Promise<PurchaseRecord[]> {
   const detail = await getInventoryItem(token, itemId)
@@ -70,11 +82,11 @@ export async function fetchPurchases(token: string, itemId: number): Promise<Pur
 export async function addPurchase(token: string, item: { id: number; name: string }, p: PurchaseInput): Promise<void> {
   const detail = await getInventoryItem(token, item.id)
   const placeholder = detail.receipts.length > 0 && detail.receipts.every(isPlaceholder) ? detail.receipts[0] : null
-  const fields = { quantity: p.quantity, unit_cost: p.unitCost, received_at: p.date, supplier: p.supplier.trim() || undefined, memo: p.memo.trim() || undefined }
+  const fields = { quantity: p.quantity, unit_cost: p.unitCost, received_at: p.date, supplier: p.supplier.trim() || undefined, memo: memoWithTax(p) || undefined }
   if (placeholder) {
     await updateInventoryReceipt(token, placeholder.receipt_id, { ...fields, supplier: fields.supplier ?? null, memo: fields.memo ?? null })
   } else {
-    await createInventoryReceipt(token, { item_id: item.id, ...fields })
+    await createInventoryReceipt(token, { item_id: item.id, ...fields, tax_free: p.taxFree })
   }
 }
 
@@ -107,22 +119,14 @@ function errorOf(res: Response, data: unknown, fallback: string): ApiError {
 // 서울 날짜 YYYY-MM-DD (대신 만드는 입고 기록의 날짜)
 const seoulToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date())
 
-// 매입 정보를 같이 넣으면 그 입고 기록으로 품목을 만든다 (빈 기록 없이)
-export async function createCatalogItem(token: string, input: { name: string; image: Blob; description: string; purchase?: PurchaseInput }): Promise<void> {
+// 상품만 등록한다 — 입고는 목록의 "+ 입고"로 따로
+export async function createCatalogItem(token: string, input: { name: string; image: Blob; description: string }): Promise<void> {
   const base = () => {
     const form = new FormData()
     form.append('name', input.name.trim())
     form.append('image', input.image)
     if (input.description.trim()) form.append('description', input.description.trim())
     return form
-  }
-  const p = input.purchase
-  if (p) {
-    await createInventoryReceipt(token, {
-      name: input.name.trim(), image: input.image, description: input.description.trim() || undefined,
-      quantity: p.quantity, unit_cost: p.unitCost, received_at: p.date, supplier: p.supplier.trim() || undefined, memo: p.memo.trim() || undefined,
-    })
-    return
   }
   const first = await postForm(token, '/inventory/items', base())
   if (first.res.ok) return

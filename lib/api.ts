@@ -722,6 +722,7 @@ export interface InventoryReceiptResponse {
   received_at: string      // 매입일 YYYY-MM-DD
   supplier: string | null
   memo: string | null
+  tax_free?: boolean       // 면세 입고 — TODO(백엔드): 아직 안 보냄 (그동안 메모 앞 "[면세]"로 구분, lib/catalog.ts)
   created_at: string
 }
 
@@ -748,6 +749,7 @@ export interface CreateInventoryReceiptPayload {
   received_at: string
   supplier?: string
   memo?: string
+  tax_free?: boolean       // TODO(백엔드): 받기 전엔 무시됨
 }
 
 export function getInventoryItems(token: string) {
@@ -773,6 +775,7 @@ export async function createInventoryReceipt(token: string, payload: CreateInven
   formData.append('received_at', payload.received_at)
   if (payload.supplier) formData.append('supplier', payload.supplier)
   if (payload.memo) formData.append('memo', payload.memo)
+  if (payload.tax_free != null) formData.append('tax_free', String(payload.tax_free))
 
   const res = await fetch(`${API_URL}/inventory/receipts`, {
     method: 'POST',
