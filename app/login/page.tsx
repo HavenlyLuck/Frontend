@@ -14,6 +14,9 @@ export default function LoginPage() {
   const [form, setForm] = useState({ userId: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // 관리자 2단계 인증 — 비밀번호가 맞으면 서버가 OTP 코드를 요청한다(otp_required). 그때부터 코드 칸을 보여준다
+  const [otpStep, setOtpStep] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
   // 로그인 뒤 돌아갈 주소(?next=) — 회원가입으로 넘어가도 이어서 들고 간다
   const [signupHref, setSignupHref] = useState('/signup')
   useEffect(() => {
@@ -27,6 +30,11 @@ export default function LoginPage() {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value })
+    // 아이디·비밀번호를 고치면 OTP 단계는 처음부터
+    if (otpStep) {
+      setOtpStep(false)
+      setOtpCode('')
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -34,7 +42,11 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      const res = await login({ login_id: form.userId, password: form.password })
+      const res = await login({
+        login_id: form.userId,
+        password: form.password,
+        ...(otpStep ? { otp_code: otpCode } : {}),
+      })
       localStorage.setItem('token', res.access_token)
       localStorage.setItem('refreshToken', res.refresh_token)
       localStorage.setItem('userId', form.userId)
@@ -43,6 +55,12 @@ export default function LoginPage() {
       notifyStorageUpdated()
       router.push(safeNextPath(new URLSearchParams(window.location.search).get('next')))
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'otp_required') {
+        setOtpStep(true)
+        setOtpCode('')
+        return
+      }
+      if (err instanceof ApiError && err.code === 'otp_invalid') setOtpCode('')
       setError(err instanceof ApiError ? err.message : '로그인 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
@@ -98,6 +116,26 @@ export default function LoginPage() {
                 autoComplete="current-password"
               />
             </div>
+            {otpStep && (
+              <div className="field">
+                <input
+                  id="login-otp"
+                  name="otp"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  placeholder="OTP 인증 코드 6자리"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                  required
+                  autoFocus
+                  className="field-input"
+                  autoComplete="one-time-code"
+                />
+                <p className="field-hint">관리자 계정이에요. OTP 앱에 표시된 6자리 코드를 입력해주세요.</p>
+              </div>
+            )}
             {error && <p className="field-hint fail">{error}</p>}
             <button type="submit" disabled={loading} className="auth-submit">
               {loading ? '로그인 중...' : '로그인'}
