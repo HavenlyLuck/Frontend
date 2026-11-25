@@ -28,6 +28,7 @@ import StoreFundingCard from "@/components/StoreFundingCard";
 import MobileBuyBar from "@/components/MobileBuyBar";
 import ProductDescription from "@/components/ProductDescription";
 import { SHIPPING_NOTICE } from "@/lib/shipping";
+import { isRegular, isSoldOut, maxOrderQty } from "@/lib/storeStock";
 import { cloudinarySized } from "@/lib/image";
 import { ConfettiIcon, HeartIcon, WarningIcon } from "@phosphor-icons/react";
 
@@ -143,13 +144,16 @@ export default function ShopProductPage({
 
   const label = STORE_LABEL[product.pay_type];
   const isCash = product.pay_type === "cash";
-  const soldOut = product.stock === 0;
+  const soldOut = isSoldOut(product);
+  // 일반 상품 — 개수 없이 계속 판다. 남은 개수도 보여주지 않는다 (lib/storeStock.ts)
+  const regular = isRegular(product);
+  const maxQty = maxOrderQty(product);
   const related = (products ?? [])
     .filter(
       (p) =>
         p.store_product_id !== product.store_product_id &&
         p.pay_type === product.pay_type &&
-        p.stock > 0,
+        !isSoldOut(p),
     )
     .slice(0, 4);
 
@@ -180,7 +184,7 @@ export default function ShopProductPage({
   const payAmount = total - pointApplied;
 
   const changeQty = (delta: number) =>
-    setQty((prev) => Math.min(product.stock, Math.max(1, prev + delta)));
+    setQty((prev) => Math.min(maxOrderQty(product), Math.max(1, prev + delta)));
 
   const confirmPurchase = async () => {
     if (purchasing) return;
@@ -316,8 +320,8 @@ export default function ShopProductPage({
             <div className="price">
               {formatStorePrice(product.pay_type, product.price)}
             </div>
-            {/* 품절이거나 마지막 1개일 때만 알린다 */}
-            {(soldOut || product.stock === 1) && (
+            {/* 한정 상품만 — 품절이거나 마지막 1개일 때 알린다 (일반 상품은 개수를 보여주지 않는다) */}
+            {!regular && (soldOut || product.stock === 1) && (
               <div className="price-sub">
                 {soldOut ? "현재 품절된 상품입니다" : "재고 1개 남음"}
               </div>
@@ -402,7 +406,7 @@ export default function ShopProductPage({
                   </button>
                 </div>
                 <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
-                  최대 {product.stock}개까지 구매 가능
+                  {regular ? `한 번에 최대 ${maxQty}개` : `최대 ${product.stock}개까지 구매 가능`}
                 </span>
               </div>
               <div
@@ -516,12 +520,12 @@ export default function ShopProductPage({
                   −
                 </button>
                 <div className="ticket-num">{qty}</div>
-                <button className="ticket-btn" onClick={() => changeQty(1)} disabled={purchasing || qty >= product.stock} aria-label="수량 늘리기">
+                <button className="ticket-btn" onClick={() => changeQty(1)} disabled={purchasing || qty >= maxQty} aria-label="수량 늘리기">
                   +
                 </button>
               </div>
               <div className="ticket-info">
-                <span>남은 수량 {product.stock.toLocaleString()}개</span>
+                <span>{regular ? "" : `남은 수량 ${product.stock.toLocaleString()}개`}</span>
                 <span className="total">
                   총 {formatStorePrice(product.pay_type, total)}
                 </span>

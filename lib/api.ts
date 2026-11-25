@@ -485,6 +485,9 @@ export interface StoreProductResponse {
   stock: number
   image_url: string | null
   funding_disabled?: boolean   // 응모 전환 막기 (랜덤 상품 등) — 상세에 응모 전환 칸이 안 나온다
+  // 판매 방식 (결제·쌀포인트 상점 모두) — limited: 남은 개수 표시·다 팔리면 매진 / regular: 개수 없이 계속 판매.
+  // TODO(백엔드): 아직 안 보내면 모두 한정으로 본다 (lib/storeStock.ts)
+  sale_mode?: 'limited' | 'regular'
   created_at: string
   // 상점 세부 탭 분류 — 결제 상점: figure | goods | card / 쌀포인트 상점: coupon | goods | avatar
   // 분류 도입 전에 등록된 상품은 null
@@ -778,8 +781,9 @@ export async function createInventoryReceipt(token: string, payload: CreateInven
   return data as InventoryItemDetailResponse
 }
 
-// 품목 설명 고치기 — 이미 등록한 상품은 그대로, 다음에 이 품목으로 만드는 상품에 복사된다
-export function updateInventoryItem(token: string, itemId: number, payload: { description: string | null }) {
+// 등록 상품(품목) 이름·설명 고치기 — 이미 게시한 상품은 그대로, 다음에 이 품목으로 게시하는 상품에 복사된다
+// TODO(백엔드): name은 서버가 받기 전까지 무시된다
+export function updateInventoryItem(token: string, itemId: number, payload: { name?: string; description: string | null }) {
   return request<InventoryItemDetailResponse>(`/inventory/items/${itemId}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
@@ -932,6 +936,7 @@ export interface CreateStoreProductPayload {
   // 재고 품목에서 고른 경우 — 서버가 stock만큼 그 품목을 이 상품에 묶는다
   inventory_item_id?: number
   funding_disabled?: boolean   // 결제 상점만 — 응모 전환 막기
+  sale_mode?: 'limited' | 'regular'   // 한정 / 일반 (TODO(백엔드): 서버가 받기 전엔 무시됨)
 }
 
 export async function createStoreProduct(token: string, payload: CreateStoreProductPayload) {
@@ -945,6 +950,7 @@ export async function createStoreProduct(token: string, payload: CreateStoreProd
   if (payload.image) formData.append('image', payload.image)
   if (payload.inventory_item_id != null) formData.append('inventory_item_id', String(payload.inventory_item_id))
   if (payload.funding_disabled) formData.append('funding_disabled', 'true')
+  if (payload.sale_mode) formData.append('sale_mode', payload.sale_mode)
 
   const res = await fetch(`${API_URL}/store-products`, {
     method: 'POST',
@@ -978,6 +984,8 @@ export interface KujiPrizeResponse {
   image_url: string | null
   quantity: number
   remaining_quantity: number
+  // 쌀포인트 상 — 뽑히면 보관함 대신 이만큼 쌀포인트를 바로 적립 (실물 상이면 null). TODO(백엔드): 아직 안 보냄
+  point_amount?: number | null
 }
 
 export interface KujiSetResponse {
@@ -1011,6 +1019,7 @@ export interface CreateKujiPrize {
   name: string
   quantity: number
   cost: number
+  point_amount?: number   // 쌀포인트 상 (하위상만) — TODO(백엔드): 받기 전엔 무시돼 실물 상으로 저장된다
   image?: Blob
   // 재고 품목에서 고른 경우 — 서버가 quantity만큼 그 품목을 이 상에 묶는다
   inventory_item_id?: number
@@ -1035,7 +1044,7 @@ export interface KujiBoardResponse {
 
 export interface KujiDrawResponse {
   ok: boolean
-  drawn: { ticket_number: number; kuji_prize_id: number; grade: string; tier: 'upper' | 'lower'; name: string; image_url: string | null }[]
+  drawn: { ticket_number: number; kuji_prize_id: number; grade: string; tier: 'upper' | 'lower'; name: string; image_url: string | null; point_amount?: number | null }[]
   last_one: { name: string; image_url: string | null } | null
   amount_paid: number  // 결제 금액(원)
   conflict_ticket_numbers: number[]

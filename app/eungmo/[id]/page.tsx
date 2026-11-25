@@ -1,6 +1,7 @@
 "use client";
 
 import { trackViewContent } from "@/lib/metaPixel";
+import InviteFriendCard from "@/components/InviteFriendCard";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -329,6 +330,10 @@ export default function RaffleProductPage({
                 <HeartIcon size={20} weight={isLiked ? "fill" : "regular"} />
               </button>
             </div>
+            {/* 아직 응모 중일 때만 — 친구를 불러 빨리 채우기 */}
+            {product.status === "open" && !soldOut && (
+              <InviteFriendCard path={`/eungmo/${product.raffle_product_id}`} productName={product.product_name} />
+            )}
           </div>
 
           <div className="info-panel">

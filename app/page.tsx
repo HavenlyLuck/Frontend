@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { isSoldOut } from "@/lib/storeStock";
 import Link from "next/link";
 import {
   GiftIcon,
@@ -80,8 +81,8 @@ export default function HomePage() {
     // 상점: 백엔드에 등록된 실제 상품 중 재고 있는 것 우선으로 4개
     getStoreProducts()
       .then((list) => {
-        const inStock = pickRandom(list.filter((p) => p.stock > 0), 4);
-        const soldOut = list.filter((p) => p.stock === 0);
+        const inStock = pickRandom(list.filter((p) => !isSoldOut(p)), 4);
+        const soldOut = list.filter((p) => isSoldOut(p));
         setShopProducts([...inStock, ...soldOut].slice(0, 4));
       })
       .catch(() => {})

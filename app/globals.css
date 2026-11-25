@@ -1708,6 +1708,7 @@ a.product-card-home.is-soldout { cursor: pointer; }
 .modal-overlay {
   position: fixed;
   inset: 0;
+  overflow-y: auto;
   overscroll-behavior: contain;
   background: rgba(0, 0, 0, 0.75);
   z-index: 200;
@@ -6425,10 +6426,14 @@ a.auth-submit {
 .admin-prow-bar span { display: block; height: 100%; background: var(--gold); transform-origin: left; }
 .admin-prow-sub { font-size: 11px; color: var(--text-tertiary); }
 .admin-prow-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+/* 상태 칸이 없는 목록(상품 등록) — 버튼을 오른쪽 끝에 한 줄로 */
+.admin-prow.no-status { grid-template-columns: 48px minmax(0, 1fr) auto; }
+.admin-prow.no-status .admin-prow-actions { flex-wrap: nowrap; }
 @media (max-width: 640px) {
   .admin-prow { grid-template-columns: 48px minmax(0, 1fr); row-gap: 10px; }
   .admin-prow-status { grid-column: 2; }
   .admin-prow-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  .admin-prow.no-status { grid-template-columns: 48px minmax(0, 1fr); }
 }
 
 .admin-toolbar {
@@ -6615,6 +6620,14 @@ a.auth-submit {
   box-shadow: none;
   padding: 0;
   overflow: visible;
+  /* 창 안 스크롤 대신 바깥 배경이 스크롤된다 (.modal-overlay overflow-y) — 위아래 16px 여백, 화면보다 작으면 가운데 */
+  max-height: none;
+  margin: auto 0;
+  flex-shrink: 0;
+}
+.modal-overlay:has(.ticket-modal) {
+  align-items: flex-start;
+  padding: 16px 0;
 }
 
 .ticket-modal-top,
@@ -8096,3 +8109,39 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
 .guide-sub-desc b { color: var(--text); }
 
 .gd-trophy { color: var(--gold); filter: drop-shadow(0 0 4px rgba(243, 201, 79, 0.6)); }
+
+/* 응모 상세 — 친구 초대 카드 (components/InviteFriendCard.tsx) */
+.invite-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--accent-tint-border);
+  border-radius: 14px;
+  background: var(--accent-tint);
+}
+.invite-card-text { flex: 1; min-width: 0; }
+.invite-card-title { font-size: 14px; font-weight: 700; color: var(--text); word-break: keep-all; }
+.invite-card-sub { margin-top: 3px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); word-break: keep-all; }
+.invite-card-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.12s ease;
+}
+.invite-card-btn:active { transform: scale(0.97); }
+@media (max-width: 480px) {
+  .invite-card { flex-direction: column; align-items: stretch; }
+  .invite-card-btn { justify-content: center; }
+}
