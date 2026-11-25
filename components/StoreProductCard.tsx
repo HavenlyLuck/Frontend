@@ -1,15 +1,16 @@
 import Link from 'next/link'
 import { CreditCardIcon, GrainsIcon } from '@phosphor-icons/react'
-import type { StorePayType, StoreProductResponse } from '@/lib/api'
+import type { StoreCategory, StorePayType, StoreProductResponse } from '@/lib/api'
 import CardImage from './CardImage'
 import { isRegular, isSoldOut } from '@/lib/storeStock'
 
 // 상점 이름 — cash: 카드 결제 상점, ssal: 쌀포인트 상점
 export const STORE_LABEL: Record<StorePayType, string> = { cash: '일반', ssal: '쌀포인트' }
 
-// 가격 표기 — 결제 상품은 "5,000원", 쌀포인트 상품은 "5,000 쌀포인트"
-export function formatStorePrice(type: StorePayType, amount: number): string {
-  return type === 'cash' ? `${amount.toLocaleString()}원` : `${amount.toLocaleString()} 쌀포인트`
+// 가격 표기 — 결제 상품은 "5,000원", 쌀포인트 상품은 "5,000 쌀포인트", 쌀 응모권(쿠폰)은 "5,000p"
+export function formatStorePrice(type: StorePayType, amount: number, category?: StoreCategory | null): string {
+  if (type === 'cash') return `${amount.toLocaleString()}원`
+  return category === 'coupon' ? `${amount.toLocaleString()}p` : `${amount.toLocaleString()} 쌀포인트`
 }
 
 export function PayTypeIcon({ type, size }: { type: StorePayType; size: number }) {
@@ -35,7 +36,7 @@ export default function StoreProductCard({ product: p }: { product: StoreProduct
         <div className="card-raffle-badge"><PayTypeIcon type={p.pay_type} size={11} /> {label} 상점</div>
         <div className="card-title" style={soldOut ? { color: 'var(--text-tertiary)' } : undefined}>{p.product_name}</div>
         <div className="card-price store-price-row" style={soldOut ? { color: 'var(--text-tertiary)' } : undefined}>
-          <span className="nowrap">{formatStorePrice(p.pay_type, p.price)}</span>
+          <span className="nowrap">{formatStorePrice(p.pay_type, p.price, p.category)}</span>
           {/* 한정 상품만 — 마지막 1개일 때 알린다 (일반 상품은 개수를 보여주지 않는다) */}
           {!regular && p.stock === 1 && (
             <span className="store-stock-badge">

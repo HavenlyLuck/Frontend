@@ -539,6 +539,9 @@ export interface StoreFundingStatus {
 
 export interface StoreProductDetailResponse extends StoreProductResponse {
   funding?: StoreFundingStatus | null  // 결제 상점 상품만
+  // 쌀 응모권(쿠폰) 상품만 — 계정당 한 주에 살 수 있는 장수, 로그인했으면 이번 주에 이미 산 장수
+  weekly_limit?: number | null
+  bought_this_week?: number | null
 }
 
 // 로그인했으면 token을 넘긴다 — 전환 응모권 구매 제한(funding.banned_until)이 내 기준으로 내려온다
@@ -549,13 +552,14 @@ export function getStoreProduct(storeProductId: number, token?: string) {
 }
 
 export interface StorePurchaseResponse {
-  storage_item_id: number
+  storage_item_id: number | null  // 쌀 응모권 상품은 보관함 상품이 아니라 쌀 응모권으로 받아서 없다
   store_product_id: number
   quantity: number
   amount_spent: number
   pay_type: StorePayType
   remaining_stock: number
   point_used?: number  // 일반 상점: 할인에 쓴 쌀포인트 (카드 결제 금액 = amount_spent - point_used)
+  free_tickets?: number  // 쌀 응모권 상품: 받은 쌀 응모권 장수
 }
 
 // 쌀포인트 상품 구매 (결제 상점 상품은 lib/payment.ts의 카드 결제로 산다)
@@ -1246,10 +1250,10 @@ export function registerReferral(token: string, referralCode: string) {
 }
 
 // first_purchase: 첫 구매 선물 응모권(related = 나를 추천한 사람), referral: 추천 응모권(related = 내가 추천한 사람),
-// signup_event: 오픈 이벤트 가입 선물
+// signup_event: 오픈 이벤트 가입 선물, store_purchase: 쌀포인트 상점에서 산 응모권
 export interface FreeTicketResponse {
   free_ticket_id: number
-  kind: 'first_purchase' | 'referral' | 'signup_event'
+  kind: 'first_purchase' | 'referral' | 'signup_event' | 'store_purchase'
   related_nickname: string | null
   created_at: string
 }
