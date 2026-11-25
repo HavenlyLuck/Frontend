@@ -204,8 +204,8 @@ export interface PointsResponse {
 }
 
 // 쌀포인트 거래 내역 — 최신순. amount는 지급 +, 차감 -
-// store_discount: 상점 카드 결제 할인에 사용, store_discount_refund: 그 구매를 취소해 돌려받음
-export type PointTransactionReason = 'store_purchase' | 'admin_grant' | 'raffle_consolation' | 'avatar_purchase' | 'store_discount' | 'store_discount_refund' | 'withdrawal'
+// store_discount: 상점 카드 결제 할인에 사용, store_discount_refund: 그 구매를 취소해 돌려받음, kuji_prize: 쿠지 쌀포인트 상 당첨, storage_convert: (쓰지 않음 — 보관 기한 전환은 쌀 응모권으로 준다)
+export type PointTransactionReason = 'store_purchase' | 'admin_grant' | 'raffle_consolation' | 'avatar_purchase' | 'store_discount' | 'store_discount_refund' | 'withdrawal' | 'kuji_prize' | 'storage_convert'
 
 export interface PointTransactionResponse {
   transaction_id: number
@@ -509,7 +509,7 @@ export const STORE_CATEGORIES: Record<StorePayType, { id: StoreCategory; label: 
   ],
   ssal: [
     { id: 'coupon', label: '쿠폰' },
-    { id: 'goods', label: '굿즈' },
+    { id: 'goods', label: '피규어·굿즈' },
     { id: 'avatar', label: '아바타' },
   ],
 }
@@ -586,7 +586,8 @@ export interface StorageItemResponse {
   price_krw: number | null
   pay_type: StorePayType | null
   amount_spent: number | null  // 결제 상점·쿠지는 원, 쌀포인트 상점은 쌀포인트
-  status: 'ready' | 'requested' | 'shipped'
+  status: 'ready' | 'requested' | 'shipped'   // (쌀포인트로 바뀐 converted 상품은 보관함 목록에 오지 않는다)
+  convert_tickets?: number | null  // 응모 당첨·쿠지 상품 — 보관 기한(30일)이 지나면 바뀔 쌀 응모권 장수 (서버 계산, 상점 구매는 null)
   address_id: number | null
   // 배송 신청 때 낸 배송비 결제 — 같은 값인 상품끼리 같이 신청한 한 상자 (배송 취소도 같이 된다)
   shipping_payment_id: string | null
@@ -1260,10 +1261,10 @@ export function registerReferral(token: string, referralCode: string) {
 }
 
 // first_purchase: 첫 구매 선물 응모권(related = 나를 추천한 사람), referral: 추천 응모권(related = 내가 추천한 사람),
-// signup_event: 오픈 이벤트 가입 선물, store_purchase: 쌀포인트 상점에서 산 응모권
+// signup_event: 오픈 이벤트 가입 선물, store_purchase: 쌀포인트 상점에서 산 응모권, idea_contest: 아바타 아이디어 공모전 수상
 export interface FreeTicketResponse {
   free_ticket_id: number
-  kind: 'first_purchase' | 'referral' | 'signup_event' | 'store_purchase'
+  kind: 'first_purchase' | 'referral' | 'signup_event' | 'store_purchase' | 'idea_contest' | 'storage_convert'
   related_nickname: string | null
   created_at: string
 }

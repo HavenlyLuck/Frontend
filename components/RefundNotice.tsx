@@ -61,7 +61,7 @@ export default function RefundNotice({ kind, style }: { kind: Kind; style?: Reac
       <ul>
         <li>{SHIPPING_NOTICE}</li>
         {(kind === "raffle" || kind === "kuji") && (
-          <li>받은 상품은 보관함에 들어온 날부터 {STORAGE_KEEP_DAYS}일 안에 배송 신청해 주세요. 지나면 쌀포인트로 바뀌어요.</li>
+          <li>받은 상품은 보관함에 들어온 날부터 {STORAGE_KEEP_DAYS}일 안에 배송 신청해 주세요. 지나면 쌀 응모권으로 바뀌어요.</li>
         )}
       </ul>
     </div>

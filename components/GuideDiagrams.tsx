@@ -305,7 +305,7 @@ export function StorageDiagram() {
   const step = useStep(12)
   const inBox = within(step, 1, 11) ? Math.min(3, step) : 0
   return (
-    <Row n={4} label={`보관함 그림: 상품이 보관함에 모이고, ${STORAGE_KEEP_DAYS}일 안에 배송 신청하면 묶어서 발송, 안 하면 쌀포인트로 바뀌어요`}>
+    <Row n={4} label={`보관함 그림: 상품이 보관함에 모이고, ${STORAGE_KEEP_DAYS}일 안에 배송 신청하면 묶어서 발송, 안 하면 쌀 응모권으로 바뀌어요`}>
       <Panel no={1} caption="받은 상품은 보관함으로" active={within(step, 1, 3)} stageClass="gd-col">
         <div className="gd-items">
           {[0, 1, 2].map((i) => (
@@ -321,10 +321,10 @@ export function StorageDiagram() {
       <Panel no={3} caption={`영업일 ${SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송`} active={within(step, 6, 8)}>
         <span className={`gd-truck${step >= 6 ? ' go' : ''}`}><TruckIcon size={34} weight="fill" /></span>
       </Panel>
-      <Panel no={4} caption={`신청 안 하면 ${STORAGE_KEEP_DAYS}일 뒤 쌀포인트로`} active={step >= 9}>
+      <Panel no={4} caption={`신청 안 하면 ${STORAGE_KEEP_DAYS}일 뒤 쌀 응모권으로`} active={step >= 9}>
         <span className="gd-icon"><EmojiIcon name="box" /></span>
         <ArrowRightIcon size={18} className={`gd-arrow${step >= 9 ? ' on' : ''}`} />
-        <span className={`gd-icon gd-swap${step >= 10 ? ' on' : ''}`}><EmojiIcon name="rice" /></span>
+        <span className={`gd-icon gd-swap${step >= 10 ? ' on' : ''}`}><EmojiIcon name="ssal-ticket" /></span>
       </Panel>
     </Row>
   )

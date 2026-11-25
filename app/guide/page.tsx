@@ -3,7 +3,7 @@
 import { CONTENTS_OPEN } from '@/lib/features'
 import { AvatarDiagram, FundingDiagram, KujiDiagram, PointDiagram, RaffleDiagram, SsalTicketDiagram, StorageDiagram, StoreDiagram } from '@/components/GuideDiagrams'
 import { SHIPPING_FEE_TEXT, SHIP_WITHIN_BUSINESS_DAYS } from '@/lib/shipping'
-import { STORAGE_CONVERT_PERCENT_TEXT, STORAGE_KEEP_DAYS } from '@/lib/storageExpiry'
+import { STORAGE_CONVERT_WON_PER_TICKET, STORAGE_KEEP_DAYS } from '@/lib/storageExpiry'
 import {
   ArchiveIcon,
   CoinsIcon,
@@ -276,7 +276,7 @@ export default function GuidePage() {
             ]} />
             <Callout>여러 상품을 한 번에 배송 신청하면 한 상자로 묶어 보내고, 배송비도 {SHIPPING_FEE_TEXT} 한 번만 내요. 발송 전에 배송을 취소하면 배송비를 돌려드려요.</Callout>
             <Callout tone="warn">
-              <b>보관 기간은 {STORAGE_KEEP_DAYS}일이에요.</b> 응모 당첨·쿠지 상품은 보관함에 들어온 날부터 {STORAGE_KEEP_DAYS}일 안에 배송 신청하지 않으면 판매가의 {STORAGE_CONVERT_PERCENT_TEXT}가 쌀포인트로 바뀌어요. 바뀌기 7일 전과 1일 전에 알려 드리고, 바뀐 뒤에는 상품으로 되돌릴 수 없어요. (상점에서 산 상품은 해당 없음)
+              <b>보관 기간은 {STORAGE_KEEP_DAYS}일이에요.</b> 응모 당첨·쿠지 상품은 보관함에 들어온 날부터 {STORAGE_KEEP_DAYS}일 안에 배송 신청하지 않으면 쌀 응모권으로 바뀌어요(응모 상품은 정가 {STORAGE_CONVERT_WON_PER_TICKET.toLocaleString()}원당 1장). 바뀌기 7일 전과 1일 전에 알려 드리고, 바뀐 뒤에는 상품으로 되돌릴 수 없어요. (상점에서 산 상품은 해당 없음)
             </Callout>
             <Rules items={[
               <>받은 상품이 파손·불량이면 교환해 드려요. <b>택배 상자를 여는 장면부터 영상으로 찍어 두시면</b> 빠르게 처리돼요.</>,
@@ -296,7 +296,7 @@ export default function GuidePage() {
           <><b>상점</b> · 카드 구매는 배송 전 취소, 받은 날부터 7일 안 반품(개봉 시 제한). 쌀포인트 구매는 취소할 수 없어요.</>,
           <><b>쌀포인트·쌀 응모권</b> · 현금으로 바꾸거나 남에게 줄 수 없고, 탈퇴하면 사라져요.</>,
           <><b>배송비</b> · 배송 신청 1건당 {SHIPPING_FEE_TEXT}(묶음 배송), 영업일 기준 {SHIP_WITHIN_BUSINESS_DAYS}일 안에 발송, 발송 전 취소 시 환불.</>,
-          <><b>보관 기간</b> · 응모 당첨·쿠지 상품은 {STORAGE_KEEP_DAYS}일 안에 배송 신청하지 않으면 쌀포인트로 바뀌어요.</>,
+          <><b>보관 기간</b> · 응모 당첨·쿠지 상품은 {STORAGE_KEEP_DAYS}일 안에 배송 신청하지 않으면 쌀 응모권으로 바뀌어요.</>,
           <><b>탈퇴</b> · 남은 쌀포인트·쌀 응모권과 배송 신청하지 않은 보관함 상품은 모두 사라지고 되돌릴 수 없어요.</>,
           <><b>가입</b> · 만 14세 이상만 가입할 수 있고, 본인인증으로 1인 1계정만 만들 수 있어요. 만 19세 미만은 보호자(법정대리인) 인증과 동의가 필요하고, 응모권·쿠지·상점 결제는 한 달에 합계 10만 원까지예요.</>,
         ]} />
