@@ -63,11 +63,14 @@ export default function ShopProductPage({
 
   // 결제 상점 상품의 응모 전환 모금 현황 — 다른 사람이 응모권을 사면 올라가므로 주기적으로 다시 불러온다
   const [funding, setFunding] = useState<StoreFundingStatus | null>(null);
+  // 쌀 응모권 상품 — 계정당 한 주에 살 수 있는 장수와 이번 주에 이미 산 장수
+  const [weekly, setWeekly] = useState<{ limit: number; bought: number } | null>(null);
   const loadDetail = () =>
     getValidSession()
       .then((session) => getStoreProduct(productId, session?.token))
       .then((detail) => {
         setFunding(detail.funding ?? null);
+        setWeekly(detail.weekly_limit ? { limit: detail.weekly_limit, bought: detail.bought_this_week ?? 0 } : null);
         setProducts(
           (prev) =>
             prev?.map((p) =>
@@ -110,7 +113,7 @@ export default function ShopProductPage({
   const [purchasing, setPurchasing] = useState(false);
   // 구매 팝업 안에서 보여줄 결과 — 실패 문구, 또는 완료 카드(산 개수·금액)
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
-  const [purchaseDone, setPurchaseDone] = useState<{ quantity: number; amount: number; pointUsed: number } | null>(null);
+  const [purchaseDone, setPurchaseDone] = useState<{ quantity: number; amount: number; pointUsed: number; tickets: number } | null>(null);
   // 일반 상점: 쌀포인트 할인 (구매 금액의 10%까지, 1P = 1원)
   const [pointUse, setPointUse] = useState(0);
   const { ssalPoint } = useMyPoints();
@@ -147,7 +150,11 @@ export default function ShopProductPage({
   const soldOut = isSoldOut(product);
   // 일반 상품 — 개수 없이 계속 판다. 남은 개수도 보여주지 않는다 (lib/storeStock.ts)
   const regular = isRegular(product);
-  const maxQty = maxOrderQty(product);
+  // 쌀 응모권: 이번 주에 더 살 수 있는 장수 — 다 샀으면 구매 버튼을 막는다
+  const weeklyLeft = weekly ? Math.max(weekly.limit - weekly.bought, 0) : null;
+  const maxQty = weeklyLeft === null ? maxOrderQty(product) : Math.min(maxOrderQty(product), weeklyLeft);
+  const weeklyDone = weeklyLeft === 0;
+  const blocked = soldOut || weeklyDone;
   const related = (products ?? [])
     .filter(
       (p) =>
@@ -184,7 +191,7 @@ export default function ShopProductPage({
   const payAmount = total - pointApplied;
 
   const changeQty = (delta: number) =>
-    setQty((prev) => Math.min(maxOrderQty(product), Math.max(1, prev + delta)));
+    setQty((prev) => Math.min(Math.max(maxQty, 1), Math.max(1, prev + delta)));
 
   const confirmPurchase = async () => {
     if (purchasing) return;
@@ -222,7 +229,7 @@ export default function ShopProductPage({
           ) ?? prev,
       );
       const pointUsed = res.point_used ?? 0;
-      setPurchaseDone({ quantity: res.quantity, amount: res.amount_spent - pointUsed, pointUsed });
+      setPurchaseDone({ quantity: res.quantity, amount: res.amount_spent - pointUsed, pointUsed, tickets: res.free_tickets ?? 0 });
       // 재고가 바뀌면 응모 전환 가능 여부도 바뀐다
       loadDetail();
       setQty(1);
@@ -249,6 +256,7 @@ export default function ShopProductPage({
     setPurchaseError(null);
     setPurchaseDone(null);
     setPointUse(0);
+    setQty((prev) => Math.min(prev, Math.max(maxQty, 1)));
     setModalOpen(true);
   };
   const closePurchaseModal = () => {
@@ -318,7 +326,7 @@ export default function ShopProductPage({
 
             <div className="product-title">{product.product_name}</div>
             <div className="price">
-              {formatStorePrice(product.pay_type, product.price)}
+              {formatStorePrice(product.pay_type, product.price, product.category)}
             </div>
             {/* 한정 상품만 — 품절이거나 마지막 1개일 때 알린다 (일반 상품은 개수를 보여주지 않는다) */}
             {!regular && (soldOut || product.stock === 1) && (
@@ -406,7 +414,9 @@ export default function ShopProductPage({
                   </button>
                 </div>
                 <span style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
-                  {regular ? `한 번에 최대 ${maxQty}개` : `최대 ${product.stock}개까지 구매 가능`}
+                  {weekly
+                    ? `계정당 한 주에 ${weekly.limit}장까지 · 이번 주 ${weeklyLeft}장 남음`
+                    : regular ? `한 번에 최대 ${maxQty}개` : `최대 ${product.stock}개까지 구매 가능`}
                 </span>
               </div>
               <div
@@ -414,7 +424,7 @@ export default function ShopProductPage({
               >
                 총 결제 금액{" "}
                 <strong>
-                  {formatStorePrice(product.pay_type, product.price * qty)}
+                  {formatStorePrice(product.pay_type, product.price * qty, product.category)}
                 </strong>
               </div>
             </div>
@@ -422,18 +432,18 @@ export default function ShopProductPage({
             <div className="cta-row" id="main-cta" style={{ marginTop: 24 }}>
               <button
                 className="btn-raffle"
-                disabled={soldOut}
+                disabled={blocked}
                 onClick={openPurchaseModal}
               >
-                {soldOut ? "품절" : "구매하기"}
+                {soldOut ? "품절" : weeklyDone ? "이번 주 구매 완료" : "구매하기"}
               </button>
             </div>
             <MobileBuyBar
               watchId="main-cta"
-              price={formatStorePrice(product.pay_type, product.price)}
-              label={soldOut ? "품절" : "구매하기"}
+              price={formatStorePrice(product.pay_type, product.price, product.category)}
+              label={soldOut ? "품절" : weeklyDone ? "이번 주 구매 완료" : "구매하기"}
               onClick={openPurchaseModal}
-              disabled={soldOut}
+              disabled={blocked}
             />
 
             {isCash && funding && (
@@ -482,12 +492,14 @@ export default function ShopProductPage({
               {product.product_name} · {purchaseDone.quantity}개
               <br />
               <strong style={{ color: "var(--text)" }}>
-                {formatStorePrice(product.pay_type, purchaseDone.amount)}
+                {formatStorePrice(product.pay_type, purchaseDone.amount, product.category)}
               </strong>
               {isCash ? " 결제 완료" : " 차감"}
               {purchaseDone.pointUsed > 0 && ` (쌀포인트 ${purchaseDone.pointUsed.toLocaleString()}P 할인)`}
               <br />
-              구매한 상품은 보관함에서 확인할 수 있어요.
+              {purchaseDone.tickets > 0
+                ? `쌀 응모권 ${purchaseDone.tickets}장이 들어왔어요. 응모할 때 결제 대신 쓸 수 있어요.`
+                : "구매한 상품은 보관함에서 확인할 수 있어요."}
             </div>
             <div className="modal-btn-row">
               {/* 구매한 상품의 상점(일반 / 쌀포인트) 목록으로 돌아간다 */}
@@ -525,9 +537,9 @@ export default function ShopProductPage({
                 </button>
               </div>
               <div className="ticket-info">
-                <span>{regular ? "" : `남은 수량 ${product.stock.toLocaleString()}개`}</span>
+                <span>{weekly ? `이번 주 ${weeklyLeft}장 더 살 수 있어요` : regular ? "" : `남은 수량 ${product.stock.toLocaleString()}개`}</span>
                 <span className="total">
-                  총 {formatStorePrice(product.pay_type, total)}
+                  총 {formatStorePrice(product.pay_type, total, product.category)}
                 </span>
               </div>
 
