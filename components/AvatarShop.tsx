@@ -196,8 +196,11 @@ export default function AvatarShop() {
       <div className="avatar-shop-items">
         {AVATAR_SHOP_ITEMS
           .filter(item => category === 'all' || item.slot === category)
+          // 칸 순서(머리 → 상의 → 하의 → 모자 → 신발 → 소품 → 등 → 오라 → 배경)대로, 같은 칸 안은 등록 순서 그대로.
           // 아직 살 수 없는(서버 등록 전) 아이템은 맨 뒤로
-          .sort((a, b) => Number(!!onSale && !onSale.has(a.id)) - Number(!!onSale && !onSale.has(b.id)))
+          .sort((a, b) =>
+            Number(!!onSale && !onSale.has(a.id)) - Number(!!onSale && !onSale.has(b.id))
+            || WEAR_SLOTS.indexOf(a.slot) - WEAR_SLOTS.indexOf(b.slot))
           .map((item) => {
           const worn = isWorn(item)
           return (
@@ -211,7 +214,6 @@ export default function AvatarShop() {
                 <AvatarItemPreview config={withItem(DEFAULT_AVATAR, item.slot, item.id)} slot={item.slot} size={112} alt={item.name} />
               </div>
               <div className="avatar-shop-item-name">{item.name}</div>
-              <div className="avatar-shop-item-desc">{item.description}</div>
               <div className="avatar-shop-item-price">
                 <GrainsIcon size={14} weight="fill" /> {priceOf(item).toLocaleString()}P
               </div>

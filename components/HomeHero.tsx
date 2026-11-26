@@ -21,8 +21,8 @@ const pixelFont = localFont({
 /*
  * 메인 히어로 — 옆으로 넘기는 배너 (2026-11 오픈)
  *  1. 오픈 기념 혜택 (쌀 응모권) → 응모 보러 가기
- *  2. 서비스 소개 + 지금 진행 중인 실제 응모 상품 한 개 (없으면 "새 응모 준비 중" 카드)
- *     + 진행 중인 쿠지가 있으면 쿠지 한 판도 — PC는 가로로, 모바일은 세로로 두 장
+ *  2. 서비스 소개 + 지금 진행 중인 실제 응모 상품 한 개 (없으면 "응모 준비 중" 카드)
+ *     + 진행 중인 쿠지 한 판 (없으면 "쿠지 준비 중") — 늘 두 장, PC는 가로로 · 모바일은 세로로
  *  3. 함께 만드는 천운 (후기/문의) → 후기/문의 남기기
  * 7초마다 자동으로 넘어간다. 손가락으로 누르고 있거나 키보드(Tab)로 배너 안에 들어와 있을 때만 멈춘다.
  * (마우스를 올렸을 때·마우스로 점을 누른 뒤에는 멈추지 않는다 — PC에선 배너가 화면을 거의 채워 마우스가 늘 위에 있어서 "안 넘어간다"고 느껴졌음)
@@ -226,7 +226,7 @@ function RaffleSlide({ featured, loaded }: Props) {
   const kuji = useFeaturedKuji();
   const ready = loaded && kuji !== undefined;
   return (
-      <div className={`home-hero-slide${ready && kuji ? " has-two" : ""}`}>
+      <div className="home-hero-slide has-two">
         <div className="home-hero-copy">
           <h1>
             천원 한 장,
@@ -244,15 +244,21 @@ function RaffleSlide({ featured, loaded }: Props) {
           </div>
         </div>
 
-        {/* 응모와 쿠지를 둘 다 불러온 뒤에 한 번에 그린다 (카드가 한 장 떴다 두 장으로 바뀌며 밀리지 않게) */}
-        {!ready ? (
-          <div className="home-hero-card is-loading" aria-hidden="true" />
-        ) : (
-          <div className="home-hero-cards">
-            {featured ? <FeaturedRaffle rp={featured.rp} countdown={featured.countdown} /> : <EmptyRaffle />}
-            {kuji && <FeaturedKuji kuji={kuji} />}
-          </div>
-        )}
+        {/* 응모 · 쿠지 카드 두 장을 늘 나란히 둔다 (없으면 "준비 중" 카드).
+            둘 다 불러온 뒤에 한 번에 그리고, 그동안은 같은 크기의 빈 카드 두 장으로 자리를 잡아 둔다 */}
+        <div className="home-hero-cards">
+          {!ready ? (
+            <>
+              <div className="home-hero-card is-loading" aria-hidden="true" />
+              <div className="home-hero-card is-loading" aria-hidden="true" />
+            </>
+          ) : (
+            <>
+              {featured ? <FeaturedRaffle rp={featured.rp} countdown={featured.countdown} /> : <EmptyRaffle />}
+              {kuji ? <FeaturedKuji kuji={kuji} /> : <EmptyKuji />}
+            </>
+          )}
+        </div>
       </div>
   );
 }
@@ -338,8 +344,19 @@ function EmptyRaffle() {
   return (
     <div className="home-hero-card is-empty">
       <LogoMark className="home-hero-empty-mark" />
-      <p className="home-hero-empty-title">새 응모 준비 중</p>
+      <p className="home-hero-empty-title">응모 준비 중</p>
       <p className="home-hero-empty-sub">응모가 열리면 이곳에 표시됩니다.</p>
+    </div>
+  );
+}
+
+// 진행 중인 쿠지가 없을 때 — 응모 쪽 빈 카드와 같은 모양
+function EmptyKuji() {
+  return (
+    <div className="home-hero-card is-empty">
+      <LogoMark className="home-hero-empty-mark" />
+      <p className="home-hero-empty-title">쿠지 준비 중</p>
+      <p className="home-hero-empty-sub">쿠지가 열리면 이곳에 표시됩니다.</p>
     </div>
   );
 }
