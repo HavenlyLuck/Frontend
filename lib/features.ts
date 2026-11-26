@@ -12,3 +12,8 @@ export const AVATAR_CONTEST_OPEN = false;
 export const HERO_PINNED_RAFFLE_IDS: number[] = [
   7, // 극장판 체인소맨 레제편 레제 (S-FIRE)
 ]
+
+// 메인 배너 응모 카드에 상품 사진 대신 쓸 사진 (응모 상품 번호 → public 안의 사진 경로). 없으면 상품 사진 그대로
+export const HERO_RAFFLE_IMAGES: Record<number, string> = {
+  7: '/images/banner/reze-hero.jpg', // 레제 — 얼굴이 크게 보이는 정사각형 사진
+}
