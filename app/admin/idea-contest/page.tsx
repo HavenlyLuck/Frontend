@@ -12,7 +12,7 @@ import {
 } from '@/lib/ideaContest'
 
 const RANK_COLOR: Record<number, string> = { 1: '#f3c94f', 2: '#cfd6e2', 3: '#d49a6a' }
-const PRIZE: Record<number, number> = { 1: 10, 2: 5, 3: 5 }
+const PRIZE: Record<number, number> = { 1: 10, 2: 7, 3: 5 }
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }
 const smallBtn = (active = false): React.CSSProperties => ({
@@ -21,7 +21,7 @@ const smallBtn = (active = false): React.CSSProperties => ({
   background: active ? 'var(--accent-tint)' : 'var(--surface)', color: active ? 'var(--accent-fg)' : 'var(--text-secondary)',
 })
 
-// 아바타 아이디어 공모전 — 주가 끝나면 응모작 중 1·2·3등을 골라 쌀 응모권을 지급한다 (1등 10장, 2·3등 5장)
+// 아바타 아이디어 공모전 — 주가 끝나면 응모작 중 1·2·3등을 골라 쌀 응모권을 지급한다 (1등 10장, 2등 7장, 3등 5장)
 export default function AdminIdeaContestPage() {
   const token = useAdminToken()
   const [weeks, setWeeks] = useState<IdeaAdminWeek[] | null>(null)
@@ -106,7 +106,7 @@ export default function AdminIdeaContestPage() {
     <div>
       <AdminPageHeader
         title="아이디어 공모전"
-        description="천운 아바타 아이디어 공모전 — 고객이 그림판으로 그린 아이디어 중 매주 3명을 뽑아요. 주가 끝난 뒤(월요일 0시 이후) 고를 수 있고, 확정하면 1등 쌀 응모권 10장, 2·3등 5장이 바로 지급돼요."
+        description="천운 아바타 아이디어 공모전 — 고객이 그림판으로 그린 아이디어 중 매주 3명을 뽑아요. 주가 끝난 뒤(월요일 0시 이후) 고를 수 있고, 확정하면 1등 쌀 응모권 10장, 2등 7장, 3등 5장이 바로 지급돼요."
         actions={<button style={smallBtn()} onClick={() => { loadWeeks(); loadEntries() }}><ArrowClockwiseIcon size={14} /> 새로고침</button>}
       />
 

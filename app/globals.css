@@ -2370,11 +2370,6 @@ a.product-card-home.is-soldout { cursor: pointer; }
   font-weight: 700;
   color: var(--text);
 }
-.avatar-shop-item-desc {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-tertiary);
-}
 .avatar-shop-item-price {
   display: inline-flex;
   align-items: center;
@@ -8468,7 +8463,9 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
 .home-hero-slide.has-two .home-hero-card-body { padding: 14px; gap: 8px; }
 .home-hero-slide.has-two .home-hero-card-price { font-size: 22px; }
 .home-hero-slide.has-two .home-hero-card-cta { padding: 11px; font-size: 14px; }
-.home-hero-slide.has-two .home-hero-card.is-empty { min-height: 0; }
+/* 빈 카드("새 응모/쿠지 준비 중")와 불러오는 중 카드 — 두 장이 같은 높이로 나란히 서게 */
+.home-hero-slide.has-two .home-hero-card.is-empty,
+.home-hero-slide.has-two .home-hero-card.is-loading { min-height: 400px; }
 
 /* 진행 중인 응모가 없을 때 — 로고와 한 줄 안내만 */
 .home-hero-card.is-empty {
@@ -8535,7 +8532,8 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
   .home-hero-slide.has-two .home-hero-bar { height: 6px; }
   .home-hero-slide.has-two .home-hero-card-meta { display: none; }
   .home-hero-slide.has-two .home-hero-card-cta { margin-top: 2px; padding: 8px; font-size: 13px; border-radius: 8px; }
-  .home-hero-slide.has-two .home-hero-card.is-empty { min-height: 0; padding: 18px 16px; gap: 4px; }
+  .home-hero-slide.has-two .home-hero-card.is-empty { min-height: 140px; padding: 18px 16px; gap: 4px; }
+  .home-hero-slide.has-two .home-hero-card.is-loading { min-height: 140px; }
   .home-hero-slide.has-two .home-hero-empty-mark { width: 44px; margin-bottom: 4px; }
   .home-hero-slide.has-two .home-hero-empty-title { font-size: 17px; }
   .home-hero-card.is-loading,
@@ -8746,14 +8744,6 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
   .avatar-shop-item { padding: 12px 10px; gap: 4px; }
   .avatar-shop-item-thumb { width: 96px; height: 96px; }
   .avatar-shop-item-name { font-size: 14px; }
-  .avatar-shop-item-desc {
-    font-size: 11px;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
-  }
   .avatar-shop-item-actions { flex-direction: column; gap: 6px; }
   .avatar-shop-item-actions .avatar-small-btn { width: 100%; }
 }

@@ -38,7 +38,6 @@ export const HAIRS: { id: HairId; name: string; layer: string | null }[] = [
 export interface AvatarShopItem {
   id: string
   name: string
-  description: string
   price: number // 쌀포인트
   slot: WearSlot
   room?: RoomBackgroundId // 배경 아이템만 — 캐릭터 방에 깔 배경
@@ -52,7 +51,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'aura-gold-halo',
     name: '금빛 후광',
-    description: '머리 뒤로 커다란 금빛 고리가 천천히 돌고, 고리 위에서 별이 반짝여요.',
     price: 8000,
     slot: 'aura',
     aura: 'gold-halo',
@@ -60,7 +58,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'aura-thunder',
     name: '정전기',
-    description: '등 뒤 주황빛 속에서 정전기가 찌릿찌릿 갈래로 튀어요.',
     price: 8000,
     slot: 'aura',
     aura: 'thunder',
@@ -68,7 +65,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'aura-blue-flame',
     name: '푸른 도깨비불',
-    description: '발밑에서 푸른 불꽃이 피어올라 몸을 감싸요.',
     price: 8000,
     slot: 'aura',
     aura: 'blue-flame',
@@ -76,7 +72,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'aura-sakura',
     name: '벚꽃 바람',
-    description: '분홍 꽃잎이 캐릭터 둘레를 빙글빙글 돌며 흩날려요.',
     price: 8000,
     slot: 'aura',
     aura: 'sakura',
@@ -85,7 +80,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'back-angel-wings',
     name: '천사 날개',
-    description: '등 뒤에서 하얀 날개가 천천히 퍼덕이고, 깃털이 한 장씩 떨어져요.',
     price: 5000,
     slot: 'back',
     back: 'angel-wings',
@@ -93,84 +87,72 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'hat-red-beanie',
     name: '빨간 방울 비니',
-    description: '포근한 빨간 니트 비니. 꼭대기에 하얀 방울이 달려 있어요.',
     price: 2000,
     slot: 'hat',
   },
   {
     id: 'hat-cap',
     name: '갈색 캡모자',
-    description: '챙이 둥근 갈색 캡모자. 어떤 머리 모양에도 잘 어울려요.',
     price: 2000,
     slot: 'hat',
   },
   {
     id: 'held-flowers',
     name: '빨간 꽃다발',
-    description: '한 손에 쏙 들어오는 빨간 꽃다발. 당첨 축하용으로도 좋아요.',
     price: 2000,
     slot: 'held',
   },
   {
     id: 'top-cat-hoodie',
     name: '냥냥 후드티',
-    description: '가슴에 흰 고양이가 그려진 까만 후드티. 소매가 길어 포근해요.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'hat-bunny',
     name: '토끼 귀 머리띠',
-    description: '쫑긋 선 하얀 토끼 귀. 귀 안쪽은 분홍색이에요.',
     price: 2000,
     slot: 'hat',
   },
   {
     id: 'hat-crown',
     name: '반짝 왕관',
-    description: '빨간 보석이 박힌 금빛 왕관. 오늘의 주인공은 나!',
     price: 2000,
     slot: 'hat',
   },
   {
     id: 'hat-cat-headphones',
     name: '냥냥 헤드폰',
-    description: '고양이 귀가 달린 검정 헤드폰.',
     price: 2000,
     slot: 'hat',
   },
   {
     id: 'hat-sprout',
     name: '새싹 머리핀',
-    description: '머리 위에 쏙 돋아난 초록 새싹.',
     price: 2000,
     slot: 'hat',
   },
   {
     id: 'shoes-sneakers',
     name: '흰 운동화',
-    description: '파란 줄이 들어간 깔끔한 흰 운동화.',
     price: 1500,
     slot: 'shoes',
   },
   {
     id: 'held-milktea',
     name: '밀크티 한 잔',
-    description: '쫀득한 펄이 가득한 밀크티.',
     price: 2000,
     slot: 'held',
   },
   {
     id: 'held-balloon',
     name: '하트 풍선',
-    description: '손에 쥔 분홍 하트 풍선.',
     price: 2000,
     slot: 'held',
   },
   {
     id: 'bg-night',
     name: '달빛 밤하늘',
-    description: '초승달과 별이 반짝이는 밤하늘.',
     price: 5000,
     slot: 'background',
     room: 'night',
@@ -178,7 +160,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'bg-stage',
     name: '스포트라이트 무대',
-    description: '커튼 앞, 흔들리는 조명 아래 무대에 서요.',
     price: 5000,
     slot: 'background',
     room: 'stage',
@@ -186,7 +167,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'bg-park',
     name: '햇살 공원',
-    description: '구름이 천천히 흘러가는 초록 공원.',
     price: 5000,
     slot: 'background',
     room: 'park',
@@ -194,91 +174,78 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'top-neko-hoodie',
     name: '네코 후드티',
-    description: '볼이 발그레한 흰 고양이가 그려진 까만 후드티. 후드 끈까지 귀여워요.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'top-aurora-jumper',
     name: '별하늘 오로라 점퍼',
-    description: '라벤더빛 점퍼에 금빛 별과 반짝이가 콕콕.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'top-dracula-cape',
     name: '드라큘라 케이프',
-    description: '빨간 리본에 붉은 안감 망토가 펄럭이는 검정 재킷.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'top-dino-hoodie',
     name: '공룡 후드티',
-    description: '어깨에 초록 가시, 옆으로 꼬리가 삐죽 나온 공룡 후드티.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'top-wizard-robe',
     name: '마법사 로브',
-    description: '금빛 테두리와 늘어진 금 장식이 달린 검정 로브.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'top-blouse',
     name: '베이직 블라우스',
-    description: '까만 리본을 단 깔끔한 흰 블라우스.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'top-school-vest',
     name: '스쿨 니트 조끼',
-    description: '흰 셔츠 위에 남색 V넥 조끼와 빨간 넥타이.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'top-plain-hoodie',
     name: '무지 후드티',
-    description: '어디에나 잘 어울리는 회색 무지 후드티.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'top-knit-sweater',
     name: '니트 스웨터',
-    description: '꽈배기 결이 살아 있는 포근한 크림색 니트.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'top-highneck',
     name: '하이넥 티셔츠',
-    description: '목까지 올라오는 검정 하이넥에 금색 핀 포인트.',
     price: 2000,
     slot: 'top',
   },
   {
     id: 'bottom-track-shorts',
     name: '트레이닝 반바지',
-    description: '바깥쪽에 흰 줄이 들어간 까만 운동 반바지.',
     price: 2000,
     slot: 'bottom',
   },
   {
     id: 'bottom-cargo-pants',
     name: '카고 팬츠',
-    description: '허리 벨트와 큰 주머니가 달린 회갈색 긴바지.',
     price: 2000,
     slot: 'bottom',
   },
   {
     id: 'hair-cone-head',
     name: '뾰족 원뿔 머리',
-    description: '위로 길쭉하게 솟은 원뿔 머리. 머리를 통째로 바꿔요.',
     price: 3000,
     slot: 'hairItem',
     fullHead: true,
@@ -286,7 +253,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'hair-monster',
     name: '초록 괴물 머리',
-    description: '납작한 앞머리에 꿰맨 자국, 목 옆 볼트까지. 머리를 통째로 바꿔요.',
     price: 3000,
     slot: 'hairItem',
     fullHead: true,
@@ -294,7 +260,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
   {
     id: 'hair-alien',
     name: '외계인 머리',
-    description: '커다란 까만 눈의 연두색 외계인. 머리를 통째로 바꿔요.',
     price: 3000,
     slot: 'hairItem',
     fullHead: true,

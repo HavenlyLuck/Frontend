@@ -53,7 +53,7 @@ export default function ContentsPage() {
             <div className="contents-card-desc">
               여러분들의 아이디어를 실제로 구현해드립니다!
               <br />
-              매주 3명을 뽑아 1등은 쌀 응모권 10장, 2·3등은 5장을 드려요.
+              매주 3명을 뽑아 1등은 쌀 응모권 10장, 2등은 7장, 3등은 5장을 드려요.
             </div>
             {idea && (
               <div className="contents-card-meta">
