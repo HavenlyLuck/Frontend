@@ -5317,6 +5317,12 @@ a.product-card-home.is-soldout { cursor: pointer; }
   box-shadow: var(--shadow-lg);
 }
 
+/* 회원가입 — 소개 패널 없이 입력 카드 한 칸 */
+.auth-grid.is-single {
+  grid-template-columns: 1fr;
+  max-width: 460px;
+}
+
 .auth-brand {
   background: var(--bg-subtle);
   padding: 48px 40px;
@@ -5373,11 +5379,20 @@ a.product-card-home.is-soldout { cursor: pointer; }
 
 .auth-brand-facts li {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   font-size: 13px;
   color: var(--text-secondary);
   list-style: none;
+}
+
+.auth-brand-facts li::before {
+  content: "";
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
 }
 
 .auth-brand-facts b {
@@ -6521,6 +6536,42 @@ a.auth-submit {
   font-size: 12px;
   color: var(--text-tertiary);
 }
+a.review-private-hint { flex-shrink: 0; text-decoration: underline; }
+
+/* 사진 후기 보상(쌀 응모권 1장) 안내 — 후기 탭 위 띠 + 후기 쓰기 창의 사진 칸 */
+.review-reward-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--gold-tint);
+  border: 1px dashed var(--gold-tint-border);
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  word-break: keep-all;
+}
+.review-reward-banner svg { flex-shrink: 0; color: var(--gold); }
+.review-reward-banner b { color: var(--gold); font-weight: 700; margin-right: 4px; }
+.review-reward-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: -2px 0 8px;
+  font-size: 12.5px;
+  color: var(--gold);
+}
+
+/* 후기 쓰기 — 홍보 활용에 이미 동의한 사람에게 보이는 안내 */
+.review-consent-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-tertiary);
+  word-break: keep-all;
+}
+.review-consent-note a { color: var(--text-secondary); text-decoration: underline; }
 
 .review-modal-actions {
   display: flex;
@@ -7917,6 +7968,271 @@ a.auth-submit {
   background: radial-gradient(circle, rgba(217, 51, 71, 0.2), rgba(217, 51, 71, 0) 62%);
   pointer-events: none;
 }
+/* 넘김 배너 — 슬라이드를 가로로 이어 붙이고 track을 옮긴다. 높이는 가장 큰 슬라이드에 맞춰진다 */
+.home-hero-track {
+  position: relative;
+  display: flex;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.home-hero-page {
+  flex: 0 0 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+.home-hero-page > * { width: 100%; }
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-track { transition: none; }
+}
+
+.home-hero-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  margin-top: -20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: rgba(20, 21, 26, 0.6);
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s, background 0.2s;
+}
+.home-hero-arrow.is-prev { left: 16px; }
+.home-hero-arrow.is-next { right: 16px; }
+.home-hero:hover .home-hero-arrow,
+.home-hero-arrow:focus-visible { opacity: 1; }
+.home-hero-arrow:hover { color: var(--text); background: rgba(20, 21, 26, 0.85); }
+
+.home-hero-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 2;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+}
+.home-hero-dots button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.home-hero-dots button::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  transition: width 0.25s, background 0.25s;
+}
+.home-hero-dots button.is-active::before {
+  width: 22px;
+  background: var(--accent);
+}
+
+/* 홍보 슬라이드 (오픈 기념 · 함께 만드는 천운) — PC: 왼쪽 글 / 오른쪽 그림, 모바일: 제목 → 그림 → 혜택 → 안내 → 버튼 */
+.home-promo {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  grid-template-areas:
+    "head art"
+    "body art"
+    "cta  art"
+    "note art";
+  grid-template-rows: auto auto auto 1fr;
+  column-gap: 40px;
+  align-items: start;
+}
+.home-promo-head { grid-area: head; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.home-promo-art { grid-area: art; align-self: center; position: relative; }
+.home-promo-body { grid-area: body; margin-top: 36px; }
+.home-promo-cta { grid-area: cta; margin-top: 36px; }
+.home-promo-cta .hero-cta { display: inline-block; padding: 16px 34px; font-size: 18px; border-radius: 12px; }
+.home-promo-note { grid-area: note; margin: 28px 0 0; font-size: 13px; color: var(--text-tertiary); word-break: keep-all; }
+
+.home-promo-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent-fg);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.home-promo-title {
+  margin: 0;
+  font-family: var(--font-display), "Noto Sans KR", sans-serif;
+  font-size: clamp(34px, 4.8vw, 68px);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  word-break: keep-all;
+}
+.home-promo-title span { color: var(--accent-fg); }
+.home-promo-sub {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  word-break: keep-all;
+}
+.home-promo-sub b { color: var(--text); font-weight: 700; }
+
+.home-promo-art img {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* 그림 가장자리를 배경색으로 흐려서 네모 경계가 안 보이게 */
+  -webkit-mask-image: radial-gradient(ellipse 62% 60% at 50% 54%, #000 50%, transparent 100%);
+  mask-image: radial-gradient(ellipse 62% 60% at 50% 54%, #000 50%, transparent 100%);
+}
+
+/* 오픈 기념 — 혜택 두 줄 */
+.home-promo-benefits {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.home-promo-benefits li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  position: relative;
+  padding-left: 28px;
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--text);
+  word-break: keep-all;
+}
+.home-promo-benefits li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.42em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 106, 0.25);
+}
+.home-promo-benefits b { font-weight: 800; }
+.home-promo-benefits small { font-size: 18px; font-weight: 500; color: var(--text-secondary); margin-left: 4px; }
+
+/* 오픈 기념 — 픽셀 말풍선 */
+.pixel-bubble {
+  position: absolute;
+  left: 4%;
+  top: 0;
+  padding: 10px 14px;
+  background: #fff;
+  color: #14151a;
+  font-size: clamp(12px, 1.35vw, 16px);
+  line-height: 1.5;
+  white-space: nowrap;
+  border: 3px solid #14151a;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55);
+  image-rendering: pixelated;
+}
+.pixel-bubble em { font-style: normal; color: var(--accent); }
+/* 말풍선 꼬리 — 계단 모양 픽셀 삼각형 */
+.pixel-bubble::after {
+  content: "";
+  position: absolute;
+  left: 26%;
+  bottom: -15px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  clip-path: polygon(0 0, 100% 0, 100% 25%, 75% 25%, 75% 50%, 50% 50%, 50% 75%, 25% 75%, 25% 100%, 0 100%);
+  transform: scaleX(-1);
+}
+
+/* 함께 만드는 천운 — 선물 안내 상자 */
+.home-promo-gift {
+  padding: 20px 24px;
+  border: 1px solid var(--accent-tint-border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.home-promo-gift-desc { display: none; }
+.home-promo-gift-line {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--text);
+  word-break: keep-all;
+}
+.home-promo-gift-line b { font-weight: 800; }
+.home-promo-gift-line em { font-style: normal; font-weight: 800; color: var(--accent-fg); }
+.home-promo-gift-icon { flex-shrink: 0; color: var(--gold); }
+
+.home-promo .m-only { display: none; }
+@media (max-width: 860px) {
+  .home-promo .pc-only { display: none; }
+  .home-promo .m-only { display: inline; }
+  .home-hero-page { align-items: flex-start; }
+  .home-promo {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "art" "body" "note" "cta";
+    grid-template-rows: none;
+    justify-items: center;
+    text-align: center;
+    padding: 32px 16px 56px;
+  }
+  .home-promo-head { align-items: center; }
+  .home-promo-sub.is-desktop,
+  .is-open .home-promo-sub { display: none; }
+  .home-promo-art { width: 100%; max-width: 520px; margin-top: 20px; }
+  .is-open .home-promo-art { padding-top: 56px; }
+  .home-promo-body { width: 100%; margin-top: 20px; }
+  .home-promo-benefits {
+    padding: 20px;
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    background: var(--surface);
+    text-align: left;
+  }
+  .home-promo-benefits li { font-size: 16px; }
+  .home-promo-benefits small { display: none; }
+  .home-promo-gift { padding: 20px 16px; }
+  .home-promo-gift-desc {
+    display: block;
+    margin: 0 0 14px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    word-break: keep-all;
+  }
+  .home-promo-gift-desc b { color: var(--text); }
+  .home-promo-gift-line { justify-content: center; font-size: 15px; gap: 12px; }
+  .home-promo-note { margin-top: 12px; font-size: 11.5px; }
+  .home-promo-cta { margin-top: 16px; }
+  .pixel-bubble { left: 0; font-size: 13px; }
+  .home-hero-arrow { display: none; }
+  .home-hero-dots { bottom: 12px; }
+}
+
 .home-hero-slide {
   position: relative;
   max-width: 1200px;
@@ -7961,19 +8277,13 @@ a.auth-submit {
   word-break: keep-all;
 }
 .home-hero-steps b { color: var(--text); font-weight: 700; }
-.home-hero-steps .num {
+.home-hero-steps li::before {
+  content: "";
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--accent-tint);
-  border: 1px solid var(--accent-tint-border);
-  color: var(--accent-fg);
-  font-family: var(--font-display), "Noto Sans KR", sans-serif;
-  font-size: 13px;
-  line-height: 1;
+  background: var(--gold);
 }
 .home-hero-actions {
   display: flex;
@@ -8195,6 +8505,7 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
   color: var(--text-secondary);
 }
 .win-ticker-item svg { color: var(--gold); }
+.win-ticker-item .kind { color: var(--text-tertiary); font-weight: 600; }
 .win-ticker-item .who { color: var(--text); font-weight: 700; }
 .win-ticker-item .what {
   max-width: 16em;
@@ -8203,6 +8514,11 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
 }
 .win-ticker-item b { color: var(--gold); font-weight: 700; }
 .win-ticker-item .when { color: var(--text-tertiary); }
+/* 쿠지 라스트원상 — 빨간색으로 눈에 띄게 */
+.win-ticker-item.is-last-one svg,
+.win-ticker-item.is-last-one .what,
+.win-ticker-item.is-last-one b { color: var(--accent-fg); font-weight: 800; }
+.win-ticker-item.is-last-one .what { text-shadow: 0 0 10px rgba(242, 80, 101, 0.45); }
 @keyframes win-ticker {
   to { transform: translateX(-50%); }
 }

@@ -246,8 +246,8 @@ export function StoreDiagram() {
 export function SsalTicketDiagram() {
   const step = useStep(10)
   return (
-    <Row n={3} label="쌀 응모권 그림: 친구 추천·이벤트로 받고, 결제 대신 응모에 1장씩 쓰고, 낙첨돼도 쌀포인트는 없어요">
-      <Panel no={1} caption="친구 추천·이벤트로 받아요" active={within(step, 1, 2)}>
+    <Row n={3} label="쌀 응모권 그림: 사진 후기·친구 추천·이벤트로 받고, 결제 대신 응모에 1장씩 쓰고, 낙첨돼도 쌀포인트는 없어요">
+      <Panel no={1} caption="사진 후기·친구 추천·이벤트로 받아요" active={within(step, 1, 2)}>
         <Person config={FRIEND}>
           <span className={`gd-pop gd-icon-pop${step >= 1 ? ' on' : ''}`}><EmojiIcon name="ssal-ticket" /></span>
         </Person>

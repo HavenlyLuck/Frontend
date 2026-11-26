@@ -9,10 +9,12 @@ import {
   type StorePayType,
   type StoreProductResponse,
 } from "@/lib/api";
+import { parseServerTime } from "@/lib/raffle";
 import StoreProductCard from "@/components/StoreProductCard";
 import AvatarShop from "@/components/AvatarShop";
 
-const SORTS = ["최신순", "낮은 가격순", "높은 가격순", "인기순"];
+// 인기순은 판매량·찜 수 같은 기준 값을 서버가 아직 안 줘서 뺐다 — TODO(백엔드): 상점 상품에 인기 기준 값이 생기면 다시 넣는다
+const SORTS = ["최신순", "낮은 가격순", "높은 가격순"];
 
 // 일반 상점: 카드 결제 상품, 쌀포인트 상점: 쌀포인트 상품
 type StoreTab = "일반" | "쌀포인트";
@@ -78,10 +80,18 @@ export default function ShopPage() {
   const isAvatarTab = storeTab === "쌀포인트" && subTab === "avatar";
   const tabProducts = cache[storeTab] ?? [];
   const loaded = cache[storeTab] !== undefined;
-  const products =
+  const filtered =
     subTab === "all"
       ? tabProducts
       : tabProducts.filter((p) => p.category === subTab);
+  // 정렬 — 같은 값이면 최신 상품이 앞에 오게 한다
+  const newest = (a: StoreProductResponse, b: StoreProductResponse) =>
+    parseServerTime(b.created_at) - parseServerTime(a.created_at) || b.store_product_id - a.store_product_id;
+  const products = [...filtered].sort((a, b) =>
+    sort === "낮은 가격순" ? a.price - b.price || newest(a, b)
+    : sort === "높은 가격순" ? b.price - a.price || newest(a, b)
+    : newest(a, b),
+  );
 
   useEffect(() => {
     if (cache[storeTab] !== undefined) return;

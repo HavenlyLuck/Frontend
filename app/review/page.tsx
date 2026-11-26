@@ -13,10 +13,11 @@ import {
   QuestionIcon,
   StarIcon,
   TrashIcon,
+  TicketIcon,
   WarningIcon,
   XIcon,
 } from '@phosphor-icons/react'
-import { ApiError } from '@/lib/api'
+import { ApiError, getMyProfile, setReviewMarketingConsent } from '@/lib/api'
 import { getValidSession, loginPath } from '@/lib/auth'
 import { formatKstDate } from '@/lib/date'
 import {
@@ -71,6 +72,11 @@ export default function ReviewPage() {
   const [editingInquiryId, setEditingInquiryId] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  // 후기 홍보 활용 동의 — null: 아직 모름(불러오는 중·실패). 동의 안 한 사람만 후기 쓰기 창에 선택 체크를 보여준다
+  const [marketingAgreed, setMarketingAgreed] = useState<boolean | null>(null)
+  const [marketingCheck, setMarketingCheck] = useState(false)
+  // 사진 후기 보상(쌀 응모권 1장)을 받았으면 올린 뒤 안내 창을 띄운다
+  const [rewarded, setRewarded] = useState(false)
 
   // 로그인했으면 토큰을 붙여서 받는다 — 내 비공개 문의 내용과 "내 후기" 삭제 버튼을 보기 위해
   const load = async (t: string | null) => {
@@ -112,9 +118,16 @@ export default function ReviewPage() {
     setFormError(null)
     setShowModal(true)
     if (tab === '후기') {
+      setMarketingCheck(false)
+      getMyProfile(session.token)
+        .then((p) => setMarketingAgreed(p.review_marketing_agreed ?? false))
+        .catch(() => setMarketingAgreed(null))
       setReviewable(null)
       getReviewableItems(session.token)
-        .then((items) => {
+        .then((all) => {
+          // 후기는 응모 당첨 상품 · 쿠지 상위상 · 일반 상점 상품만 — 쌀포인트 상점 상품은 여기서 뺀다.
+          // 쿠지 하위상은 목록에 등급 정보가 없어 서버가 걸러 줘야 한다 (TODO(백엔드))
+          const items = all.filter(i => !(i.product_type === 'store' && i.pay_type === 'ssal'))
           setReviewable(items)
           setReviewForm(f => ({ ...f, storageItemId: items[0]?.storage_item_id ?? 0 }))
         })
@@ -166,6 +179,8 @@ export default function ReviewPage() {
     if (tab === '후기') {
       if (!reviewForm.storageItemId) return setFormError('후기를 쓸 상품을 골라주세요.')
       if (!reviewForm.title.trim() || !reviewForm.content.trim()) return setFormError('제목과 내용을 모두 입력해주세요.')
+      // 쌀 응모권은 사진 후기에만 준다 — 사진 없이 올리면 한 번 알려 준다
+      if (!reviewForm.imgFile && !confirm('사진 없이 올리면 쌀 응모권을 받을 수 없어요. 그래도 올릴까요?')) return
     } else if (!inquiryForm.title.trim() || !inquiryForm.content.trim()) {
       return setFormError('제목과 내용을 모두 입력해주세요.')
     }
@@ -180,6 +195,11 @@ export default function ReviewPage() {
           image: reviewForm.imgFile,
         })
         setReviews(prev => [created, ...(prev ?? [])])
+        if (created.ssal_ticket_rewarded) setRewarded(true)
+        // 홍보 활용 동의에 체크했으면 계정 동의를 켠다 — 실패해도 후기는 이미 올라갔으니 조용히 넘긴다(설정에서 다시 켤 수 있음)
+        if (marketingCheck && marketingAgreed === false) {
+          setReviewMarketingConsent(token, true).then(() => setMarketingAgreed(true)).catch(() => {})
+        }
       } else {
         const payload = {
           title: inquiryForm.title.trim(),
@@ -208,7 +228,7 @@ export default function ReviewPage() {
   }
 
   async function removeReview(review: ReviewResponse) {
-    if (!token || !confirm('이 후기를 지울까요? 지우면 같은 상품에 다시 쓸 수 있어요.')) return
+    if (!token || !confirm('이 후기를 지울까요? 지우면 같은 상품에 다시 쓸 수 있지만, 쌀 응모권은 다시 받을 수 없어요.')) return
     try {
       await deleteReview(token, review.review_id)
       setReviews(prev => prev?.filter(r => r.review_id !== review.review_id) ?? prev)
@@ -247,6 +267,14 @@ export default function ReviewPage() {
             ))}
           </div>
         </div>
+
+        {/* 사진 후기 보상 안내 */}
+        {tab === '후기' && (
+          <div className="review-reward-banner">
+            <TicketIcon size={18} weight="fill" />
+            <span><b>사진 후기를 쓰면 쌀 응모권 1장!</b> 응모 당첨 · 쿠지 상위상 · 일반 상점 상품, 상품마다 1번 · 사진이 있어야 지급돼요</span>
+          </div>
+        )}
 
         {/* 후기 탭 */}
         {loadError && (
@@ -463,6 +491,7 @@ export default function ReviewPage() {
                 </div>
                 <div>
                   <div className="field-label">사진 (선택)</div>
+                  <p className="review-reward-hint"><TicketIcon size={13} weight="fill" /> 사진을 넣으면 쌀 응모권 1장을 드려요 (상품마다 1번)</p>
                   <label className="review-file-label">
                     <div className="review-file-btn">파일 선택</div>
                     <span className="review-file-status">{reviewForm.imgPreview ? '사진이 선택되었습니다' : '선택된 파일 없음'}</span>
@@ -474,6 +503,23 @@ export default function ReviewPage() {
                     </div>
                   )}
                 </div>
+                {/* 후기 홍보 활용 동의 — 선택. 안 해도 후기는 올라간다. 동의는 계정 단위(내 후기 전체)라 이미 동의했으면 안내만 */}
+                {marketingAgreed === true ? (
+                  <p className="review-consent-note">
+                    후기 홍보 활용(천운 SNS·홈페이지)에 동의한 상태예요. <Link href="/mypage/settings">마이페이지 설정</Link>에서 바꿀 수 있어요.
+                  </p>
+                ) : marketingAgreed === false ? (
+                  <label className={`review-private-row${marketingCheck ? ' checked' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={marketingCheck}
+                      onChange={e => setMarketingCheck(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                    />
+                    <span className="label">(선택) 내 후기를 천운 SNS·홈페이지 홍보에 활용하는 데 동의합니다</span>
+                    <a className="review-private-hint" href="/privacy#collect" target="_blank" rel="noopener noreferrer">자세히</a>
+                  </label>
+                ) : null}
               </div>
             )}
 
@@ -534,6 +580,22 @@ export default function ReviewPage() {
         </>
       )}
 
+      {/* 사진 후기 보상 지급 안내 — 회원가입 축하 창과 같은 응모권 카드 모양 */}
+      <div className={`modal-overlay ${rewarded ? 'open' : ''}`} onClick={() => setRewarded(false)}>
+        {rewarded && (
+          <div className="modal signup-welcome-modal" role="dialog" aria-modal="true" aria-label="쌀 응모권 지급" style={{ margin: '0 16px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-title">후기 고마워요!</div>
+            <div className="signup-welcome-ticket">
+              <span className="signup-welcome-badge">사진 후기</span>
+              <strong>쌀 응모권 1장</strong>
+              <span>보관함에 지급되었어요</span>
+            </div>
+            <div className="modal-btn-row">
+              <button className="btn-confirm" onClick={() => setRewarded(false)}>확인</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -78,9 +78,9 @@ export default function LoginPage() {
             <span>천운</span>을 뽑다.
           </h1>
           <ul className="auth-brand-facts">
-            <li><b>1,000원</b>부터 응모 시작</li>
-            <li><b>매진</b> 시 바로 자동 추첨</li>
-            <li>낙첨해도 <b>쌀포인트</b>로 페이백</li>
+            <li><span>응모권 1장 <b>1,000원</b></span></li>
+            <li><b>전량 판매 시 즉시 추첨</b></li>
+            <li><span>낙첨 시 <b>쌀포인트 환급</b></span></li>
           </ul>
         </div>
 
