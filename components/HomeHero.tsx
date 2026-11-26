@@ -10,6 +10,7 @@ import { parseServerTime } from "@/lib/raffle";
 import CardImage from "./CardImage";
 import { maskNickname } from "@/lib/mask";
 import LogoMark from "./LogoMark";
+import { HERO_RAFFLE_IMAGES } from "@/lib/features";
 
 // 오픈 기념 배너의 픽셀 말풍선 글씨 — 갈무리11 Bold (OFL 무료 폰트, app/fonts/Galmuri-OFL.md)
 const pixelFont = localFont({
@@ -311,6 +312,8 @@ function FeaturedKuji({ kuji }: { kuji: KujiSetResponse }) {
 }
 
 function FeaturedRaffle({ rp, countdown }: { rp: RaffleProductResponse; countdown: string }) {
+  // 메인 배너용으로 따로 정한 사진이 있으면 그것 (lib/features.ts HERO_RAFFLE_IMAGES)
+  const heroImage = HERO_RAFFLE_IMAGES[rp.raffle_product_id] ?? rp.image_url;
   const pct = rp.total_slots > 0 ? Math.min(100, Math.round((rp.sold_slots / rp.total_slots) * 100)) : 0;
   return (
     <Link className="home-hero-card" href={`/eungmo/${rp.raffle_product_id}`}>
@@ -319,7 +322,7 @@ function FeaturedRaffle({ rp, countdown }: { rp: RaffleProductResponse; countdow
         <span className="home-hero-time">{countdown}</span>
       </div>
       <div className="home-hero-card-img card-img">
-        {rp.image_url && <CardImage src={rp.image_url} alt={rp.product_name} />}
+        {heroImage && <CardImage src={heroImage} alt={rp.product_name} />}
       </div>
       <div className="home-hero-card-body">
         <div className="home-hero-card-name">{rp.product_name}</div>
