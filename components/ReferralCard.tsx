@@ -14,6 +14,7 @@ const card: React.CSSProperties = {
 // 추천인을 등록한 사람이 첫 응모권을 사면 본인과 추천인 모두 쌀 응모권을 1장씩 보관함에 받는다
 export default function ReferralCard() {
   const [info, setInfo] = useState<ReferralSummaryResponse | null>(null)
+  const [failed, setFailed] = useState(false)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
@@ -22,7 +23,7 @@ export default function ReferralCard() {
   useEffect(() => {
     getValidSession().then(session => {
       if (!session) return
-      getMyReferral(session.token).then(setInfo).catch(() => {})
+      getMyReferral(session.token).then(setInfo).catch(() => setFailed(true))
     })
   }, [])
 
@@ -52,7 +53,9 @@ export default function ReferralCard() {
     }
   }
 
-  if (!info) return null
+  if (failed) return null
+  // 불러오는 동안 카드 자리를 비워 둔다 — 없다가 생기면 아래 카드(비밀번호 변경 등)가 밀려 내려간다
+  if (!info) return <div className="referral-card-placeholder" style={card} aria-hidden="true" />
 
   return (
     <div style={card}>

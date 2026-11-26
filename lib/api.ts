@@ -17,8 +17,21 @@ export class ApiError extends Error {
   }
 }
 
+// 서버에 닿지 못했을 때(인터넷 끊김, 서버 오류로 응답 헤더가 빠진 경우 등) 브라우저는 "Failed to fetch" 같은
+// 영어 TypeError를 던진다 — 화면에 그대로 나가지 않게 한국어 안내로 바꾼다
+export const NETWORK_ERROR_MESSAGE = '서버와 연결하지 못했어요. 잠시 후 다시 시도해 주세요.'
+
+export async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init)
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') throw e
+    throw new ApiError(0, NETWORK_ERROR_MESSAGE)
+  }
+}
+
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await apiFetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -267,7 +280,7 @@ export async function deleteMyAccount(token: string, password: string): Promise<
 }
 
 export async function changeMyPassword(token: string, currentPassword: string, newPassword: string): Promise<void> {
-  const res = await fetch(`${API_URL}/users/me/password`, {
+  const res = await apiFetch(`${API_URL}/users/me/password`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
@@ -788,7 +801,7 @@ export async function createInventoryReceipt(token: string, payload: CreateInven
   if (payload.memo) formData.append('memo', payload.memo)
   if (payload.tax_free != null) formData.append('tax_free', String(payload.tax_free))
 
-  const res = await fetch(`${API_URL}/inventory/receipts`, {
+  const res = await apiFetch(`${API_URL}/inventory/receipts`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
@@ -915,7 +928,7 @@ export function updateStoreProductStock(token: string, storeProductId: number, s
 
 // 품절 상품 삭제 (재고 0일 때만) — 구매 내역은 그대로 남고 목록·상세에서만 사라진다
 export async function deleteStoreProduct(token: string, storeProductId: number): Promise<void> {
-  const res = await fetch(`${API_URL}/store-products/${storeProductId}`, {
+  const res = await apiFetch(`${API_URL}/store-products/${storeProductId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -974,7 +987,7 @@ export async function createStoreProduct(token: string, payload: CreateStoreProd
   if (payload.sale_mode) formData.append('sale_mode', payload.sale_mode)
   if (payload.catalog_item_id != null) formData.append('catalog_item_id', String(payload.catalog_item_id))
 
-  const res = await fetch(`${API_URL}/store-products`, {
+  const res = await apiFetch(`${API_URL}/store-products`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
@@ -1133,7 +1146,7 @@ export async function createKujiSet(token: string, payload: CreateKujiSetPayload
     if (payload.last_one.catalog_item_id != null) formData.append('last_one_catalog_item_id', String(payload.last_one.catalog_item_id))
   }
 
-  const res = await fetch(`${API_URL}/kuji`, {
+  const res = await apiFetch(`${API_URL}/kuji`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
@@ -1167,7 +1180,7 @@ export async function createRaffleProduct(token: string, payload: CreateRafflePr
   if (payload.inventory_item_id != null) formData.append('inventory_item_id', String(payload.inventory_item_id))
   if (payload.catalog_item_id != null) formData.append('catalog_item_id', String(payload.catalog_item_id))
 
-  const res = await fetch(`${API_URL}/raffles`, {
+  const res = await apiFetch(`${API_URL}/raffles`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,

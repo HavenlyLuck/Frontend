@@ -9,6 +9,7 @@ import { useStorage } from '@/hooks/useStorage'
 import { notifyStorageUpdated } from '@/lib/storage'
 import { getValidSession } from '@/lib/auth'
 import { payWithCard, paymentFailureMessage, PaymentWindowError } from '@/lib/payment'
+import { kstDate } from '@/lib/date'
 import {
   ApiError,
   cancelStorePurchase,
@@ -51,6 +52,10 @@ const headerBtnStyle: React.CSSProperties = {
   fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
+// 배송지 연락처 — 숫자만 세서 0으로 시작하는 9~12자리 (휴대폰·지역번호·안심번호). 서버(routers/address.py)와 같은 규칙
+const PHONE_FORMAT_MESSAGE = '연락처를 정확히 입력해 주세요 (예: 010-1234-5678)'
+const isValidContactPhone = (v: string) => /^0\d{8,11}$/.test(v.replace(/\D/g, ''))
+
 const EMPTY_ADDR_FORM = { label: '', recipient: '', phone: '', zipCode: '', address1: '', address2: '', isDefault: false }
 
 function itemTitle(item: StorageItemResponse) {
@@ -79,6 +84,7 @@ export default function StoragePage() {
   const [addresses, setAddresses] = useState<AddressResponse[]>([])
   const [showAddrModal, setShowAddrModal] = useState(false)
   const [newAddr, setNewAddr] = useState(EMPTY_ADDR_FORM)
+  const [phoneTouched, setPhoneTouched] = useState(false)   // 연락처 칸을 한 번 벗어난 뒤부터 형식 안내를 보인다
   const [showDefaultModal, setShowDefaultModal] = useState(false)
 
   const [showAddrSearch, setShowAddrSearch] = useState(false)
@@ -190,6 +196,7 @@ export default function StoragePage() {
     setShowAddrModal(false)
     setShowAddrSearch(false)
     setNewAddr(EMPTY_ADDR_FORM)
+    setPhoneTouched(false)
     resetAddrSearch()
   }
 
@@ -220,6 +227,11 @@ export default function StoragePage() {
 
   const handleAddAddress = async () => {
     if (!newAddr.recipient.trim() || !newAddr.phone.trim() || !newAddr.address1.trim() || submitting) return
+    if (!isValidContactPhone(newAddr.phone)) {
+      setPhoneTouched(true)
+      showToast(PHONE_FORMAT_MESSAGE)
+      return
+    }
     const session = await getValidSession()
     if (!session) return
     setSubmitting(true)
@@ -373,7 +385,7 @@ export default function StoragePage() {
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                     {item.source === 'store' ? <ShoppingBagIcon size={12} /> : <ConfettiIcon size={12} color="var(--gold)" />} {item.source === 'store' ? '구매' : item.source === 'kuji' ? '쿠지 당첨' : '당첨'}
                   </span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {item.created_at.slice(0, 10)}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><CalendarIcon size={12} /> {kstDate(item.created_at)}</span>
                   {value && <span>{value}</span>}
                 </div>
                 {expiresFor(item) && (() => {
@@ -621,7 +633,15 @@ export default function StoragePage() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={labelStyle}>연락처 *</div>
-                  <input style={inputStyle} type="tel" inputMode="tel" autoComplete="tel" placeholder="010-0000-0000" value={newAddr.phone} onChange={e => setNewAddr(p => ({ ...p, phone: e.target.value }))} />
+                  <input
+                    style={{ ...inputStyle, ...(phoneTouched && newAddr.phone.trim() && !isValidContactPhone(newAddr.phone) ? { borderColor: 'var(--accent)' } : {}) }}
+                    type="tel" inputMode="tel" autoComplete="tel" placeholder="010-0000-0000" value={newAddr.phone}
+                    onChange={e => setNewAddr(p => ({ ...p, phone: e.target.value }))}
+                    onBlur={() => setPhoneTouched(true)}
+                  />
+                  {phoneTouched && newAddr.phone.trim() && !isValidContactPhone(newAddr.phone) && (
+                    <div style={{ marginTop: 4, fontSize: 12, color: 'var(--accent-fg)' }}>번호를 다시 확인해 주세요</div>
+                  )}
                 </div>
               </div>
               <div>

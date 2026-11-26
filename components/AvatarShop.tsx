@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { withJosa } from '@/lib/josa'
 import Link from 'next/link'
 import { ArrowCounterClockwiseIcon, ConfettiIcon, GrainsIcon, LightningIcon, WarningIcon } from '@phosphor-icons/react'
 import AvatarRoom from '@/components/AvatarRoom'
@@ -253,7 +254,7 @@ export default function AvatarShop() {
             </div>
             <div className="modal-title">구매가 완료되었습니다!</div>
             <div className="modal-sub">
-              {buyTarget.name}을(를) 손에 넣었어요.
+              {withJosa(buyTarget.name, '을/를')} 손에 넣었어요.
               <br />
               마이페이지 캐릭터 꾸미기에서 바로 입을 수 있어요.
             </div>

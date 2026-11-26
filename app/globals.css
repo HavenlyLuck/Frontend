@@ -58,6 +58,13 @@ html {
   width: 100%;
 }
 
+/* 설정 화면 친구 추천 카드 — 불러오는 동안 자리 (다 그린 카드 높이와 비슷하게) */
+.referral-card-placeholder { min-height: 280px; }
+@media (max-width: 640px) { .referral-card-placeholder { min-height: 340px; } }
+
+/* 데이터를 불러오는 동안 짧은 화면에서 푸터가 올라왔다가 내용이 채워지며 밀려 내려가는 것(레이아웃 밀림)을 막는다 */
+.site-content { min-height: 100vh; min-height: 100svh; }
+
 body {
   width: 100%;
   background: var(--bg);
@@ -8220,7 +8227,6 @@ a.review-private-hint { flex-shrink: 0; text-decoration: underline; }
 }
 .home-promo-gift-line b { font-weight: 800; }
 .home-promo-gift-line em { font-style: normal; font-weight: 800; color: var(--accent-fg); }
-.home-promo-gift-icon { flex-shrink: 0; color: var(--gold); }
 
 .home-promo .m-only { display: none; }
 @media (max-width: 860px) {
@@ -8451,6 +8457,19 @@ a.home-hero-card:hover {
 }
 a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
 
+/* 응모 + 쿠지 두 장 — PC는 가로로 나란히 */
+.home-hero-cards { display: grid; gap: 16px; }
+.home-hero-slide.has-two {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 660px);
+  gap: 40px;
+}
+.home-hero-slide.has-two .home-hero-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.home-hero-slide.has-two .home-hero-card-head { padding: 12px 14px; font-size: 12px; }
+.home-hero-slide.has-two .home-hero-card-body { padding: 14px; gap: 8px; }
+.home-hero-slide.has-two .home-hero-card-price { font-size: 22px; }
+.home-hero-slide.has-two .home-hero-card-cta { padding: 11px; font-size: 14px; }
+.home-hero-slide.has-two .home-hero-card.is-empty { min-height: 0; }
+
 /* 진행 중인 응모가 없을 때 — 로고와 한 줄 안내만 */
 .home-hero-card.is-empty {
   min-height: 320px;
@@ -8491,6 +8510,34 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
   .home-hero-copy { gap: 20px; }
   .home-hero-steps li { font-size: 15px; }
   .home-hero-card { max-width: 480px; width: 100%; }
+  /* 모바일은 두 장을 세로로 */
+  .home-hero-slide.has-two { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .home-hero-slide.has-two .home-hero-cards { grid-template-columns: minmax(0, 1fr); gap: 12px; max-width: 480px; width: 100%; }
+  /* 두 장일 땐 사진 왼쪽 · 정보 오른쪽의 납작한 카드로 — 세로로 크게 쌓이면 이 배너만 길어져
+     다른 배너 아래가 비고, 쿠지를 불러온 뒤 배너 높이가 늘며 화면이 밀린다 */
+  .home-hero-slide.has-two .home-hero-card:not(.is-empty) {
+    display: grid;
+    grid-template-columns: 116px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    max-width: none;
+  }
+  .home-hero-slide.has-two .home-hero-card-head { grid-column: 2; padding: 10px 12px 0; font-size: 11.5px; }
+  .home-hero-slide.has-two .home-hero-card-img.card-img {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 116px;
+  }
+  .home-hero-slide.has-two .home-hero-card-body { grid-column: 2; padding: 6px 12px 12px; gap: 6px; }
+  .home-hero-slide.has-two .home-hero-card-name { font-size: 14px; -webkit-line-clamp: 1; line-clamp: 1; }
+  .home-hero-slide.has-two .home-hero-card-price { font-size: 18px; }
+  .home-hero-slide.has-two .home-hero-bar { height: 6px; }
+  .home-hero-slide.has-two .home-hero-card-meta { display: none; }
+  .home-hero-slide.has-two .home-hero-card-cta { margin-top: 2px; padding: 8px; font-size: 13px; border-radius: 8px; }
+  .home-hero-slide.has-two .home-hero-card.is-empty { min-height: 0; padding: 18px 16px; gap: 4px; }
+  .home-hero-slide.has-two .home-hero-empty-mark { width: 44px; margin-bottom: 4px; }
+  .home-hero-slide.has-two .home-hero-empty-title { font-size: 17px; }
   .home-hero-card.is-loading,
   .home-hero-card.is-empty { min-height: 240px; }
 }

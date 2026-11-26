@@ -4,8 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import localFont from "next/font/local";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { CaretLeftIcon, CaretRightIcon, GiftIcon, LightningIcon, TicketIcon } from "@phosphor-icons/react";
-import { getKujiRecentWins, getRaffleProducts, type KujiRecentWin, type RaffleProductResponse } from "@/lib/api";
+import { CaretLeftIcon, CaretRightIcon, LightningIcon, SparkleIcon, TicketIcon } from "@phosphor-icons/react";
+import { getKujiRecentWins, getKujiSets, getRaffleProducts, type KujiRecentWin, type KujiSetResponse, type RaffleProductResponse } from "@/lib/api";
 import { parseServerTime } from "@/lib/raffle";
 import CardImage from "./CardImage";
 import { maskNickname } from "@/lib/mask";
@@ -22,15 +22,16 @@ const pixelFont = localFont({
  * 메인 히어로 — 옆으로 넘기는 배너 (2026-11 오픈)
  *  1. 오픈 기념 혜택 (쌀 응모권) → 응모 보러 가기
  *  2. 서비스 소개 + 지금 진행 중인 실제 응모 상품 한 개 (없으면 "새 응모 준비 중" 카드)
+ *     + 진행 중인 쿠지가 있으면 쿠지 한 판도 — PC는 가로로, 모바일은 세로로 두 장
  *  3. 함께 만드는 천운 (후기/문의) → 후기/문의 남기기
- * 4초마다 자동으로 넘어간다. 손가락으로 누르고 있거나 키보드(Tab)로 배너 안에 들어와 있을 때만 멈춘다.
+ * 7초마다 자동으로 넘어간다. 손가락으로 누르고 있거나 키보드(Tab)로 배너 안에 들어와 있을 때만 멈춘다.
  * (마우스를 올렸을 때·마우스로 점을 누른 뒤에는 멈추지 않는다 — PC에선 배너가 화면을 거의 채워 마우스가 늘 위에 있어서 "안 넘어간다"고 느껴졌음)
  * 모바일은 손가락으로 밀어 넘긴다. 움직임 줄이기 설정이면 미끄러지는 효과 없이 바로 바뀐다(CSS).
  * 슬라이드를 늘리거나 뺄 땐 아래 slides 배열만 고치면 된다.
  * '응모 보러 가기' 클릭은 MetaPixel 컴포넌트가 버튼 글자로 찾아 Lead를 보내므로 여기서 따로 할 일 없음.
  */
 
-const AUTO_MS = 4000;
+const AUTO_MS = 7000;
 
 interface Props {
   // 지금 진행 중인 응모 중 대표로 보여줄 것. 없으면 null
@@ -53,7 +54,7 @@ export default function HomeHero({ featured, loaded }: Props) {
 
   const go = useCallback((i: number) => setIndex(((i % count) + count) % count), [count]);
 
-  // 자동 넘김 — 손으로 넘기면 index가 바뀌어 4초를 처음부터 다시 센다
+  // 자동 넘김 — 손으로 넘기면 index가 바뀌어 7초를 처음부터 다시 센다
   useEffect(() => {
     if (paused) return;
     const t = window.setTimeout(() => {
@@ -204,7 +205,6 @@ function FeedbackSlide() {
       <div className="home-promo-body home-promo-gift">
         <p className="home-promo-gift-desc">{desc}</p>
         <p className="home-promo-gift-line">
-          <GiftIcon className="home-promo-gift-icon" size={30} weight="duotone" aria-hidden="true" />
           <span>
             좋은 의견을 주신 분께는 <b>감사의 마음을 담아</b>
             <br />
@@ -223,8 +223,10 @@ function FeedbackSlide() {
 
 // ── 2. 서비스 소개 + 진행 중인 응모 ──
 function RaffleSlide({ featured, loaded }: Props) {
+  const kuji = useFeaturedKuji();
+  const ready = loaded && kuji !== undefined;
   return (
-      <div className="home-hero-slide">
+      <div className={`home-hero-slide${ready && kuji ? " has-two" : ""}`}>
         <div className="home-hero-copy">
           <h1>
             천원 한 장,
@@ -242,14 +244,63 @@ function RaffleSlide({ featured, loaded }: Props) {
           </div>
         </div>
 
-        {!loaded ? (
+        {/* 응모와 쿠지를 둘 다 불러온 뒤에 한 번에 그린다 (카드가 한 장 떴다 두 장으로 바뀌며 밀리지 않게) */}
+        {!ready ? (
           <div className="home-hero-card is-loading" aria-hidden="true" />
-        ) : featured ? (
-          <FeaturedRaffle rp={featured.rp} countdown={featured.countdown} />
         ) : (
-          <EmptyRaffle />
+          <div className="home-hero-cards">
+            {featured ? <FeaturedRaffle rp={featured.rp} countdown={featured.countdown} /> : <EmptyRaffle />}
+            {kuji && <FeaturedKuji kuji={kuji} />}
+          </div>
         )}
       </div>
+  );
+}
+
+// 히어로에 보여줄 쿠지 한 판 — 진행 중인 것 중 가장 많이 뽑힌(마감이 가까운) 것.
+// 불러오는 중이면 undefined, 진행 중인 쿠지가 없거나 불러오지 못하면 null
+function useFeaturedKuji(): KujiSetResponse | null | undefined {
+  const [kuji, setKuji] = useState<KujiSetResponse | null | undefined>(undefined);
+  useEffect(() => {
+    getKujiSets("open")
+      .then((list) => {
+        const open = list.filter((k) => k.status === "open" && k.remaining_tickets > 0 && k.total_tickets > 0);
+        const drawnRatio = (k: KujiSetResponse) => (k.total_tickets - k.remaining_tickets) / k.total_tickets;
+        setKuji(open.sort((a, b) => drawnRatio(b) - drawnRatio(a))[0] ?? null);
+      })
+      .catch(() => setKuji(null));
+  }, []);
+  return kuji;
+}
+
+function FeaturedKuji({ kuji }: { kuji: KujiSetResponse }) {
+  const drawn = kuji.total_tickets - kuji.remaining_tickets;
+  const pct = Math.min(100, Math.round((drawn / kuji.total_tickets) * 100));
+  const upperLeft = kuji.prizes.filter((p) => p.tier === "upper").reduce((n, p) => n + p.remaining_quantity, 0);
+  return (
+    <Link className="home-hero-card is-kuji" href={`/kuji/${kuji.kuji_set_id}`}>
+      <div className="home-hero-card-head">
+        <span className="home-hero-live"><i aria-hidden="true" /> 진행 중인 쿠지</span>
+        <span className="home-hero-time">상위상 {upperLeft.toLocaleString()}개 남음</span>
+      </div>
+      <div className="home-hero-card-img card-img">
+        {kuji.image_url && <CardImage src={kuji.image_url} alt={kuji.title} />}
+      </div>
+      <div className="home-hero-card-body">
+        <div className="home-hero-card-name">{kuji.title}</div>
+        <div className="home-hero-card-price">
+          {kuji.ticket_price.toLocaleString()}원 <small>/ 제비 1장</small>
+        </div>
+        <div className="home-hero-bar" role="img" aria-label={`제비 ${kuji.total_tickets}장 중 ${drawn}장 뽑힘`}>
+          <div style={{ width: `${pct}%` }} />
+        </div>
+        <div className="home-hero-card-meta">
+          <span><b>{drawn.toLocaleString()}</b> / {kuji.total_tickets.toLocaleString()}장 뽑힘</span>
+          <span><b>{kuji.remaining_tickets.toLocaleString()}장</b> 남음</span>
+        </div>
+        <span className="home-hero-card-cta"><SparkleIcon size={16} weight="fill" /> 쿠지 뽑으러 가기</span>
+      </div>
+    </Link>
   );
 }
 
