@@ -21,10 +21,12 @@ export default function MobileBuyBar({ watchId, price, label, onClick, disabled 
     return () => io.disconnect()
   }, [watchId])
 
+  // 매진·마감·품절처럼 살 수 없으면 아래 고정 버튼은 띄우지 않는다 (원래 버튼 자리에 상태가 이미 보인다)
+  if (disabled) return null
+
+  // 맨 아래 하단 정보(푸터)가 버튼에 가려지지 않는 자리는 CSS가 푸터 아래에 남긴다 (globals.css .mobile-buy-bar)
   return (
     <>
-      {/* 맨 아래 내용(하단 정보)이 버튼에 가려지지 않게 자리를 남긴다 */}
-      <div className="mobile-buy-spacer" aria-hidden="true" />
       <div className={`mobile-buy-bar${show ? ' show' : ''}`} aria-hidden={!show}>
         {price != null && <div className="mobile-buy-price">{price}</div>}
         <button type="button" className="btn-raffle" onClick={onClick} disabled={disabled} tabIndex={show ? 0 : -1}>

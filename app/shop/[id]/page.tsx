@@ -368,19 +368,20 @@ export default function ShopProductPage({
                     gap: 16,
                     border: "1px solid var(--border-strong)",
                     borderRadius: 10,
-                    padding: "8px 16px",
+                    padding: "4px 10px",
                   }}
                 >
                   <button
                     onClick={() => changeQty(-1)}
-                    disabled={soldOut}
+                    disabled={blocked}
+                    aria-label="수량 줄이기"
                     style={{
-                      width: 28,
-                      height: 28,
+                      width: 36,
+                      height: 36,
                       border: "none",
                       background: "none",
                       fontSize: 18,
-                      cursor: soldOut ? "default" : "pointer",
+                      cursor: blocked ? "default" : "pointer",
                       color: "var(--text-secondary)",
                     }}
                   >
@@ -399,14 +400,15 @@ export default function ShopProductPage({
                   </span>
                   <button
                     onClick={() => changeQty(1)}
-                    disabled={soldOut}
+                    disabled={blocked}
+                    aria-label="수량 늘리기"
                     style={{
-                      width: 28,
-                      height: 28,
+                      width: 36,
+                      height: 36,
                       border: "none",
                       background: "none",
                       fontSize: 18,
-                      cursor: soldOut ? "default" : "pointer",
+                      cursor: blocked ? "default" : "pointer",
                       color: "var(--text-secondary)",
                     }}
                   >

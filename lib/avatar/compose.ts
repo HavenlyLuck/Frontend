@@ -1,12 +1,12 @@
 // 아바타 설정(JSON) → 픽셀 합성. 브라우저 API를 쓰지 않는 순수 함수라
 // 미리보기 스크립트나 다른 캔버스에서도 그대로 재사용할 수 있다.
 //
-// 그림은 hd.ts — 기본 캐릭터(똥머리·흰 티) 위에 문신·표정·하의·신발·상의·머리·모자·손 층을 차례로 덮어 그린다.
+// 그림은 hd.ts — 기본 캐릭터(똥머리·흰 티) 위에 하의·신발·상의·머리·모자·손 층을 차례로 덮어 그린다.
 // 원본 그림에는 잔디 발판이 붙어 있어서, 여기서 발판을 떼고 캐릭터만 남긴다 (stripTile).
 
 import { HD_BASE, HD_ITEMS, HD_PALETTE, HD_W } from './hd'
 import { HD_EXTRA_ITEMS, HD_EXTRA_PALETTE, HD_EXTRA_TOP } from './hdExtra'
-import { AVATAR_SHOP_ITEMS, FACE_SLOTS, HAIRS, LAYER_ORDER, WEAR_SLOTS, type HairId, type WearSlot } from './shopItems'
+import { AVATAR_SHOP_ITEMS, HAIRS, LAYER_ORDER, WEAR_SLOTS, type HairId, type WearSlot } from './shopItems'
 
 export type { HairId, WearSlot }
 export { WEAR_SLOTS }
@@ -16,9 +16,6 @@ export interface AvatarConfig {
   hair: HairId // 무료 머리 모양 (hairItem을 입으면 가려진다)
   // 칸마다 착용한 쌀포인트 상점 아이템 id (shopItems.ts). 없으면 기본 그림 그대로
   hairItem?: string
-  eyes?: string
-  mouth?: string
-  tattoo?: string
   top?: string
   bottom?: string
   hat?: string
@@ -56,9 +53,8 @@ export function normalizeAvatar(raw: unknown): AvatarConfig {
   if (src.v !== 3) return { v: 3, hair: src.gender === 'm' ? 'short' : 'buns' }
   const out: AvatarConfig = { v: 3, hair: typeof src.hair === 'string' && HAIR_IDS.has(src.hair) ? (src.hair as HairId) : 'short' }
   // 예전 "옷" 칸(outfit)에 입던 아이템은 지금 상의 칸 아이템이다
-  let legacy: Record<string, unknown> = src.top == null && typeof src.outfit === 'string' ? { ...src, top: src.outfit } : src
-  // 예전 "표정" 칸의 해맑은 미소는 지금 눈웃음 + 발그레 미소
-  if (legacy.face === 'face-smile') legacy = { eyes: 'eyes-smile', mouth: 'mouth-smile', ...legacy }
+  // 없앤 칸(표정·문신·눈·입)과 없앤 아이템은 아래에서 저절로 빠진다
+  const legacy: Record<string, unknown> = src.top == null && typeof src.outfit === 'string' ? { ...src, top: src.outfit } : src
   for (const slot of WEAR_SLOTS) {
     const id = legacy[slot]
     if (typeof id === 'string' && itemSlot.get(id) === slot) out[slot] = id
@@ -83,12 +79,7 @@ export function avatarKey(c: AvatarConfig): string {
 function layersOf(c: AvatarConfig): string[][] {
   // 상점 머리를 입었으면 무료 머리 모양 대신 그 머리를 그린다
   const hair = c.hairItem ?? HAIRS.find(h => h.id === c.hair)?.layer
-  const fullHead = FULL_HEADS.has(c.hairItem ?? '')
-  const ids = LAYER_ORDER.flatMap(slot => {
-    if (slot === 'hairItem') return [hair]
-    if (fullHead && FACE_SLOTS.includes(slot)) return []
-    return [c[slot]]
-  })
+  const ids = LAYER_ORDER.map(slot => (slot === 'hairItem' ? hair : c[slot]))
   return ids.filter((id): id is string => !!id && !!ITEMS[id]).map(id => ITEMS[id])
 }
 
@@ -153,8 +144,8 @@ export function composeAvatar(c: AvatarConfig, { background = false, blink = fal
   })
   paint(BASE_PADDED)
   layersOf(c).forEach(paint)
-  // 얼굴까지 바꾸는 머리, 눈 아이템을 입었을 땐 눈 모양이 달라 깜빡이지 않는다
-  if (blink && !FULL_HEADS.has(c.hairItem ?? '') && !c.eyes) for (const x of EYE_COLUMNS) for (const y of EYE_ROWS) if (y !== EYE_CLOSED_ROW) set(x, y, SKIN)
+  // 얼굴까지 바꾸는 머리를 입었을 땐 눈 모양이 달라 깜빡이지 않는다
+  if (blink && !FULL_HEADS.has(c.hairItem ?? '')) for (const x of EYE_COLUMNS) for (const y of EYE_ROWS) if (y !== EYE_CLOSED_ROW) set(x, y, SKIN)
   if (background) {
     const bg = hexToRgb(AVATAR_BG)
     for (let i = 0; i < AVATAR_W * AVATAR_H; i++) if (px[i * 4 + 3] === 0) set(i % AVATAR_W, Math.floor(i / AVATAR_W), bg)

@@ -58,8 +58,11 @@ export function getIdeaContest(token?: string) {
 // 응모할 때 고르는 아바타 분류 — 아바타 꾸미기 분류와 같다 (모자 · 상의 · 손 ...)
 export const IDEA_CATEGORIES: { id: WearSlot; label: string }[] = WEAR_SLOTS.map(slot => ({ id: slot, label: SLOT_LABELS[slot] }))
 
+// 없앤 칸(2026-11)으로 올라온 지난 응모작도 이름이 보이게
+const REMOVED_CATEGORY_LABELS: Record<string, string> = { eyes: '눈', mouth: '입', tattoo: '문신' }
+
 export function categoryLabel(id: string): string {
-  return SLOT_LABELS[id as WearSlot] ?? id
+  return SLOT_LABELS[id as WearSlot] ?? REMOVED_CATEGORY_LABELS[id] ?? id
 }
 
 export async function submitIdea(token: string, input: { category: WearSlot; title: string; description: string; image: File }): Promise<IdeaEntry> {

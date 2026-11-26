@@ -4113,6 +4113,8 @@ a.product-card-home.is-soldout { cursor: pointer; }
   padding-top: 20px;
   border-top: 1px solid var(--border);
 }
+/* 카드 맨 위에 올 때는 위쪽 여백·구분선 없이 */
+.avatar-options-card > .avatar-tabs:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 /* 꾸미기 모드 전환 — 카드 맨 위라 구분선 없이 */
 .avatar-tabs.avatar-mode-tabs {
   margin: 0 0 22px;
@@ -5488,6 +5490,53 @@ a.field-btn {
 
 .field-hint.ok { color: var(--success); }
 .field-hint.fail { color: var(--danger); }
+
+/* 회원가입 — 휴대폰 번호는 본인인증으로만 채워진다. 안내를 눈에 띄게, 칸을 누르면 빨갛게 흔든다 */
+.field-input.is-locked { cursor: pointer; }
+.field-input.is-locked:focus { border-color: var(--border-strong); box-shadow: none; }
+.field-input.is-locked.is-nudged,
+.field-input.is-locked.is-nudged:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-tint);
+}
+.field-btn.is-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.field-btn.is-primary:hover { background: var(--accent); color: #fff; filter: brightness(1.08); }
+.field-btn.is-nudged { animation: signup-cert-pulse 0.9s ease-out 2; }
+.signup-phone-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--accent-tint);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.signup-phone-hint svg { flex-shrink: 0; color: var(--accent); }
+.signup-phone-hint.is-nudged {
+  background: var(--danger-tint);
+  border-color: var(--danger-tint-border);
+  color: var(--danger);
+  animation: signup-hint-shake 0.4s ease-in-out;
+}
+.signup-phone-hint.is-nudged svg { color: var(--danger); }
+@keyframes signup-hint-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+@keyframes signup-cert-pulse {
+  0% { box-shadow: 0 0 0 0 var(--danger-tint-border); }
+  100% { box-shadow: 0 0 0 10px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .signup-phone-hint.is-nudged, .field-btn.is-nudged { animation: none; }
+}
 
 /* 회원가입 — 만 19세 미만 보호자(법정대리인) 인증 */
 .signup-guardian {
@@ -8335,10 +8384,10 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
 .not-found-actions { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
 
 /* 휴대폰 상품 상세 하단 고정 구매·응모 버튼 (components/MobileBuyBar.tsx) — 원래 버튼이 화면 밖일 때만 올라온다 */
-.mobile-buy-bar,
-.mobile-buy-spacer { display: none; }
+.mobile-buy-bar { display: none; }
 @media (max-width: 720px) {
-  .mobile-buy-spacer { display: block; height: 76px; }
+  /* 버튼이 페이지 맨 아래 하단 정보(사업자 정보·구매안전 안내)를 가리지 않게 푸터 아래에 버튼 높이만큼 자리를 둔다 */
+  body:has(.mobile-buy-bar) .site-footer { padding-bottom: calc(32px + 72px + env(safe-area-inset-bottom)); }
   .mobile-buy-bar {
     position: fixed;
     left: 0;

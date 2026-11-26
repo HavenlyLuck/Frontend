@@ -2,7 +2,7 @@
 
 import { trackPixel } from '@/lib/metaPixel'
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
-import { ConfettiIcon } from '@phosphor-icons/react'
+import { ConfettiIcon, InfoIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { storedReferralCode } from '@/lib/referralLink'
 import LogoMark, { Logo } from '@/components/LogoMark'
@@ -59,6 +59,9 @@ export default function SignupPage() {
   // 본인인증: 포트원 인증 ID와 서버가 확인해 준 휴대폰 번호·이름. 만 19세 미만이면 guardianRequired
   const [identity, setIdentity] = useState<Identity | null>(null)
   const [certifying, setCertifying] = useState(false)
+  // 휴대폰 칸을 누르거나 인증 없이 가입하려 할 때 안내를 빨갛게 흔들어 보여준다 (숫자가 바뀔 때마다 애니메이션을 다시 튼다)
+  const [phoneNudge, setPhoneNudge] = useState(0)
+  const nudgePhone = () => setPhoneNudge(n => n + 1)
   // 만 19세 미만 — 보호자(법정대리인) 본인인증과 보호자 동의
   const [guardian, setGuardian] = useState<{ id: string; name: string | null } | null>(null)
   const [guardianConsent, setGuardianConsent] = useState(false)
@@ -255,7 +258,11 @@ export default function SignupPage() {
     if (checks.nickname !== 'ok' || checks.userId !== 'ok' || checks.email !== 'ok') {
       alert('닉네임, 아이디, 이메일 중복확인을 완료해주세요.'); return
     }
-    if (!identity) { alert('핸드폰 본인인증을 완료해주세요.'); return }
+    if (!identity) {
+      nudgePhone()
+      document.getElementById('signup-phone')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
     if (identity.guardianRequired && !guardian) { alert('만 19세 미만은 보호자(법정대리인) 본인인증이 필요해요.'); return }
     if (identity.guardianRequired && !guardianConsent) { alert('보호자(법정대리인)의 가입 동의가 필요해요.'); return }
     if (!agree.terms || !agree.age14) { alert('이용약관 동의와 만 14세 이상 확인은 필수예요.'); return }
@@ -430,16 +437,37 @@ export default function SignupPage() {
                 <input
                   id="signup-phone"
                   type="tel"
-                  placeholder="휴대폰 번호"
+                  placeholder={identity ? '휴대폰 번호' : '본인인증 후 자동 입력'}
                   value={identity?.phone ?? ''}
                   readOnly
-                  className="field-input"
+                  aria-describedby="signup-phone-hint"
+                  className={`field-input${identity ? '' : ' is-locked'}${phoneNudge ? ' is-nudged' : ''}`}
+                  onClick={() => { if (!identity) nudgePhone() }}
+                  onKeyDown={e => { if (!identity && e.key.length === 1) nudgePhone() }}
                 />
-                <button type="button" disabled={certifying} className="field-btn" onClick={handlePhoneCert}>
+                <button
+                  key={identity ? 'done' : `cert-${phoneNudge}`}
+                  type="button"
+                  disabled={certifying}
+                  className={`field-btn${identity ? '' : ' is-primary'}${phoneNudge && !identity ? ' is-nudged' : ''}`}
+                  onClick={handlePhoneCert}
+                >
                   {certifying ? '인증 중...' : identity ? '재인증' : '본인인증'}
                 </button>
               </div>
-              {!identity && <p className="field-hint">본인인증을 하면 자동으로 입력돼요</p>}
+              {!identity && (
+                <p
+                  key={phoneNudge}
+                  id="signup-phone-hint"
+                  role={phoneNudge ? 'alert' : undefined}
+                  className={`field-hint signup-phone-hint${phoneNudge ? ' is-nudged' : ''}`}
+                >
+                  <InfoIcon size={14} weight="fill" aria-hidden />
+                  {phoneNudge
+                    ? '휴대폰 번호는 직접 입력하지 않아요. 오른쪽 [본인인증] 버튼을 눌러 주세요.'
+                    : '휴대폰 번호는 [본인인증]을 하면 자동으로 입력돼요.'}
+                </p>
+              )}
               {identity && (
                 <p className="field-hint ok">
                   {identity.name ? `${identity.name}님, ` : ''}본인인증이 완료되었습니다.

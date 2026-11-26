@@ -9,15 +9,12 @@ import type { BackId } from './backs'
 // 착용 칸 — 칸마다 아이템 하나. 머리 모양은 무료라 상점 아이템 칸이 아니다.
 // 순서 = 캐릭터 꾸미기 탭 순서
 // hairItem = 상점에서 산 머리 (입으면 무료 머리 모양 대신 이 머리로 그린다)
-export type WearSlot = 'hairItem' | 'eyes' | 'mouth' | 'tattoo' | 'top' | 'bottom' | 'hat' | 'shoes' | 'held' | 'back' | 'aura' | 'background'
+export type WearSlot = 'hairItem' | 'top' | 'bottom' | 'hat' | 'shoes' | 'held' | 'back' | 'aura' | 'background'
 export type HairId = 'buns' | 'short'
 
-export const WEAR_SLOTS: WearSlot[] = ['hairItem', 'eyes', 'mouth', 'tattoo', 'top', 'bottom', 'hat', 'shoes', 'held', 'back', 'aura', 'background']
+export const WEAR_SLOTS: WearSlot[] = ['hairItem', 'top', 'bottom', 'hat', 'shoes', 'held', 'back', 'aura', 'background']
 export const SLOT_LABELS: Record<WearSlot, string> = {
   hairItem: '머리',
-  eyes: '눈',
-  mouth: '입',
-  tattoo: '문신',
   top: '상의',
   bottom: '하의',
   hat: '모자',
@@ -29,11 +26,8 @@ export const SLOT_LABELS: Record<WearSlot, string> = {
 }
 
 // 그림을 겹치는 순서 (뒤 → 앞). 배경·등·오라는 그림 층이 아니라 캐릭터 방에 따로 그려서 빠진다.
-// 머리(무료 머리 모양 또는 hairItem)는 상의와 눈·입 사이 — 앞머리가 눈썹을 덮어도 눈 아이템이 보이게.
-// 얼굴까지 통째로 바꾸는 머리(fullHead)를 입으면 문신·눈·입은 그리지 않는다 (compose.ts)
-export const LAYER_ORDER: WearSlot[] = ['tattoo', 'bottom', 'shoes', 'top', 'hairItem', 'eyes', 'mouth', 'hat', 'held']
-// 얼굴 부위 — 얼굴까지 바꾸는 머리를 입으면 숨긴다
-export const FACE_SLOTS: WearSlot[] = ['tattoo', 'eyes', 'mouth']
+// 문신·눈·입 칸은 없앴다 (2026-11)
+export const LAYER_ORDER: WearSlot[] = ['bottom', 'shoes', 'top', 'hairItem', 'hat', 'held']
 
 // 머리 모양 — 누구나 고를 수 있다. layer가 null이면 기본 그림(똥머리) 그대로
 export const HAIRS: { id: HairId; name: string; layer: string | null }[] = [
@@ -50,7 +44,7 @@ export interface AvatarShopItem {
   room?: RoomBackgroundId // 배경 아이템만 — 캐릭터 방에 깔 배경
   aura?: AuraId // 오라 아이템만 — 캐릭터 둘레에 그릴 빛 효과 (auras.ts)
   back?: BackId // 등 아이템만 — 캐릭터 등에 다는 장식 (backs.ts)
-  fullHead?: boolean // 머리 아이템만 — 머리카락이 아니라 얼굴까지 통째로 바꾸는 머리 (눈·코·입·문신이 가려지고 눈을 깜빡이지 않는다)
+  fullHead?: boolean // 머리 아이템만 — 머리카락이 아니라 얼굴까지 통째로 바꾸는 머리 (얼굴이 가려지고 눈을 깜빡이지 않는다)
 }
 
 export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
@@ -123,36 +117,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
     description: '한 손에 쏙 들어오는 빨간 꽃다발. 당첨 축하용으로도 좋아요.',
     price: 1500,
     slot: 'held',
-  },
-  // 해맑은 미소(face-smile)를 눈·입 두 아이템으로 나눴다 (2026-11, 표정 칸 → 눈·코·입)
-  {
-    id: 'eyes-smile',
-    name: '눈웃음',
-    description: '반달처럼 휘어진 웃는 눈. 보기만 해도 기분 좋아져요.',
-    price: 600,
-    slot: 'eyes',
-  },
-  // 뾰족 원뿔 머리에 그려져 있던 눈을 떼어 또렷하게 다듬은 아이템
-  {
-    id: 'eyes-bright',
-    name: '또렷한 눈',
-    description: '짙은 눈썹에 또렷한 눈매. 원뿔 머리의 그 눈을 다듬었어요.',
-    price: 600,
-    slot: 'eyes',
-  },
-  {
-    id: 'mouth-smile',
-    name: '발그레 미소',
-    description: '살짝 웃는 입에 발그레한 볼터치.',
-    price: 600,
-    slot: 'mouth',
-  },
-  {
-    id: 'tattoo-star',
-    name: '별빛 볼 문신',
-    description: '오른쪽 볼에 반짝이는 작은 금빛 별 하나.',
-    price: 800,
-    slot: 'tattoo',
   },
   {
     id: 'top-cat-hoodie',
@@ -298,90 +262,6 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
     description: '위로 뻗친 밝은 갈색 뾰족 머리. 장난기 가득!',
     price: 2000,
     slot: 'hairItem',
-  },
-  {
-    id: 'hair-dandy-part',
-    name: '댄디 가르마',
-    description: '옆으로 넘겨 이마가 보이는 짙은 갈색 가르마 머리.',
-    price: 2500,
-    slot: 'hairItem',
-  },
-  {
-    id: 'hair-buzz',
-    name: '짧은 스포츠머리',
-    description: '이마가 시원하게 드러나는 짧은 스포츠머리.',
-    price: 1500,
-    slot: 'hairItem',
-  },
-  {
-    id: 'tattoo-sparkle',
-    name: '푸른 별빛 타투',
-    description: '눈 옆에서 반짝이는 청록빛 별. 세상에 하나뿐인 문신!',
-    price: 1200,
-    slot: 'tattoo',
-  },
-  {
-    id: 'tattoo-dark-flame',
-    name: '다크 플레임',
-    description: '볼 위로 피어오르는 보랏빛 불꽃.',
-    price: 1200,
-    slot: 'tattoo',
-  },
-  {
-    id: 'tattoo-heart',
-    name: '하트 드리프트',
-    description: '볼에 콕 찍힌 빨간 하트와 흩날리는 조각.',
-    price: 1200,
-    slot: 'tattoo',
-  },
-  {
-    id: 'tattoo-crescent',
-    name: '초승달 문신',
-    description: '금빛 초승달 안에 작은 별이 반짝여요.',
-    price: 1200,
-    slot: 'tattoo',
-  },
-  {
-    id: 'tattoo-demon-wing',
-    name: '데몬 윙',
-    description: '검붉은 작은 날개. 살짝 시크하게!',
-    price: 1200,
-    slot: 'tattoo',
-  },
-  {
-    id: 'tattoo-black-star',
-    name: '별 문신',
-    description: '볼에 새긴 까만 별. 언제나 사랑받는 클래식.',
-    price: 800,
-    slot: 'tattoo',
-  },
-  {
-    id: 'tattoo-teardrop',
-    name: '눈물방울',
-    description: '눈 아래 똑 떨어진 까만 눈물 한 방울.',
-    price: 800,
-    slot: 'tattoo',
-  },
-  {
-    id: 'tattoo-x',
-    name: 'X자 문신',
-    description: '볼에 그린 까만 X 표시.',
-    price: 800,
-    slot: 'tattoo',
-  },
-  {
-    id: 'tattoo-paw',
-    name: '발바닥 자국',
-    description: '냥이가 콕 찍고 간 발바닥 자국.',
-    price: 800,
-    slot: 'tattoo',
-  },
-  {
-    id: 'tattoo-bolt',
-    name: '번개 문신',
-    description: '눈 옆을 가르는 까만 번개.',
-    price: 800,
-    slot: 'tattoo',
   },
   {
     id: 'top-neko-hoodie',

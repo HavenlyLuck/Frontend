@@ -30,6 +30,7 @@ export async function payWithCard(token: string, order: PaymentOrder): Promise<P
   }
 
   const back = `${window.location.pathname}${window.location.search}`
+  // 결제창을 띄우기 전에 포트원이 거절하면(잘못된 구매자 정보 등) 예외로 오므로, 그 이유를 그대로 보여 준다
   const res = await PortOne.requestPayment({
     storeId: STORE_ID,
     channelKey: CHANNEL_KEY,
@@ -47,6 +48,8 @@ export async function payWithCard(token: string, order: PaymentOrder): Promise<P
         }
       : undefined,
     redirectUrl: `${window.location.origin}/payment/complete?next=${encodeURIComponent(back)}`,
+  }).catch((e: unknown) => {
+    throw new PaymentWindowError(e instanceof Error && e.message ? `결제창을 열지 못했어요: ${e.message}` : '결제창을 열지 못했어요. 잠시 후 다시 시도해 주세요.')
   })
   if (!res || res.code !== undefined) {
     throw new PaymentWindowError(res?.message || '결제가 취소되었습니다.')
