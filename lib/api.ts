@@ -1083,7 +1083,7 @@ export function getKujiSet(kujiSetId: number) {
 }
 
 // 메인 "당첨 소식" 띠에 쓰는 최근 쿠지 당첨 — 상위상(A상 등)과 라스트원상만, 최신순
-// TODO(백엔드): GET /kuji/recent-wins?limit=N 아직 없음. 생기기 전엔 404라 띠에 쿠지가 안 나온다
+// 쿠지 당첨 소식 — 상위상·라스트원상만, 최신순 (GET /kuji/recent-wins, 로그인 없이)
 export interface KujiRecentWin {
   kuji_set_id: number
   kuji_title: string
@@ -1288,10 +1288,11 @@ export function registerReferral(token: string, referralCode: string) {
 }
 
 // first_purchase: 첫 구매 선물 응모권(related = 나를 추천한 사람), referral: 추천 응모권(related = 내가 추천한 사람),
-// signup_event: 오픈 이벤트 가입 선물, store_purchase: 쌀포인트 상점에서 산 응모권, idea_contest: 아바타 아이디어 공모전 수상
+// signup_event: 오픈 이벤트 가입 선물, store_purchase: 쌀포인트 상점에서 산 응모권, idea_contest: 아바타 아이디어 공모전 수상,
+// storage_convert: 보관 기한 전환, review_photo: 사진 후기 보상
 export interface FreeTicketResponse {
   free_ticket_id: number
-  kind: 'first_purchase' | 'referral' | 'signup_event' | 'store_purchase' | 'idea_contest' | 'storage_convert'
+  kind: 'first_purchase' | 'referral' | 'signup_event' | 'store_purchase' | 'idea_contest' | 'storage_convert' | 'review_photo'
   related_nickname: string | null
   created_at: string
 }
