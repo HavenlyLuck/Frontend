@@ -29,7 +29,8 @@ export default function NoticePage() {
     reload()
     let cancelled = false
     getValidSession().then(session => {
-      if (!session) return
+      // 관리자 토큰일 때만 서버에 한 번 더 확인한다 (일반 회원은 확인 요청 없이 읽기만)
+      if (!session?.isAdmin) return
       verifyAdmin(session.token)
         .then(() => { if (!cancelled) setAdminToken(session.token) })
         .catch(() => {}) // 관리자가 아니면 읽기만
