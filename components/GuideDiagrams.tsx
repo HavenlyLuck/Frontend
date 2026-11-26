@@ -67,10 +67,10 @@ const within = (step: number, from: number, to: number) => step >= from && step 
 const PEOPLE: AvatarConfig[] = [
   { v: 3, hair: 'short', hat: 'hat-cap' },
   { v: 3, hair: 'buns', top: 'top-cat-hoodie' },
-  { v: 3, hair: 'buns', hairItem: 'hair-pink-buns' },
+  { v: 3, hair: 'buns', top: 'top-neko-hoodie' },
   { v: 3, hair: 'short', held: 'held-balloon' },
 ]
-const ME: AvatarConfig = { v: 3, hair: 'buns', hairItem: 'hair-pink-buns' }
+const ME: AvatarConfig = { v: 3, hair: 'buns', hat: 'hat-bunny' }
 const FRIEND: AvatarConfig = { v: 3, hair: 'short', hat: 'hat-cap' }
 
 function Person({ config, className = '', children }: { config: AvatarConfig; className?: string; children?: ReactNode }) {
@@ -345,7 +345,7 @@ const SHELF: AvatarConfig[] = [
 export function AvatarDiagram() {
   const step = useStep(11)
   const look = step >= 1 && step <= 2 ? LOOKS[step] : LOOKS[0]
-  const dressed: AvatarConfig = { v: 3, hair: 'buns', hairItem: 'hair-pink-buns', hat: 'hat-crown', top: 'top-wizard-robe' }
+  const dressed: AvatarConfig = { v: 3, hair: 'buns', hat: 'hat-crown', top: 'top-wizard-robe' }
   return (
     <Row n={4} label="아바타 그림: 무료로 꾸미고, 쌀포인트로 아이템을 사고, 추첨·쿠지 화면에 내 아바타가 나오고, 컨텐츠·이벤트로 쌀 응모권이나 상품을 받아요">
       <Panel no={1} caption="나만의 아바타를 꾸며보세요!" active={within(step, 1, 2)}>

@@ -1,15 +1,13 @@
 // 캐릭터 방 배경 — 아바타 뒤에 깔리는 픽셀 배경. 칸 크기는 아바타 그림의 2배(방 1칸 = 그림 2칸).
-// 지금은 "진열장"만 쓰고, 나머지(행운·무대·밤하늘·공원)는 나중에 쌀포인트 상점 배경 아이템으로 팔 수 있게 그림만 남겨 둔다.
+// 기본은 "진열장"이고, 무대·밤하늘·공원은 쌀포인트 상점 배경 아이템으로 판다. (노을 강가·천운 행운방은 오픈 전 정리로 지웠다)
 
 import { hash01 } from '@/lib/lightningDraw/scene'
 
-export type RoomBackgroundId = 'case' | 'lucky' | 'stage' | 'night' | 'park' | 'sunset'
+export type RoomBackgroundId = 'case' | 'stage' | 'night' | 'park'
 export const DEFAULT_ROOM_BACKGROUND: RoomBackgroundId = 'case'
 
 // 그림 파일로 된 배경 — 60×60(방 칸의 2배, 캐릭터 그림과 같은 해상도) 픽셀 그림을 방 전체에 깐다
-const IMAGE_ROOMS: Partial<Record<RoomBackgroundId, string>> = {
-  sunset: '/images/avatar-rooms/sunset-river.png',
-}
+const IMAGE_ROOMS: Partial<Record<RoomBackgroundId, string>> = {}
 const roomImages = new Map<RoomBackgroundId, HTMLImageElement>()
 
 function roomImage(id: RoomBackgroundId): HTMLImageElement | null {
@@ -106,9 +104,8 @@ export function drawRoom(ctx: CanvasRenderingContext2D, id: RoomBackgroundId, t:
       ctx.imageSmoothingEnabled = false
       ctx.drawImage(img, 0, 0, W, H)
     } else {
-      // 불러오는 동안은 노을빛만 깐다
-      rect(ctx, '#f6b13c', 0, 0, W, 18)
-      rect(ctx, '#6aa84f', 0, 18, W, H - 18)
+      // 불러오는 동안은 어두운 바탕만 깐다
+      rect(ctx, '#1d1f27', 0, 0, W, H)
     }
     return
   }
@@ -165,23 +162,5 @@ export function drawRoom(ctx: CanvasRenderingContext2D, id: RoomBackgroundId, t:
     }
     ctx.globalAlpha = 1
     return
-  }
-  // lucky — 천운 레드 + 금빛 반짝이
-  const bg = ['#8a1d2c', '#a3243a', '#bb2b42', '#d93347']
-  for (let y = 0; y < H; y++) rect(ctx, bg[Math.min(bg.length - 1, Math.floor((H - 1 - y) / 8))], 0, y, W, 1)
-  for (let y = 22; y < H; y++) rect(ctx, y === 22 ? '#e3b341' : '#7a1828', 0, y, W, 1)
-  for (let i = 0; i < 10; i++) {
-    const x = Math.floor(hash01(i * 19 + 3) * W)
-    const y = Math.floor(hash01(i * 11 + 9) * 20)
-    const k = ((t / 900 + hash01(i) * 4) % 4) / 4 // 0~1 주기
-    if (k > 0.5) continue
-    const big = k > 0.15 && k < 0.35
-    rect(ctx, '#ffe27a', x, y)
-    if (big) {
-      rect(ctx, '#ffe27a', x - 1, y)
-      rect(ctx, '#ffe27a', x + 1, y)
-      rect(ctx, '#ffe27a', x, y - 1)
-      rect(ctx, '#ffe27a', x, y + 1)
-    }
   }
 }

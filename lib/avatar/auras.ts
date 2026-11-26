@@ -97,7 +97,7 @@ function goldHalo(ctx: Ctx, a: AuraAnchor, t: number, layer: 'back' | 'front') {
   }
 }
 
-// ── 2. 천운 번개 — 등 뒤 주황빛 속에서 번개가 갈래로 친다 (로고 번개 색) ──
+// ── 2. 정전기 — 등 뒤 주황빛 속에서 번개가 갈래로 친다 (로고 번개 색) ──
 function zigzag(seed: number, x0: number, y0: number, x1: number, y1: number, n: number): [number, number][] {
   const pts: [number, number][] = [[x0, y0]]
   for (let i = 1; i < n; i++) {
