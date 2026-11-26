@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Logo } from "./LogoMark";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArchiveIcon,
   GearIcon,
@@ -62,6 +62,18 @@ export default function Navbar() {
   const { ssalPoint, ssalTicket } = useMyPoints();
   const { readyCount: readyStorageCount } = useStorage();
 
+  // 상단 메뉴가 옆으로 더 있는지 (휴대폰) — 끝까지 밀면 흐림·› 표시를 없앤다
+  const catRef = useRef<HTMLDivElement>(null);
+  const [catMore, setCatMore] = useState(false);
+  const updateCatMore = useCallback(() => {
+    const el = catRef.current;
+    if (el) setCatMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+  useEffect(() => {
+    updateCatMore();
+    window.addEventListener("resize", updateCatMore);
+    return () => window.removeEventListener("resize", updateCatMore);
+  }, [updateCatMore, isAdmin, compact]);
   useEffect(() => {
     let cancelled = false;
     getValidSession().then((session) => {
@@ -92,13 +104,15 @@ export default function Navbar() {
         <div className="nav-actions">
           {isLoggedIn ? (
             <>
-              <Link href="/mypage/storage" className="nav-point-item" aria-label={`쌀 응모권 ${ssalTicket}장`} title="이벤트·친구 추천으로 받은 쌀 응모권 (낙첨돼도 쌀포인트 페이백 없음)">
+              <Link href="/mypage/storage" className="nav-point-item" aria-label={`쌀 응모권 ${ssalTicket}장`} title="이벤트·친구 추천으로 받은 쌀 응모권 (낙첨돼도 쌀포인트 적립 없음)">
                 <EmojiIcon name="ssal-ticket" />
                 <span className="nav-point-label">쌀 응모권</span>
                 <span className="nav-point-value">{ssalTicket.toLocaleString()}장</span>
               </Link>
               <Link href="/mypage/points" className="nav-point-item" aria-label={`쌀포인트 ${ssalPoint.toLocaleString()}P, 내역 보기`}>
-                <span className="nav-point-label"><EmojiIcon name="rice" /> 쌀포인트</span>
+                {/* 아이콘은 글자(nav-point-label) 밖에 둔다 — 폰에선 글자를 숨기는데 아이콘까지 같이 사라졌었음 */}
+                <EmojiIcon name="rice" />
+                <span className="nav-point-label">쌀포인트</span>
                 <span className="nav-point-value">
                   {ssalPoint.toLocaleString()}P
                 </span>
@@ -161,27 +175,30 @@ export default function Navbar() {
           />
         </form>
 
-        <div className="nav-categories">
-          {NAV_CATEGORIES.map((cat) => (
-            <Link
-              key={cat.href}
-              href={cat.href}
-              className={`nav-cat-tab ${pathname === cat.href ? "active" : ""}`}
-            >
-              {cat.label}
-            </Link>
-          ))}
+        {/* 휴대폰에선 메뉴가 옆으로 밀리므로, 오른쪽에 더 있으면 끝을 흐리게 하고 › 표시를 띄운다 (catMore) */}
+        <div className={`nav-cat-wrap${catMore ? " has-more" : ""}`}>
+          <div className="nav-categories" ref={catRef} onScroll={updateCatMore}>
+            {NAV_CATEGORIES.map((cat) => (
+              <Link
+                key={cat.href}
+                href={cat.href}
+                className={`nav-cat-tab ${pathname === cat.href ? "active" : ""}`}
+              >
+                {cat.label}
+              </Link>
+            ))}
+            {/* 관리자 메뉴도 같은 줄 안에 둔다 — 예전엔 줄 밖 오른쪽에 붙어 있어서 휴대폰에서 "후기/문의"를 덮었다 */}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`nav-cat-tab nav-cat-admin ${pathname === "/admin" ? "active" : ""}`}
+              >
+                <GearIcon size={15} weight="bold" />
+                관리자
+              </Link>
+            )}
+          </div>
         </div>
-        {isAdmin && (
-          <Link
-            href="/admin"
-            className={`nav-cat-tab ${pathname === "/admin" ? "active" : ""}`}
-            style={{ marginLeft: 'auto', gap: '6px' }}
-          >
-            <GearIcon size={15} weight="bold" />
-            관리자
-          </Link>
-        )}
       </div>}
     </nav>
   );

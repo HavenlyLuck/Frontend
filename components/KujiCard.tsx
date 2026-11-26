@@ -17,7 +17,8 @@ export default function KujiCard({ item }: { item: KujiListItem }) {
       <div className="card-body">
         <div className="card-raffle-badge"><GiftIcon size={11} weight="fill" /> {item.badge}</div>
         <div className="card-title">{item.title}</div>
-        <div className="card-price">{item.price}</div>
+        {/* 응모 카드처럼 "10,000원"과 "/ 1장"이 각각 한 덩어리로 줄바꿈되게 — 좁은 카드에서 "장"만 떨어지지 않도록 */}
+        <div className="card-price"><span className="nowrap">{item.price}</span> <span className="card-price-unit">/ 1장</span></div>
         <div className="card-progress-row">
           <div className="card-progress-bar">
             <div className="card-progress-fill" style={{ width: `${item.pct}%` }} />

@@ -233,8 +233,8 @@ function RaffleSlide({ featured, loaded }: Props) {
           </h1>
           <ul className="home-hero-steps">
             <li><span>응모권 1장 <b>1,000원</b></span></li>
-            <li><span><b>전량 판매 시 즉시 추첨</b></span></li>
-            <li><span>당첨자 1명 · <b>낙첨 시 쌀포인트 환급</b></span></li>
+            <li><span><b>응모권 매진 시 추첨 시작</b></span></li>
+            <li><span>당첨자 1명 · <b>낙첨 시 쌀포인트 적립</b></span></li>
           </ul>
           <div className="home-hero-actions">
             <Link className="hero-cta" href="/eungmo">응모 보러 가기</Link>
