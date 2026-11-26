@@ -237,11 +237,21 @@ export interface MyProfileResponse {
   avatar_url: string | null
   avatar_config: AvatarConfig | null
   trade_count: number
+  review_marketing_agreed?: boolean   // (선택) 후기 SNS·홈페이지 홍보 활용에 지금 동의 중인지
 }
 
 export function getMyProfile(token: string) {
   return request<MyProfileResponse>('/users/me', {
     headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// 후기 SNS·홈페이지 홍보 활용 동의·철회 — 선택 동의라 언제든 바꿀 수 있다 (계정 단위, 내 후기 전체에 적용)
+export function setReviewMarketingConsent(token: string, agreed: boolean) {
+  return request<MyProfileResponse>('/users/me/review-marketing', {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ agreed }),
   })
 }
 
@@ -1070,6 +1080,23 @@ export function getKujiSets(status?: KujiSetResponse['status']) {
 
 export function getKujiSet(kujiSetId: number) {
   return request<KujiSetResponse>(`/kuji/${kujiSetId}`)
+}
+
+// 메인 "당첨 소식" 띠에 쓰는 최근 쿠지 당첨 — 상위상(A상 등)과 라스트원상만, 최신순
+// TODO(백엔드): GET /kuji/recent-wins?limit=N 아직 없음. 생기기 전엔 404라 띠에 쿠지가 안 나온다
+export interface KujiRecentWin {
+  kuji_set_id: number
+  kuji_title: string
+  tier: 'upper' | 'lower'    // 라스트원상은 'upper'로
+  grade: string              // 'A' 같은 등급. 라스트원상이면 'LAST ONE'
+  prize_name: string
+  is_last_one: boolean
+  winner_nickname: string | null
+  drawn_at: string           // 뽑은 시각(UTC)
+}
+
+export function getKujiRecentWins(limit = 10) {
+  return request<KujiRecentWin[]>(`/kuji/recent-wins?limit=${limit}`)
 }
 
 // since가 서버의 최신 버전과 같으면 바뀐 게 없어서 null

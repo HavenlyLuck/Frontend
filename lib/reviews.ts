@@ -24,6 +24,9 @@ export interface ReviewResponse {
   author: string // 작성자 가입 아이디, 가운데는 * 로 가려서 온다 (ab****g)
   is_mine: boolean
   created_at: string
+  // 후기 작성 보상 — 이 후기로 쌀 응모권 1장을 줬으면 true (사진이 있고, 그 상품에 처음 받는 보상일 때).
+  // 후기를 올린 응답(POST /reviews)에만 의미가 있다. TODO(백엔드): 2026-11-26 작업 중 — 안 보내면 지급 안내를 띄우지 않는다
+  ssal_ticket_rewarded?: boolean
 }
 
 // 후기를 쓸 수 있는 내 보관함 상품 (아직 후기를 안 쓴 것)

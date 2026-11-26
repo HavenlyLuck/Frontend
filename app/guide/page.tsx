@@ -114,13 +114,14 @@ export default function GuidePage() {
 
       {/* 쌀 응모권 */}
       <section id="쌀응모권" className="guide-section">
-        <SectionTitle icon={TicketIcon} title="쌀 응모권" summary="이벤트나 친구 추천인 등록으로 받는 무료 응모권이에요. 결제 대신 응모에 쓸 수 있어요." />
+        <SectionTitle icon={TicketIcon} title="쌀 응모권" summary="사진 후기, 친구 추천, 이벤트로 받는 무료 응모권이에요. 결제 대신 응모에 쓸 수 있어요." />
         <SsalTicketDiagram />
         <details className="guide-more">
           <summary>자세히 보기</summary>
           <div className="guide-more-body">
             <Rules items={[
-              <><b>얻는 방법</b> · 천운의 각종 이벤트 보상, 그리고 친구 추천인 등록으로 받아요.</>,
+              <><b>얻는 방법</b> · 사진 후기, 친구 추천인 등록, 천운의 각종 이벤트 보상으로 받아요.</>,
+              <><b>사진 후기</b> · 받은 상품(응모 당첨 상품 · 쿠지 상위상 · 일반 상점 상품)에 <b>수령한 상품 사진을 넣은 후기</b>를 쓰면 상품 하나당 쌀 응모권 1장을 드려요. 사진 없는 후기는 지급되지 않고, 후기를 지웠다가 다시 써도 같은 상품은 한 번만 드려요.</>,
               <><b>친구 추천</b> · 추천인 코드를 등록한 친구가 첫 응모권을 사면, 친구와 나 모두 쌀 응모권 1장을 받아요.</>,
               <><b>쓰는 방법</b> · 응모 상품에서 결제 방식을 "쌀 응모권"으로 고르면 1장당 응모권 1장으로 응모돼요.</>,
               <><b>확인하는 곳</b> · 화면 위 쌀포인트 왼쪽, 그리고 보관함에서 가진 장수를 볼 수 있어요.</>,

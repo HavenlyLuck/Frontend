@@ -5,7 +5,7 @@ import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { ConfettiIcon, InfoIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { storedReferralCode } from '@/lib/referralLink'
-import LogoMark, { Logo } from '@/components/LogoMark'
+import { Logo } from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { loginPath, safeNextPath, SIGNUP_NEXT_KEY } from '@/lib/auth'
@@ -52,10 +52,19 @@ export default function SignupPage() {
   useBodyScrollLock(welcomeNext !== null)
   const [form, setForm] = useState({ nickname: '', userId: '', password: '', confirm: '', email: '', referral: '' })
 
-  const [checks, setChecks] = useState<{ nickname: CheckState; userId: CheckState; email: CheckState }>({
+  const [rawChecks, setChecks] = useState<{ nickname: CheckState; userId: CheckState; email: CheckState }>({
     nickname: 'idle', userId: 'idle', email: 'idle',
   })
   const [checkMessages, setCheckMessages] = useState({ nickname: '', userId: '', email: '' })
+  // 중복확인을 누른 그 값. 칸의 값이 이것과 같을 때만 확인 결과를 인정한다.
+  // (예전엔 칸이 바뀌는 순간 결과를 지웠는데, 본인인증 후 돌아왔을 때 브라우저 자동완성이 같은 값을 다시 채우면서
+  //  결과가 지워져 중복확인을 다시 눌러야 했다 — 값 비교로 바꿔서, 실제로 다른 값이 됐을 때만 다시 확인하게 한다)
+  const [checkedValues, setCheckedValues] = useState({ nickname: '', userId: '', email: '' })
+  const checks = {
+    nickname: form.nickname === checkedValues.nickname ? rawChecks.nickname : 'idle',
+    userId: form.userId === checkedValues.userId ? rawChecks.userId : 'idle',
+    email: form.email === checkedValues.email ? rawChecks.email : 'idle',
+  } satisfies typeof rawChecks
   // 본인인증: 포트원 인증 ID와 서버가 확인해 준 휴대폰 번호·이름. 만 19세 미만이면 guardianRequired
   const [identity, setIdentity] = useState<Identity | null>(null)
   const [certifying, setCertifying] = useState(false)
@@ -103,6 +112,7 @@ export default function SignupPage() {
         setForm(prev => ({ ...prev, ...draft.form }))
         setChecks(draft.checks)
         setCheckMessages(draft.checkMessages)
+        setCheckedValues(draft.checkedValues ?? { nickname: draft.form.nickname, userId: draft.form.userId, email: draft.form.email })
         if (draft.agree) setAgree(draft.agree)
         if (draft.guardianConsent) setGuardianConsent(true)
         if (draft.pending === 'guardian' && draft.identity) {
@@ -125,10 +135,6 @@ export default function SignupPage() {
       : name === 'password' || name === 'confirm' || name === 'email' ? e.target.value.replace(/[^\x21-\x7E]/g, '')
       : e.target.value
     setForm(prev => ({ ...prev, [name]: value }))
-    if (name in checks) {
-      setChecks(prev => ({ ...prev, [name]: 'idle' }))
-      setCheckMessages(prev => ({ ...prev, [name]: '' }))
-    }
   }
 
   async function handleCertResult(result: IdentityVerificationResult) {
@@ -161,8 +167,9 @@ export default function SignupPage() {
           nickname: form.nickname, userId: form.userId, email: form.email, referral: form.referral,
           password: form.password, confirm: form.confirm,
         },
-        checks,
+        checks: rawChecks,
         checkMessages,
+        checkedValues,
         agree,
         guardianConsent,
         pending,
@@ -219,6 +226,7 @@ export default function SignupPage() {
 
   async function handleCheck(field: keyof typeof checks) {
     const value = form[field]
+    setCheckedValues(prev => ({ ...prev, [field]: value }))
     if (!value.trim()) {
       alert('값을 입력한 뒤 중복확인을 눌러주세요.')
       return
@@ -308,20 +316,8 @@ export default function SignupPage() {
 
   return (
     <div className="auth-shell">
-      <div className="auth-grid">
-        <div className="auth-brand">
-          <LogoMark className="auth-brand-mark" />
-          <h1>
-            천원 한 장,
-            <br />
-            <span>천운</span>을 뽑다.
-          </h1>
-          <ul className="auth-brand-facts">
-            <li><b>1,000원</b>부터 응모 시작</li>
-            <li><b>매진</b> 시 바로 자동 추첨</li>
-            <li>낙첨해도 <b>쌀포인트</b>로 페이백</li>
-          </ul>
-        </div>
+      {/* 회원가입은 입력칸이 길어 왼쪽 소개 패널 없이 한 칸으로 둔다 */}
+      <div className="auth-grid is-single">
 
         <div className="auth-card">
           <div className="auth-card-mobile-mark">

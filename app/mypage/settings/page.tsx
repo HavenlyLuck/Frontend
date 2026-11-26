@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckIcon, GearIcon, LockKeyIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import { clearAuth, getValidSession } from '@/lib/auth'
-import { ApiError, changeMyPassword, deleteMyAccount, getMyProfile } from '@/lib/api'
+import { ApiError, changeMyPassword, deleteMyAccount, getMyProfile, setReviewMarketingConsent } from '@/lib/api'
 import { BIZ_INFO } from '@/components/PolicyDoc'
 import ReferralCard from '@/components/ReferralCard'
 
@@ -42,7 +42,9 @@ export default function SettingsPage() {
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
-  const [notif, setNotif] = useState({ deadline: true, win: true, marketing: false })
+  // 후기 홍보 활용 동의 — null: 아직 불러오는 중(또는 실패)
+  const [marketingAgreed, setMarketingAgreed] = useState<boolean | null>(null)
+  const [marketingSaving, setMarketingSaving] = useState(false)
   const [saving, setSaving] = useState(false)
   // 저장 결과 팝업 — 성공·실패 모두 사이트 공통 모달(.modal-overlay)로 보여준다
   const [popup, setPopup] = useState<{ ok: boolean; title: string; message: string } | null>(null)
@@ -55,6 +57,7 @@ export default function SettingsPage() {
         if (cancelled) return
         setNickname(profile.nickname)
         setEmail(profile.email)
+        setMarketingAgreed(profile.review_marketing_agreed ?? false)
       })
     })
     return () => { cancelled = true }
@@ -89,8 +92,24 @@ export default function SettingsPage() {
     }
   }
 
-  const handleLogout = () => {
-    clearAuth()
+  const toggleMarketing = async (agreed: boolean) => {
+    const session = await getValidSession()
+    if (!session) {
+      setPopup({ ok: false, title: '로그인이 필요해요', message: '로그인이 만료되었어요. 다시 로그인한 뒤 시도해 주세요.' })
+      return
+    }
+    setMarketingSaving(true)
+    try {
+      const profile = await setReviewMarketingConsent(session.token, agreed)
+      setMarketingAgreed(profile.review_marketing_agreed ?? agreed)
+    } catch (err) {
+      setPopup({ ok: false, title: '동의 설정을 바꾸지 못했어요', message: err instanceof ApiError ? err.message : '잠시 후 다시 시도해 주세요.' })
+    } finally {
+      setMarketingSaving(false)
+    }
+  }
+
+  const handleLogout = () => {    clearAuth()
     router.push('/')
   }
 
@@ -173,27 +192,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div style={card}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>알림 설정</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              { key: 'deadline' as const, label: '응모 마감 임박 알림' },
-              { key: 'win' as const, label: '당첨 알림' },
-              { key: 'marketing' as const, label: '이벤트 · 혜택 알림' },
-            ].map(item => (
-              <label key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{item.label}</span>
-                <input
-                  type="checkbox"
-                  checked={notif[item.key]}
-                  onChange={() => setNotif(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
-                  style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer' }}
-                />
-              </label>
-            ))}
-          </div>
-        </div>
-
         <button
           onClick={handleSave}
           disabled={!canSave}
@@ -202,6 +200,40 @@ export default function SettingsPage() {
           {saving ? '저장 중...' : '저장하기'}
         </button>
 
+        {/* 카카오 알림톡 — 정보성(거래·이용 안내)만 보내고 광고는 보내지 않는다. 회원이 끄는 설정은 없다 (백엔드 app/services/alimtalk.py) */}
+        <div style={card}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>카카오 알림톡</div>
+          <p style={{ margin: '0 0 12px', fontSize: 13, lineHeight: 1.6, color: 'var(--text-tertiary)' }}>
+            본인인증한 휴대폰 번호로 아래 안내를 보내드려요. 이용 안내라 광고는 보내지 않아요.
+          </p>
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {['응모 완료', '응모 마감 (전량 판매 · 추첨 일시 안내)', '응모 자동 취소 · 환불', '배송 출발'].map(label => (
+              <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+                <CheckIcon size={14} weight="bold" color="var(--success)" /> {label}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* 후기 홍보 활용 동의 — 선택 동의라 언제든 켜고 끌 수 있다. 누르면 바로 저장 */}
+        <div style={card}>
+          <label style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, cursor: marketingAgreed === null || marketingSaving ? 'default' : 'pointer' }}>
+            <span>
+              <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>후기 홍보 활용 동의 (선택)</span>
+              <span style={{ display: 'block', fontSize: 13, lineHeight: 1.6, color: 'var(--text-tertiary)' }}>
+                내가 쓴 후기(닉네임·내용·사진)를 천운 SNS·홈페이지 홍보에 쓸 수 있어요. 동의하지 않아도 후기는 쓸 수 있어요.{' '}
+                <a href="/privacy#collect" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)' }}>자세히</a>
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={marketingAgreed === true}
+              disabled={marketingAgreed === null || marketingSaving}
+              onChange={e => toggleMarketing(e.target.checked)}
+              style={{ flexShrink: 0, width: 18, height: 18, marginTop: 2, accentColor: 'var(--accent)', cursor: 'inherit' }}
+            />
+          </label>
+        </div>
         <button
           onClick={handleLogout}
           style={{ width: '100%', padding: 14, borderRadius: 10, border: '1px solid var(--danger-tint-border)', background: 'var(--danger-tint)', color: 'var(--danger)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
