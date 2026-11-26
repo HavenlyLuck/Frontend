@@ -531,8 +531,8 @@ export const STORE_CATEGORIES: Record<StorePayType, { id: StoreCategory; label: 
     { id: 'card', label: '카드' },
   ],
   ssal: [
-    { id: 'coupon', label: '쿠폰' },
     { id: 'goods', label: '피규어·굿즈' },
+    { id: 'coupon', label: '쿠폰' },
     { id: 'avatar', label: '아바타' },
   ],
 }
