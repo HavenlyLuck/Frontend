@@ -321,7 +321,7 @@ const kujiGradeLabel = (w: KujiRecentWin) =>
 // 히어로 아래 옆으로 흐르는 최근 당첨 소식 — 응모 당첨 + 쿠지 상위상·라스트원상을 최신순으로 섞어 10개.
 // 이름 앞에 [응모]/[쿠지]를 붙여 구분한다. 둘 다 하나도 없으면 아무것도 그리지 않는다.
 // 응모: 서버가 당첨자 닉네임(winner_nickname)을 주면 가려서 보여주고, 아직 없으면 응모 번호로 대신한다.
-// 쿠지: GET /kuji/recent-wins (TODO(백엔드) — 아직 없어서 실패하면 응모만 보인다)
+// 쿠지: GET /kuji/recent-wins (실패하면 응모만 보인다)
 export function WinnerTicker() {
   const [wins, setWins] = useState<TickerWin[]>([]);
 

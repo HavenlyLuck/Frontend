@@ -126,7 +126,7 @@ export default function ReviewPage() {
       getReviewableItems(session.token)
         .then((all) => {
           // 후기는 응모 당첨 상품 · 쿠지 상위상 · 일반 상점 상품만 — 쌀포인트 상점 상품은 여기서 뺀다.
-          // 쿠지 하위상은 목록에 등급 정보가 없어 서버가 걸러 줘야 한다 (TODO(백엔드))
+          // 쿠지 하위상은 목록에 등급 정보가 없어 서버(GET /reviews/reviewable)가 거른다
           const items = all.filter(i => !(i.product_type === 'store' && i.pay_type === 'ssal'))
           setReviewable(items)
           setReviewForm(f => ({ ...f, storageItemId: items[0]?.storage_item_id ?? 0 }))
