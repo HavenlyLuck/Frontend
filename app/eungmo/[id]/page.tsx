@@ -577,7 +577,7 @@ export default function RaffleProductPage({
                 </div>
               </div>
               {ssalCount > 0 && (
-                <div className="ticket-summary-note">쌀 응모권으로 응모한 {ssalCount}장은 낙첨돼도 쌀포인트 페이백이 없어요.</div>
+                <div className="ticket-summary-note">쌀 응모권으로 응모한 {ssalCount}장은 낙첨돼도 쌀포인트가 적립되지 않아요.</div>
               )}
             </div>
           </div>

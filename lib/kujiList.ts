@@ -23,7 +23,7 @@ export function toKujiListItem(ks: KujiSetResponse): KujiListItem {
     alt: ks.title,
     badge: ks.status === 'open' ? '쿠지' : '매진',
     title: ks.title,
-    price: `${ks.ticket_price.toLocaleString()}원 / 1장`,
+    price: `${ks.ticket_price.toLocaleString()}원`,   // 카드에서 "/ 1장"은 따로 붙인다 (KujiCard)
     pct: ks.total_tickets > 0 ? Math.round((drawn / ks.total_tickets) * 100) : 0,
     count: drawn,
     max: ks.total_tickets,

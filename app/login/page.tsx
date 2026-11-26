@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { login, ApiError } from '@/lib/api'
 import { notifyPointsUpdated } from '@/hooks/useMyPoints'
-import { safeNextPath, signupPath } from '@/lib/auth'
+import { getValidSession, safeNextPath, signupPath } from '@/lib/auth'
 import { notifyStorageUpdated } from '@/lib/storage'
 
 export default function LoginPage() {
@@ -26,6 +26,11 @@ export default function LoginPage() {
     // 아이디 찾기·비밀번호 재설정 후 넘어오면 아이디를 미리 채워 둔다
     const id = qs.get('id')
     if (id) setForm(f => ({ ...f, userId: id }))
+    // 이미 로그인한 채로 들어오면 입력창을 보여줄 필요 없이 가려던 곳(없으면 메인)으로 보낸다
+    getValidSession().then((session) => {
+      if (session) router.replace(safeNextPath(next))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -79,8 +84,8 @@ export default function LoginPage() {
           </h1>
           <ul className="auth-brand-facts">
             <li><span>응모권 1장 <b>1,000원</b></span></li>
-            <li><b>전량 판매 시 즉시 추첨</b></li>
-            <li><span>낙첨 시 <b>쌀포인트 환급</b></span></li>
+            <li><b>응모권 매진 시 추첨 시작</b></li>
+            <li><span>낙첨 시 <b>쌀포인트 적립</b></span></li>
           </ul>
         </div>
 

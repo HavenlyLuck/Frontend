@@ -501,12 +501,12 @@ export default function RaffleEntriesPage() {
                       <GrainsIcon size={22} weight="fill" />
                     </div>
                     <div className="consolation-body">
-                      <div className="consolation-label">쌀포인트 환급 완료</div>
+                      <div className="consolation-label">쌀포인트 적립 완료</div>
                       <div className="consolation-amount">
                         +{resultItem.totalAmountPaid.toLocaleString()}P
                       </div>
                       <div className="consolation-desc">
-                        응모권 {resultItem.parts.filter((p) => p.amountPaid > 0).reduce((n, p) => n + p.ticketCount, 0)}장만큼 돌려드렸어요. 쌀포인트 상점에서 사용할 수 있어요.
+                        응모권 {resultItem.parts.filter((p) => p.amountPaid > 0).reduce((n, p) => n + p.ticketCount, 0)}장만큼 적립했어요. 쌀포인트 상점에서 사용할 수 있어요.
                       </div>
                     </div>
                   </div>

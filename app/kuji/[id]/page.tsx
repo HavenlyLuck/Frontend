@@ -22,7 +22,6 @@ import { ApiError, getMyProfile } from '@/lib/api'
 import { PaymentWindowError } from '@/lib/payment'
 import { DEFAULT_AVATAR, normalizeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 import RefundNotice from "@/components/RefundNotice";
-import MobileBuyBar from "@/components/MobileBuyBar";
 import { SHIPPING_FEE_TEXT } from "@/lib/shipping";
 import { STORAGE_KEEP_DAYS } from "@/lib/storageExpiry";
 
@@ -398,13 +397,8 @@ function KujiProductView({ product }: { product: KujiProduct }) {
                   {closed ? '품절되었습니다' : <><TicketIcon size={16} weight="fill" /> 뽑기 시작</>}
                 </button>
               </div>
-              <MobileBuyBar
-                watchId="main-cta"
-                price={<>{product.pricePerTicket.toLocaleString()}원 <small>/ 1회</small></>}
-                label={closed ? '품절' : <><TicketIcon size={16} weight="fill" /> 뽑기 시작</>}
-                onClick={openDraw}
-                disabled={closed}
-              />
+              {/* 휴대폰 하단 고정 구매 막대(MobileBuyBar)는 쓰지 않는다 — 이 "뽑을 개수" 칸이 이미 화면 아래에 붙어 따라와서,
+                  막대까지 붙이면 화면 높이에 따라 둘이 겹쳐 +/- 버튼을 가렸다 (2026-11-26 오픈 전 점검) */}
             </div>
           </div>
         </div>

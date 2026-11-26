@@ -8,7 +8,7 @@ import { storedReferralCode } from '@/lib/referralLink'
 import { Logo } from '@/components/LogoMark'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { loginPath, safeNextPath, SIGNUP_NEXT_KEY } from '@/lib/auth'
+import { getValidSession, loginPath, safeNextPath, SIGNUP_NEXT_KEY } from '@/lib/auth'
 import { signup, checkDuplicate, verifyIdentity, verifyGuardian, ApiError, DuplCheckField } from '@/lib/api'
 import {
   requestIdentityVerification,
@@ -85,6 +85,10 @@ export default function SignupPage() {
   const [loginHref, setLoginHref] = useState('/login')
 
   useEffect(() => {
+    // 이미 로그인한 채로 들어오면 가입할 일이 없으니 메인으로 보낸다
+    getValidSession().then((session) => {
+      if (session) router.replace('/')
+    })
     // 돌아갈 주소를 탭에 보관한다 (모바일 본인인증으로 페이지를 떠났다 와도 남게).
     // next 없이 새로 들어온 가입이면 예전 값이 남아 있지 않게 지운다
     try {
@@ -352,7 +356,7 @@ export default function SignupPage() {
                   id="signup-userId"
                   name="userId"
                   type="text"
-                  placeholder="아이디 (영문·숫자 5~20자)"
+                  placeholder="아이디"
                   maxLength={20}
                   value={form.userId}
                   onChange={handleChange}
@@ -365,6 +369,8 @@ export default function SignupPage() {
                 </button>
               </div>
               <StatusMsg state={checks.userId} message={checkMessages.userId} />
+              {/* 규칙은 칸 아래에 — 칸 안에 쓰면 휴대폰에서 글자가 잘렸다 */}
+              {checks.userId === 'idle' && <p className="field-hint">영문·숫자 5~20자</p>}
             </div>
 
             {/* 비밀번호 */}

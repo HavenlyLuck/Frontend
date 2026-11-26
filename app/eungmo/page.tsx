@@ -43,12 +43,12 @@ export default function EungmoPage() {
             {loggedIn && (
               <span
                 className="ssal-ticket-chip"
-                title="이벤트나 친구 추천인 등록으로 받은 응모권이에요. 낙첨돼도 쌀포인트 페이백이 없어요."
+                title="이벤트나 친구 추천인 등록으로 받은 응모권이에요. 낙첨돼도 쌀포인트가 적립되지 않아요."
               >
                 <TicketIcon size={13} weight="fill" /> 쌀 응모권 <b>{ssalTicket.toLocaleString()}장</b>
               </span>
             )}
-            <a href="/guide#응모" style={{ fontSize: 12, color: 'var(--text-secondary)', textDecoration: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 12px', background: 'var(--bg-subtle)' }}>
+            <a href="/guide#응모" style={{ fontSize: 12, color: 'var(--text-secondary)', textDecoration: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 12px', background: 'var(--bg-subtle)' }}>
               도움이 필요하다면?
             </a>
           </div>

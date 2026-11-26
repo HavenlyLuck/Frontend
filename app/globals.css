@@ -630,6 +630,14 @@ a.nav-point-item:hover {
 }
 
 /* ── 카테고리 탭 (내비게이션) ── */
+.nav-cat-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+}
+.nav-cat-admin { gap: 6px; }
 .nav-categories {
   display: flex;
   align-items: center;
@@ -768,7 +776,7 @@ a.nav-point-item:hover {
   background: var(--danger-tint);
   border: 1px solid transparent;
   color: var(--danger);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 99px;
@@ -1079,7 +1087,7 @@ a.product-card-home.is-soldout { cursor: pointer; }
   display: inline-flex;
   gap: 4px;
   align-items: center;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--accent-fg);
   background: var(--accent-tint);
   border: 1px solid transparent;
@@ -1221,6 +1229,15 @@ a.product-card-home.is-soldout { cursor: pointer; }
 .breadcrumb a:hover {
   color: var(--text);
 }
+/* 휴대폰 — 작은 글자 링크(경로·푸터)는 모양은 그대로 두고 손가락으로 누르는 범위만 위아래로 넓힌다
+   (줄 안 글자의 위아래 여백은 줄 높이를 바꾸지 않고, 줄 밖 항목은 같은 만큼 바깥 여백을 빼서 자리를 그대로 둔다) */
+@media (pointer: coarse) {
+  .breadcrumb a,
+  .footer-biz a { padding: 10px 4px; margin: 0 -4px; }
+  .footer-links a,
+  .footer-policy-links a,
+  .footer-policy-links .footer-link-btn { padding: 8px 0; margin: -8px 0; }
+}
 
 .product-layout {
   display: grid;
@@ -1356,6 +1373,9 @@ a.product-card-home.is-soldout { cursor: pointer; }
   line-height: 1.3;
   margin-bottom: 10px;
   white-space: pre-line;
+  /* 줄을 고르게 나눠 "B"처럼 한 글자만 다음 줄로 떨어지지 않게 */
+  text-wrap: balance;
+  word-break: keep-all;
 }
 
 .price {
@@ -1689,7 +1709,7 @@ a.product-card-home.is-soldout { cursor: pointer; }
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 7px;
   border-radius: 99px;
   background: var(--accent-tint);
@@ -3004,7 +3024,7 @@ a.product-card-home.is-soldout { cursor: pointer; }
   white-space: nowrap;
 }
 .contest-card-me {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   padding: 1px 6px;
   border-radius: 999px;
@@ -3887,7 +3907,7 @@ a.product-card-home.is-soldout { cursor: pointer; }
   border-radius: 999px;
   background: linear-gradient(90deg, #8b5cf6, var(--accent));
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 1px;
   white-space: nowrap;
@@ -4721,7 +4741,7 @@ a.product-card-home.is-soldout { cursor: pointer; }
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--accent-fg);
   background: var(--accent-tint);
   border: 1px solid transparent;
@@ -5124,8 +5144,10 @@ a.product-card-home.is-soldout { cursor: pointer; }
     max-width: none;
     flex-basis: 100%;
   }
+  .nav-cat-wrap { flex: 1; }
   .nav-categories {
     flex: 1;
+    min-width: 0;
     overflow-x: auto;
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
@@ -7723,12 +7745,25 @@ a.review-private-hint { flex-shrink: 0; text-decoration: underline; }
     overflow-wrap: anywhere;
   }
 
-  /* 상단 메뉴 — 간격을 줄이고, 오른쪽 끝을 흐리게 해서 옆으로 더 있다는 걸 보여준다 */
+  /* 상단 메뉴 — 간격을 줄이고, 옆으로 더 있으면 오른쪽 끝을 흐리게 + › 표시 (끝까지 밀면 사라짐, Navbar catMore) */
   .nav-categories {
     gap: 0;
+  }
+  .nav-cat-wrap.has-more .nav-categories {
     padding-right: 28px;
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
-    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+  }
+  .nav-cat-wrap.has-more::after {
+    content: "›";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-55%);
+    font-size: 22px;
+    line-height: 1;
+    color: var(--text-secondary);
+    pointer-events: none;
   }
   .nav-cat-tab {
     padding: 8px 10px;
@@ -7814,7 +7849,7 @@ a.review-private-hint { flex-shrink: 0; text-decoration: underline; }
     border-radius: 12px;
     align-self: center;
   }
-  .profile-room-edit { font-size: 10px; }
+  .profile-room-edit { font-size: 11px; }
   .profile-name {
     grid-area: name;
     margin-top: 2px;
@@ -9139,4 +9174,12 @@ a.home-hero-card:hover .home-hero-card-cta { background: var(--accent-hover); }
 @media (max-width: 480px) {
   .invite-card { flex-direction: column; align-items: stretch; }
   .invite-card-btn { justify-content: center; }
+}
+/* 휴대폰 응모 상세 — 친구 초대 박스가 사진 바로 아래에 있으면 상품명·가격이 첫 화면 밖으로 밀린다.
+   사진 칸(.image-area)을 풀어서 박스만 정보·구매 칸 뒤로 보낸다 (PC는 그대로 사진 아래) */
+@media (max-width: 900px) {
+  .product-layout .image-area:has(> .invite-card) { display: contents; }
+  .product-layout:has(> .image-area > .invite-card) > .info-panel { order: 1; }
+  .product-layout > .image-area > .invite-card { order: 2; margin-top: 0; }
+  .product-layout:has(> .image-area > .invite-card) > .product-notices { order: 3; }
 }

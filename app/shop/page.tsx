@@ -134,7 +134,7 @@ export default function ShopPage() {
               textDecoration: "none",
               border: "1px solid var(--border)",
               borderRadius: 8,
-              padding: "4px 12px",
+              padding: "7px 12px",
               background: "var(--bg-subtle)",
             }}
           >

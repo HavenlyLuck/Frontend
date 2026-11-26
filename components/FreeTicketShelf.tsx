@@ -50,7 +50,7 @@ export default function FreeTicketShelf() {
           )
         })}
       </div>
-      <p className="free-ticket-note">응모 상품에서 결제 대신 1장당 응모권 1장으로 응모할 수 있어요. 쌀 응모권은 낙첨돼도 쌀포인트 페이백이 없어요.</p>
+      <p className="free-ticket-note">응모 상품에서 결제 대신 1장당 응모권 1장으로 응모할 수 있어요. 쌀 응모권은 낙첨돼도 쌀포인트가 적립되지 않아요.</p>
     </section>
   )
 }
