@@ -31,7 +31,7 @@ export default function MetaPixel() {
       const btn = (e.target as Element | null)?.closest?.('a, button')
       if (!btn) return
       const text = ((btn as HTMLElement).innerText || '').replace(/\s+/g, '')
-      if (text.includes('응모보러가기')) trackPixel('Lead', { content_name: '응모 보러 가기' })
+      if (text.includes('응모보러가기')) trackPixel('Lead', { content_name: '응모 보러가기' })
     }
     document.addEventListener('click', onClick)
     return () => document.removeEventListener('click', onClick)

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { AVATAR_FEET_ROW, AVATAR_H, AVATAR_TOP_PAD, AVATAR_W, avatarKey, composeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
-import { DEFAULT_ROOM_BACKGROUND, drawRoom, ROOM, ROOM_FLOOR_Y, type RoomBackgroundId } from '@/lib/avatar/rooms'
+import { DEFAULT_ROOM_BACKGROUND, drawRoom, isRoomReady, ROOM, ROOM_FLOOR_Y, type RoomBackgroundId } from '@/lib/avatar/rooms'
 import { AVATAR_SHOP_ITEMS } from '@/lib/avatar/shopItems'
 import { drawAura, type AuraAnchor } from '@/lib/avatar/auras'
 import { drawBack } from '@/lib/avatar/backs'
@@ -95,7 +95,7 @@ export default function AvatarRoom({ config, background: backgroundProp, classNa
       ctx.imageSmoothingEnabled = false
       ctx.clearRect(0, 0, w, h)
       ctx.drawImage(world, 0, 0, w, h)
-      if (!reduceMotion) raf = requestAnimationFrame(frame)
+      if (!reduceMotion || !isRoomReady(background)) raf = requestAnimationFrame(frame)
     }
     raf = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(raf)

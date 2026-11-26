@@ -3,8 +3,32 @@
 
 import { hash01 } from '@/lib/lightningDraw/scene'
 
-export type RoomBackgroundId = 'case' | 'lucky' | 'stage' | 'night' | 'park'
+export type RoomBackgroundId = 'case' | 'lucky' | 'stage' | 'night' | 'park' | 'sunset'
 export const DEFAULT_ROOM_BACKGROUND: RoomBackgroundId = 'case'
+
+// 그림 파일로 된 배경 — 60×60(방 칸의 2배, 캐릭터 그림과 같은 해상도) 픽셀 그림을 방 전체에 깐다
+const IMAGE_ROOMS: Partial<Record<RoomBackgroundId, string>> = {
+  sunset: '/images/avatar-rooms/sunset-river.png',
+}
+const roomImages = new Map<RoomBackgroundId, HTMLImageElement>()
+
+function roomImage(id: RoomBackgroundId): HTMLImageElement | null {
+  const src = IMAGE_ROOMS[id]
+  if (!src || typeof Image === 'undefined') return null
+  let img = roomImages.get(id)
+  if (!img) {
+    img = new Image()
+    img.src = src
+    roomImages.set(id, img)
+  }
+  return img
+}
+
+// 그림 파일 배경이 아직 안 불러와졌으면 false — 움직임 줄이기 설정이어도 다 불러올 때까지 다시 그린다
+export function isRoomReady(id: RoomBackgroundId): boolean {
+  const img = roomImage(id)
+  return !img || (img.complete && img.naturalWidth > 0)
+}
 
 // ── 그리기 (방 크기 ROOM × ROOM 칸, t = ms) ──
 
@@ -74,6 +98,18 @@ export function drawRoom(ctx: CanvasRenderingContext2D, id: RoomBackgroundId, t:
   const H = ROOM
   if (id === 'case') {
     drawCase(ctx, t)
+    return
+  }
+  const img = roomImage(id)
+  if (img) {
+    if (img.complete && img.naturalWidth > 0) {
+      ctx.imageSmoothingEnabled = false
+      ctx.drawImage(img, 0, 0, W, H)
+    } else {
+      // 불러오는 동안은 노을빛만 깐다
+      rect(ctx, '#f6b13c', 0, 0, W, 18)
+      rect(ctx, '#6aa84f', 0, 18, W, H - 18)
+    }
     return
   }
   if (id === 'park') {
