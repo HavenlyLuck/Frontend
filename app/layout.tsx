@@ -55,7 +55,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthProvider>
           <NavbarWrapper />
-          {children}
+          {/* 내용이 늦게 채워져도 푸터가 화면 안으로 올라왔다 밀려나지 않게 최소 높이를 둔다 (.site-content) */}
+          <div className="site-content">{children}</div>
           <Footer />
           <RaffleAlertWatcher />
           <SignupRequiredModal />

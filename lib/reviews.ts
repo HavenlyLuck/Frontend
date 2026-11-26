@@ -1,5 +1,5 @@
 // 후기·문의 API (Backend/app/routers/review.py, inquiry.py)
-import { API_URL, ApiError, request } from './api'
+import { API_URL, ApiError, apiFetch, request } from './api'
 
 export type ReviewProductType = 'raffle' | 'store' | 'kuji'
 
@@ -77,14 +77,14 @@ export async function createReview(token: string, payload: {
   form.append('content', payload.content)
   if (payload.image) form.append('image', payload.image)
   // FormData는 Content-Type을 브라우저가 정하게 둬야 해서 request() 대신 fetch를 직접 쓴다
-  const res = await fetch(`${API_URL}/reviews`, { method: 'POST', headers: auth(token), body: form })
+  const res = await apiFetch(`${API_URL}/reviews`, { method: 'POST', headers: auth(token), body: form })
   const data = await res.json().catch(() => null)
   if (!res.ok) throw new ApiError(res.status, typeof data?.detail === 'string' ? data.detail : '후기를 올리지 못했습니다.')
   return data as ReviewResponse
 }
 
 export async function deleteReview(token: string, reviewId: number): Promise<void> {
-  const res = await fetch(`${API_URL}/reviews/${reviewId}`, { method: 'DELETE', headers: auth(token) })
+  const res = await apiFetch(`${API_URL}/reviews/${reviewId}`, { method: 'DELETE', headers: auth(token) })
   if (!res.ok) {
     const data = await res.json().catch(() => null)
     throw new ApiError(res.status, typeof data?.detail === 'string' ? data.detail : '후기를 지우지 못했습니다.')
@@ -106,7 +106,7 @@ export function updateInquiry(token: string, inquiryId: number, payload: { title
 
 // 문의 삭제 — 쓴 사람, 또는 관리자(스팸 등)
 export async function deleteInquiry(token: string, inquiryId: number): Promise<void> {
-  const res = await fetch(`${API_URL}/inquiries/${inquiryId}`, { method: 'DELETE', headers: auth(token) })
+  const res = await apiFetch(`${API_URL}/inquiries/${inquiryId}`, { method: 'DELETE', headers: auth(token) })
   if (!res.ok) {
     const data = await res.json().catch(() => null)
     throw new ApiError(res.status, typeof data?.detail === 'string' ? data.detail : '문의를 지우지 못했습니다.')

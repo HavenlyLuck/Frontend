@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { MagnifyingGlassIcon, PaperclipIcon } from '@phosphor-icons/react'
 import { AdminPageHeader, useAdminToken } from '@/components/admin/AdminShell'
 import { ApiError } from '@/lib/api'
+import { josa } from '@/lib/josa'
 import { createCatalogItem, deleteCatalogItem, fetchCatalog, updateCatalogItem, type CatalogItem } from '@/lib/catalog'
 import { PRODUCT_INFO_FIELDS, parseProductDescription, productInfoTemplate } from '@/lib/productInfo'
 import PurchasePanel from '@/components/admin/PurchasePanel'
@@ -67,7 +68,7 @@ export default function AdminCatalogPage() {
   }
 
   async function remove(it: CatalogItem) {
-    if (!confirm(`"${it.name}"을(를) 등록 상품에서 지울까요?\n이미 게시한 응모·쿠지·상점 상품은 그대로 남아요. 되돌릴 수 없어요.`)) return
+    if (!confirm(`"${it.name}"${josa(it.name, '을/를')} 등록 상품에서 지울까요?\n이미 게시한 응모·쿠지·상점 상품은 그대로 남아요. 되돌릴 수 없어요.`)) return
     setBusyId(it.id)
     try {
       await deleteCatalogItem(token, it.id)

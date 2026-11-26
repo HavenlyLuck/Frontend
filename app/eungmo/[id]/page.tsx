@@ -137,12 +137,15 @@ export default function RaffleProductPage({
 
   if (product === undefined) {
     return (
-      <div className="home-container">
-        <div className="coming-soon-box large">
-          <div className="emoji">
-            <TicketIcon size={32} weight="light" />
+      <div>
+        {/* 다 불러온 화면(<div><div.container>)과 같은 틀 — 틀이 달라 내용이 밀리지 않게 */}
+        <div className="container">
+          <div className="coming-soon-box large">
+            <div className="emoji">
+              <TicketIcon size={32} weight="light" />
+            </div>
+            <div className="title">불러오는 중이에요</div>
           </div>
-          <div className="title">불러오는 중이에요</div>
         </div>
       </div>
     );
@@ -150,13 +153,16 @@ export default function RaffleProductPage({
 
   if (product === null) {
     return (
-      <div className="home-container">
-        <div className="coming-soon-box large">
-          <div className="emoji">
-            <TicketIcon size={32} weight="light" />
+      <div>
+        {/* 다 불러온 화면(<div><div.container>)과 같은 틀 — 틀이 달라 내용이 밀리지 않게 */}
+        <div className="container">
+          <div className="coming-soon-box large">
+            <div className="emoji">
+              <TicketIcon size={32} weight="light" />
+            </div>
+            <div className="title">응모 상품을 찾을 수 없어요</div>
+            <div className="desc">마감되었거나 존재하지 않는 상품이에요</div>
           </div>
-          <div className="title">응모 상품을 찾을 수 없어요</div>
-          <div className="desc">마감되었거나 존재하지 않는 상품이에요</div>
         </div>
       </div>
     );

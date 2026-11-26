@@ -1,5 +1,5 @@
 import {
-  API_URL, ApiError, createInventoryReceipt, deleteInventoryReceipt, getInventoryItem, getInventoryItems,
+  API_URL, ApiError, apiFetch, createInventoryReceipt, deleteInventoryReceipt, getInventoryItem, getInventoryItems,
   updateInventoryItem, updateInventoryReceipt, type InventoryItemResponse, type InventoryReceiptResponse,
 } from './api'
 
@@ -106,7 +106,7 @@ export async function fetchCatalog(token: string): Promise<CatalogItem[]> {
 }
 
 async function postForm(token: string, path: string, form: FormData) {
-  const res = await fetch(`${API_URL}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form })
+  const res = await apiFetch(`${API_URL}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form })
   const data = await res.json().catch(() => null)
   return { res, data }
 }
@@ -149,7 +149,7 @@ export async function updateCatalogItem(token: string, id: number, patch: { name
 }
 
 export async function deleteCatalogItem(token: string, id: number): Promise<void> {
-  const res = await fetch(`${API_URL}/inventory/items/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+  const res = await apiFetch(`${API_URL}/inventory/items/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
   if (res.ok) return
   const data = await res.json().catch(() => null)
   if (res.status === 405) throw new ApiError(405, '서버에 아직 삭제 기능이 없어요. 서버 작업이 끝나면 지울 수 있어요.')

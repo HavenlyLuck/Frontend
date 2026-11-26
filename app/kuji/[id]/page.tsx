@@ -19,6 +19,8 @@ import KujiReveal from '@/components/KujiReveal'
 import { notifyPointsUpdated } from '@/hooks/useMyPoints'
 import KujiAvatarScene from '@/components/KujiAvatarScene'
 import { ApiError, getMyProfile } from '@/lib/api'
+import { cloudinarySized } from '@/lib/image'
+import { josa } from '@/lib/josa'
 import { PaymentWindowError } from '@/lib/payment'
 import { DEFAULT_AVATAR, normalizeAvatar, type AvatarConfig } from '@/lib/avatar/compose'
 import RefundNotice from "@/components/RefundNotice";
@@ -48,11 +50,14 @@ export default function KujiProductPage({ params }: { params: { id: string } }) 
 
   if (product === undefined || product === null) {
     return (
-      <div className="home-container">
-        <div className="coming-soon-box large">
-          <div className="emoji"><GiftIcon size={32} weight="light" /></div>
-          <div className="title">{product === undefined ? '불러오는 중이에요' : '쿠지를 찾을 수 없어요'}</div>
-          {product === null && <div className="desc">종료되었거나 존재하지 않는 쿠지예요</div>}
+      <div>
+        {/* 다 불러온 화면(<div><div.container>)과 같은 틀 — 틀이 달라 내용이 밀리지 않게 */}
+        <div className="container">
+          <div className="coming-soon-box large">
+            <div className="emoji"><GiftIcon size={32} weight="light" /></div>
+            <div className="title">{product === undefined ? '불러오는 중이에요' : '쿠지를 찾을 수 없어요'}</div>
+            {product === null && <div className="desc">종료되었거나 존재하지 않는 쿠지예요</div>}
+          </div>
         </div>
       </div>
     )
@@ -70,6 +75,8 @@ function KujiProductView({ product }: { product: KujiProduct }) {
   const [results, setResults] = useState<DrawResult | null>(null)
   const [conflictIds, setConflictIds] = useState<number[]>([])
   const [confirming, setConfirming] = useState(false)
+  // 결제창을 못 열었거나 결제·뽑기가 실패한 이유 — 결제 버튼 바로 위에 보여 준다 (다른 결제 화면과 같은 방식)
+  const [drawError, setDrawError] = useState<string | null>(null)
   const [justTaken, setJustTaken] = useState<number[]>([])
   // 뽑기 결과 카드 — 연 제비, "모두 열기"로 한꺼번에 연 제비(차례로 뒤집히는 순서)
   const [revealed, setRevealed] = useState<number[]>([])
@@ -219,11 +226,15 @@ function KujiProductView({ product }: { product: KujiProduct }) {
     if (firstTop >= 0) flashTop(firstTop * 110 + 350)
   }
 
-  const closeDraw = () => setDrawOpen(false)
+  const closeDraw = () => {
+    setDrawOpen(false)
+    setDrawError(null)
+  }
 
   const toggleTicket = (ticketId: number) => {
     if (drawnGrade.has(ticketId) || confirming) return
     setConflictIds([])
+    setDrawError(null)
     setSelected(prev => {
       if (prev.includes(ticketId)) return prev.filter(id => id !== ticketId)
       if (prev.length >= qty) return prev
@@ -240,6 +251,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
       return
     }
     setConfirming(true)
+    setDrawError(null)
     try {
       const res = await confirmKujiDraw(session.token, product.id, selected)
       if (!res.ok) {
@@ -259,7 +271,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
       setSelected([])
     } catch (err) {
       // 결제 취소, 판매 종료 등은 서버·결제창이 알려준 이유를 그대로 보여준다
-      alert(err instanceof ApiError || err instanceof PaymentWindowError ? err.message : '뽑기 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.')
+      setDrawError(err instanceof ApiError || err instanceof PaymentWindowError ? err.message : '뽑기 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setConfirming(false)
     }
@@ -273,7 +285,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
       <div key={tier.grade} style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', background: 'var(--surface)', boxShadow: 'var(--shadow-sm)' }}>
         <div style={{ position: 'relative', aspectRatio: '1 / 1', background: 'var(--bg-subtle)' }}>
           {tier.image ? (
-            <img src={tier.image} alt={tier.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: soldOut ? 'blur(2px) brightness(0.5)' : undefined }} />
+            <img src={cloudinarySized(tier.image, 480)} alt={tier.title} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: soldOut ? 'blur(2px) brightness(0.5)' : undefined }} />
           ) : (
             // 사진 없이 등록한 상품 · 쌀포인트 상
             <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', justifyContent: 'center', color: tier.points ? 'var(--gold)' : 'var(--text-tertiary)', background: tier.points ? 'var(--gold-tint)' : undefined, filter: soldOut ? 'brightness(0.5)' : undefined }}>
@@ -309,7 +321,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
         </div>
 
         <div style={{ borderRadius: 16, overflow: 'hidden', marginBottom: 20, position: 'relative', height: 'clamp(240px, 34vw, 420px)' }}>
-          <img src={product.banner} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={cloudinarySized(product.banner, 1400)} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.75), rgba(0,0,0,0.1))' }} />
           <div style={{ position: 'absolute', left: 20, bottom: 16, color: '#fff' }}>
             <span style={{ fontSize: 12, fontWeight: 700, background: 'rgba(22, 24, 29, 0.72)', padding: '4px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -345,7 +357,9 @@ function KujiProductView({ product }: { product: KujiProduct }) {
             <div className="kuji-lastone-tile">
               <div style={{ position: 'relative', aspectRatio: '1 / 1', background: 'var(--bg-subtle)' }}>
                 <img
-                  src={product.lastOne.image}
+                  src={cloudinarySized(product.lastOne.image, 480)}
+                  loading="lazy"
+                  decoding="async"
                   alt={product.lastOne.title}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', filter: remaining === 0 ? 'blur(2px) brightness(0.5)' : undefined }}
                 />
@@ -416,7 +430,7 @@ function KujiProductView({ product }: { product: KujiProduct }) {
 
             {conflictIds.length > 0 && !results && (
               <div role="status" style={{ margin: '14px 20px 0', padding: '10px 14px', borderRadius: 10, background: 'var(--danger-tint)', border: '1px solid var(--danger-tint-border)', color: 'var(--danger)', fontSize: 13, fontWeight: 600 }}>
-                제비 {conflictIds.map(id => `#${id}`).join(', ')}은(는) 방금 다른 분이 먼저 뽑아서 선택이 해제됐어요. 나머지 선택은 그대로 남아있으니 빈 자리만 다시 골라주세요.
+                제비 {conflictIds.map(id => `#${id}`).join(', ')}{josa(String(conflictIds[conflictIds.length - 1]), '은/는')} 방금 다른 분이 먼저 뽑아서 선택이 해제됐어요. 나머지 선택은 그대로 남아있으니 빈 자리만 다시 골라주세요.
               </div>
             )}
             {!results && (
@@ -478,6 +492,11 @@ function KujiProductView({ product }: { product: KujiProduct }) {
                   취소·환불 정책
                 </a>
               </p>
+              {drawError && (
+                <div role="alert" style={{ marginBottom: 10, padding: '10px 14px', borderRadius: 10, background: 'var(--danger-tint)', border: '1px solid var(--danger-tint-border)', color: 'var(--danger)', fontSize: 13, fontWeight: 600 }}>
+                  {drawError}
+                </div>
+              )}
               <button
                 onClick={confirmDraw}
                 disabled={selected.length !== qty || confirming}

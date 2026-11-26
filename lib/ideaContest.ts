@@ -1,4 +1,4 @@
-import { API_URL, ApiError, request } from './api'
+import { API_URL, ApiError, apiFetch, request } from './api'
 import { SLOT_LABELS, WEAR_SLOTS, type WearSlot } from './avatar/shopItems'
 
 /*
@@ -71,14 +71,14 @@ export async function submitIdea(token: string, input: { category: WearSlot; tit
   form.append('title', input.title.trim())
   if (input.description.trim()) form.append('description', input.description.trim())
   form.append('image', input.image)
-  const res = await fetch(`${API_URL}/idea-contest/entries`, { method: 'POST', headers: auth(token), body: form })
+  const res = await apiFetch(`${API_URL}/idea-contest/entries`, { method: 'POST', headers: auth(token), body: form })
   const data = await res.json().catch(() => null)
   if (!res.ok) throw new ApiError(res.status, typeof data?.detail === 'string' ? data.detail : '응모하지 못했어요. 잠시 후 다시 시도해 주세요.')
   return data as IdeaEntry
 }
 
 export async function deleteIdea(token: string, entryId: number): Promise<void> {
-  const res = await fetch(`${API_URL}/idea-contest/entries/${entryId}`, { method: 'DELETE', headers: auth(token) })
+  const res = await apiFetch(`${API_URL}/idea-contest/entries/${entryId}`, { method: 'DELETE', headers: auth(token) })
   if (res.ok) return
   const data = await res.json().catch(() => null)
   throw new ApiError(res.status, typeof data?.detail === 'string' ? data.detail : '지우지 못했어요.')

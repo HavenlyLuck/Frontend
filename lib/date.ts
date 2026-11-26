@@ -8,6 +8,11 @@ export function formatDateTime(iso: string): string {
   })
 }
 
+// 서버 시각(UTC)의 한국 날짜 "2026-11-22" — iso.slice(0, 10)은 UTC 날짜라 오전 9시 전 시각이 하루 전으로 보인다
+export function kstDate(iso: string): string {
+  return new Date(parseServerTime(iso) + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
 // 오늘 한국 날짜 "2026-11-22" — new Date().toISOString()은 UTC라 오전 9시 전엔 어제 날짜가 된다
 export function kstToday(): string {
   return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)

@@ -2,6 +2,7 @@
 
 import { GiftIcon, GrainsIcon } from '@phosphor-icons/react'
 import type { KujiLastOne, KujiTier } from '@/lib/kujiData'
+import { cloudinarySized } from '@/lib/image'
 
 export interface KujiRevealItem {
   ticketId: number
@@ -47,7 +48,7 @@ export default function KujiReveal({ items, revealed, onReveal, skipped, lastOne
               <span className="kuji-card-face kuji-card-front">
                 <span className="kuji-card-img">
                   {item.tier.image
-                    ? <img src={item.tier.image} alt="" />
+                    ? <img src={cloudinarySized(item.tier.image, 480)} alt="" />
                     : item.tier.points
                       ? <GrainsIcon size={30} weight="fill" color="var(--gold)" />
                       : <GiftIcon size={30} weight="fill" />}
@@ -70,7 +71,7 @@ export default function KujiReveal({ items, revealed, onReveal, skipped, lastOne
           <span className="kuji-card-face kuji-card-front is-last">
             <span className="kuji-last-badge">LAST ONE</span>
             <span className="kuji-card-img">
-              <img src={lastOne.image} alt="" />
+              <img src={cloudinarySized(lastOne.image, 480)} alt="" />
             </span>
             <span className="kuji-card-grade">라스트원상</span>
             <span className="kuji-card-title">{lastOne.title}</span>
