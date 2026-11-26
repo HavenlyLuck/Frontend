@@ -249,6 +249,14 @@ export const AVATAR_SHOP_ITEMS: AvatarShopItem[] = [
     room: 'park',
   },
   {
+    id: 'bg-sunset-river',
+    name: '노을 강가',
+    description: '주황빛 노을 아래, 나무 두 그루와 잔잔한 강이 흐르는 들판.',
+    price: 3000,
+    slot: 'background',
+    room: 'sunset',
+  },
+  {
     id: 'bg-lucky',
     name: '천운 행운방',
     description: '천운 레드에 금빛이 반짝이는 행운의 방.',

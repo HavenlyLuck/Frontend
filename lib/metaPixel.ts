@@ -5,6 +5,10 @@
 import type { PaymentCompleteResponse } from './api'
 
 export const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? ''
+// 광고 대행사가 만든 광고 집행용 픽셀 (2026-11) — 천운 비즈니스가 신규라 기존 픽셀을 외부에 공유할 수 없어 따로 하나 더 단다.
+// 한 사이트에 픽셀을 여러 개 달아도 서로 영향이 없고, init을 모두 한 뒤의 track은 모든 픽셀로 간다
+const AD_AGENCY_PIXEL_ID = '1723090909147641'
+const PIXEL_IDS = Array.from(new Set([...META_PIXEL_ID.split(','), AD_AGENCY_PIXEL_ID].map(id => id.trim()).filter(Boolean)))
 const OPT_OUT_KEY = 'ad-measurement-optout'
 export const AD_MEASUREMENT_CHANGED_EVENT = 'ad-measurement-changed'
 const PURCHASE_SENT_KEY = 'meta-purchase-sent'
@@ -36,7 +40,7 @@ export function siteOptedOut(): boolean {
 }
 
 export function trackingAllowed(): boolean {
-  return typeof window !== 'undefined' && !!META_PIXEL_ID && !siteOptedOut() && !browserRefusesTracking()
+  return typeof window !== 'undefined' && PIXEL_IDS.length > 0 && !siteOptedOut() && !browserRefusesTracking()
 }
 
 export function setSiteOptOut(optOut: boolean) {
@@ -66,7 +70,7 @@ export function loadPixel() {
   script.async = true
   script.src = 'https://connect.facebook.net/en_US/fbevents.js'
   document.head.appendChild(script)
-  fbq('init', META_PIXEL_ID)
+  for (const id of PIXEL_IDS) fbq('init', id)
 }
 
 export function trackPixel(event: string, params?: Record<string, unknown>, eventId?: string) {
