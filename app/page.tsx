@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { HERO_PINNED_RAFFLE_IDS } from "@/lib/features";
 import { isSoldOut } from "@/lib/storeStock";
 import Link from "next/link";
 import {
@@ -112,14 +113,18 @@ export default function HomePage() {
   }, [raffleProducts.length]);
 
   const elapsedSeconds = raffleFetchedAt ? Math.floor((nowTick - raffleFetchedAt) / 1000) : 0;
-  const openRaffleItems = raffleProducts
+  const visibleRaffleItems = raffleProducts
     .map((rp) => ({ rp, remainingSeconds: Math.max(0, rp.remaining_seconds - elapsedSeconds) }))
-    .filter((item) => isListedRaffleVisible(item.rp, item.remainingSeconds, nowTick || Date.now()))
-    .slice(0, 4);
+    .filter((item) => isListedRaffleVisible(item.rp, item.remainingSeconds, nowTick || Date.now()));
+  const openRaffleItems = visibleRaffleItems.slice(0, 4);
 
-  // 히어로에 크게 보여줄 응모 — 아직 살 수 있는 것 중 가장 많이 팔린(추첨이 가까운) 상품
-  const featuredItem = openRaffleItems
-    .filter((item) => !isSoldOutRaffle(item.rp))
+  // 히어로에 크게 보여줄 응모 — 우선으로 띄우기로 한 상품(HERO_PINNED_RAFFLE_IDS)이 판매 중이면 그것,
+  // 아니면 아직 살 수 있는 것 중 가장 많이 팔린(추첨이 가까운) 상품
+  const buyable = visibleRaffleItems.filter((item) => !isSoldOutRaffle(item.rp));
+  const pinned = HERO_PINNED_RAFFLE_IDS
+    .map((id) => buyable.find((item) => item.rp.raffle_product_id === id))
+    .find(Boolean);
+  const featuredItem = pinned ?? buyable
     .sort((a, b) => b.rp.sold_slots / b.rp.total_slots - a.rp.sold_slots / a.rp.total_slots)[0];
   const featured = featuredItem
     ? { rp: featuredItem.rp, countdown: formatRaffleCountdown(featuredItem.remainingSeconds) }
