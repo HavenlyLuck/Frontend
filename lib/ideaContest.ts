@@ -55,7 +55,7 @@ export function getIdeaContest(token?: string) {
   return request<IdeaContestCurrent>('/idea-contest/current', { headers: auth(token) })
 }
 
-// 응모할 때 고르는 아바타 분류 — 아바타 꾸미기 분류와 같다 (모자 · 상의 · 손 ...)
+// 응모할 때 고르는 아바타 분류 — 아바타 꾸미기 분류와 같다 (모자 · 상의 · 소품 ...)
 export const IDEA_CATEGORIES: { id: WearSlot; label: string }[] = WEAR_SLOTS.map(slot => ({ id: slot, label: SLOT_LABELS[slot] }))
 
 // 없앤 칸(2026-11)으로 올라온 지난 응모작도 이름이 보이게
