@@ -1364,9 +1364,31 @@ export function getMyFreeTickets(token: string) {
   return request<FreeTicketResponse[]>('/referrals/tickets', { headers: { Authorization: `Bearer ${token}` } })
 }
 
+// 보관함 — 아직 쓰지 않은 쌀 응모권을 받은 경로(종류 · 관련 회원)별로 묶은 장수
+export interface FreeTicketGroupResponse {
+  kind: FreeTicketResponse['kind']
+  related_nickname: string | null
+  count: number
+  first_at: string | null
+  last_at: string | null
+}
+
+export function getMyFreeTicketGroups(token: string) {
+  return request<FreeTicketGroupResponse[]>('/referrals/tickets/groups', { headers: { Authorization: `Bearer ${token}` } })
+}
+
 // 보관함 무료 응모권으로 결제 없이 응모
 export function enterRaffleWithFreeTickets(token: string, raffleProductId: number, ticketCount: number) {
   return request<RaffleEntryCreateResponse>(`/raffles/${raffleProductId}/entries/free`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ ticket_count: ticketCount }),
+  })
+}
+
+// 보관함 쌀 응모권으로 상점 상품의 응모 전환 모금에 참여 (모금이 없으면 새로 열린다)
+export function fundStoreWithFreeTickets(token: string, storeProductId: number, ticketCount: number) {
+  return request<RaffleEntryCreateResponse>(`/store-products/${storeProductId}/funding/free`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ ticket_count: ticketCount }),

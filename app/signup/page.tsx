@@ -15,6 +15,7 @@ import {
   readIdentityVerificationRedirect,
   IdentityVerificationResult,
 } from '@/lib/identityVerification'
+import PasswordInput from '@/components/PasswordInput'
 
 type CheckState = 'idle' | 'checking' | 'ok' | 'fail'
 
@@ -375,10 +376,10 @@ export default function SignupPage() {
 
             {/* 비밀번호 */}
             <div className="field">
-              <input
+              <PasswordInput
                 id="signup-password"
                 name="password"
-                type="password"
+               
                 placeholder="비밀번호"
                 value={form.password}
                 onChange={handleChange}
@@ -394,10 +395,10 @@ export default function SignupPage() {
 
             {/* 비밀번호 확인 */}
             <div className="field">
-              <input
+              <PasswordInput
                 id="signup-confirm"
                 name="confirm"
-                type="password"
+               
                 placeholder="비밀번호 확인"
                 value={form.confirm}
                 onChange={handleChange}

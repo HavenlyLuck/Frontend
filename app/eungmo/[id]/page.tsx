@@ -2,7 +2,7 @@
 
 import { trackViewContent } from "@/lib/metaPixel";
 import InviteFriendCard from "@/components/InviteFriendCard";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,7 +16,7 @@ import {
 import {
   ApiError,
   enterRaffleWithFreeTickets,
-  getMyFreeTickets,
+  getMyPoints,
   getRaffleProducts,
   type RaffleProductResponse,
   type RaffleEntryCreateResponse,
@@ -33,17 +33,8 @@ import { notifyPointsUpdated } from "@/hooks/useMyPoints";
 import { addRaffleToWishlist, getMyRaffleWishlist, removeRaffleFromWishlist } from "@/lib/wishlist";
 import EmojiIcon from '@/components/EmojiIcon'
 import { maskNickname } from "@/lib/mask";
+import { formatRaffleCountdown } from "@/lib/raffle";
 
-function formatCountdown(seconds: number): string {
-  if (seconds <= 0) return "마감";
-  const d = Math.floor(seconds / 86400);
-  const h = Math.floor((seconds % 86400) / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  if (d === 0) return `${pad(h)}:${pad(m)}:${pad(s)} 남음`;
-  return `${d}일 ${pad(h)}:${pad(m)}:${pad(s)} 남음`;
-}
 
 export default function RaffleProductPage({
   params,
@@ -63,6 +54,10 @@ export default function RaffleProductPage({
   const [purchaseResult, setPurchaseResult] =
     useState<RaffleEntryCreateResponse | null>(null);
   const [tearing, setTearing] = useState(false);
+  // 완료 카드를 지금 보고 있는 화면 가운데에 띄우려고, 응모권 창 배경이 얼마나 스크롤됐는지 기억한다
+  // (모바일에서 응모권 창이 길면 배경이 위에서부터 쌓여서, 그냥 두면 완료 카드가 맨 위에 붙는다)
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const [successTop, setSuccessTop] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -212,11 +207,13 @@ export default function RaffleProductPage({
     // 로그인했으면 보관함 쌀 응모권 수를 확인해 쌀 응모권 수량 선택을 함께 보여준다
     getValidSession().then((session) => {
       if (!session) return;
-      getMyFreeTickets(session.token)
-        .then((list) => {
-          setFreeTicketCount(list.length);
+      // 장수만 필요하니 목록(1장마다 한 줄) 대신 포인트 요약의 장수를 쓴다
+      getMyPoints(session.token)
+        .then((points) => {
+          const count = points.ssal_ticket ?? 0;
+          setFreeTicketCount(count);
           // 쌀 응모권이 있으면 1장을 쌀 응모권으로 시작한다
-          if (list.length > 0) {
+          if (count > 0) {
             setSsalCount(1);
             setCardCount(0);
           }
@@ -291,6 +288,7 @@ export default function RaffleProductPage({
       // tearing 클래스는 모달이 닫힐 때까지 유지 — 먼저 풀면 찢어진 조각이 다시 붙어 보인다.
       setTearing(true);
       await new Promise((resolve) => setTimeout(resolve, 800));
+      setSuccessTop(overlayRef.current?.scrollTop ?? 0);
       setPurchaseResult(entry);
       // 쌀 응모권을 썼거나 첫 구매로 추천 보상을 받았을 수 있으니 상단 장수를 다시 불러온다
       notifyPointsUpdated();
@@ -400,7 +398,7 @@ export default function RaffleProductPage({
                     ) : (
                       <ClockIcon size={14} weight="bold" />
                     )}
-                    {formatCountdown(remaining)}
+                    {formatRaffleCountdown(remaining)}
                   </div>
                 )}
               </div>
@@ -522,6 +520,7 @@ export default function RaffleProductPage({
           결제 처리 중이거나 찢기 연출 중(성공 카드가 뜨기 전)엔 배경 클릭으로 닫히지 않게 막는다.
           (안 막으면 모달이 먼저 사라졌다가 결제 완료 후 성공 카드가 혼자 튀어나옴) */}
       <div
+        ref={overlayRef}
         className={`modal-overlay ${modalOpen ? "open" : ""}`}
         onClick={(e) => {
           if (e.target !== e.currentTarget) return;
@@ -642,6 +641,7 @@ export default function RaffleProductPage({
 
         {/* 구매 완료 — 찢어진 조각이 날아가는 동안 같은 배경 위로 겹쳐서 떠오른다 */}
         {purchaseResult && (
+          <div className="success-modal-layer" style={{ top: successTop }}>
           <div className="modal success-modal" role="dialog" aria-modal="true" aria-label="응모 완료">
             <div className="modal-icon celebrate">
               <ConfettiIcon size={28} weight="fill" color="var(--gold)" />
@@ -676,6 +676,7 @@ export default function RaffleProductPage({
                 확인
               </button>
             </div>
+          </div>
           </div>
         )}
       </div>

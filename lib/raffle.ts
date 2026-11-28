@@ -238,3 +238,16 @@ export function markResultChecked(raffleProductId: number) {
   // 사이드바 배지처럼 같은 화면의 다른 곳도 바로 갱신되도록 알린다
   window.dispatchEvent(new Event(RESULT_CHECKED_EVENT));
 }
+
+// 응모 마감까지 남은 시간 — 하루가 넘으면 "1일 14:27:05 남음", 아니면 "14:27:05 남음".
+// 메인 배너 · 홈 카드 · 응모 목록 · 응모 상세가 모두 이 함수를 써서 같은 모양으로 보인다
+export function formatRaffleCountdown(seconds: number): string {
+  if (seconds <= 0) return '마감'
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  if (d === 0) return `${pad(h)}:${pad(m)}:${pad(s)} 남음`
+  return `${d}일 ${pad(h)}:${pad(m)}:${pad(s)} 남음`
+}

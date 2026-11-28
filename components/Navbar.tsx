@@ -12,9 +12,9 @@ import {
   SignOutIcon,
   UserIcon,
 } from "@phosphor-icons/react";
-import { useMyPoints } from "@/hooks/useMyPoints";
+import { notifyPointsUpdated, useMyPoints } from "@/hooks/useMyPoints";
 import { useStorage } from "@/hooks/useStorage";
-import { getValidSession, clearAuth } from "@/lib/auth";
+import { getValidSession, clearAuth, isLoginExpired, loginPath } from "@/lib/auth";
 import { notifyStorageUpdated } from "@/lib/storage";
 import EmojiIcon from '@/components/EmojiIcon'
 
@@ -86,6 +86,27 @@ export default function Navbar() {
     };
   }, [pathname]);
 
+  // 로그인하고 하루(로그인 유지 시간)가 지나면 자동 로그아웃 — 화면을 켜 둔 채여도 1분마다, 다시 볼 때마다 확인한다
+  useEffect(() => {
+    const check = () => {
+      if (!isLoginExpired()) return;
+      clearAuth();
+      notifyStorageUpdated();
+      notifyPointsUpdated();
+      setIsLoggedIn(false);
+      setIsAdmin(false);
+      alert("로그인한 지 하루가 지나 자동으로 로그아웃되었어요. 다시 로그인해 주세요.");
+      router.push(loginPath());
+    };
+    check();
+    const timer = setInterval(check, 60_000);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [router]);
+
   function handleLogout() {
     clearAuth();
     notifyStorageUpdated();
@@ -125,10 +146,6 @@ export default function Navbar() {
                   <span className="nav-btn-badge">{readyStorageCount}</span>
                 )}
               </Link>
-              <Link href="/mypage/wishlist" className="nav-btn" aria-label="찜한 상품">
-                <HeartIcon size={16} weight="bold" />
-                <span className="nav-btn-label">찜한 상품</span>
-              </Link>
               <Link
                 href="/mypage"
                 className={`nav-btn ${isMypage ? "active-nav" : ""}`}
@@ -136,6 +153,10 @@ export default function Navbar() {
               >
                 <UserIcon size={16} weight="bold" />
                 <span className="nav-btn-label">마이페이지</span>
+              </Link>
+              <Link href="/mypage/wishlist" className="nav-btn" aria-label="찜한 상품">
+                <HeartIcon size={16} weight="bold" />
+                <span className="nav-btn-label">찜한 상품</span>
               </Link>
               <button className="nav-btn" onClick={handleLogout} aria-label="로그아웃">
                 <SignOutIcon size={16} weight="bold" className="nav-btn-mobile-icon" />

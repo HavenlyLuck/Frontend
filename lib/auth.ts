@@ -25,6 +25,14 @@ function isExpired(token: string): boolean {
   return payload.exp * 1000 - EXPIRY_SKEW_SECONDS * 1000 <= Date.now()
 }
 
+// 로그인 유지 시간(백엔드 REFRESH_TOKEN_EXPIRE_MINUTES, 1일)이 지났는지 — 리프레시 토큰이 끝나면 다시 로그인해야 한다
+export function isLoginExpired(): boolean {
+  if (typeof window === 'undefined') return false
+  if (!localStorage.getItem('token')) return false
+  const refreshToken = localStorage.getItem('refreshToken')
+  return !refreshToken || isExpired(refreshToken)
+}
+
 export function isLoggedIn(): boolean {
   if (typeof window === 'undefined') return false
   return !!localStorage.getItem('token')
@@ -85,7 +93,7 @@ export async function getValidSession(): Promise<Session | null> {
   }
 
   const refreshToken = localStorage.getItem('refreshToken')
-  if (!refreshToken) {
+  if (!refreshToken || isExpired(refreshToken)) {
     clearAuth()
     return null
   }

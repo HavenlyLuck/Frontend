@@ -7,6 +7,7 @@ import { clearAuth, getValidSession } from '@/lib/auth'
 import { ApiError, changeMyPassword, deleteMyAccount, getMyProfile, setReviewMarketingConsent } from '@/lib/api'
 import { BIZ_INFO } from '@/components/PolicyDoc'
 import ReferralCard from '@/components/ReferralCard'
+import PasswordInput from '@/components/PasswordInput'
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: 8,
@@ -164,11 +165,11 @@ export default function SettingsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <div style={labelStyle}>현재 비밀번호</div>
-              <input style={inputStyle} type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="현재 비밀번호" autoComplete="current-password" />
+              <PasswordInput style={inputStyle} value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="현재 비밀번호" autoComplete="current-password" />
             </div>
             <div>
               <div style={labelStyle}>새 비밀번호</div>
-              <input style={inputStyle} type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="새 비밀번호" autoComplete="new-password" />
+              <PasswordInput style={inputStyle} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="새 비밀번호" autoComplete="new-password" />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', marginTop: 8 }}>
                 {PASSWORD_RULES.map(rule => {
                   const ok = rule.test(newPw)
@@ -182,7 +183,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <div style={labelStyle}>새 비밀번호 확인</div>
-              <input style={inputStyle} type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="새 비밀번호 확인" autoComplete="new-password" />
+              <PasswordInput style={inputStyle} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="새 비밀번호 확인" autoComplete="new-password" />
               {confirmPw && (
                 <p style={{ margin: '6px 0 0', fontSize: 12, color: newPw === confirmPw ? 'var(--success)' : 'var(--danger)' }}>
                   {newPw === confirmPw ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
@@ -265,9 +266,8 @@ export default function SettingsPage() {
               <li>결제·배송·분쟁 기록처럼 법에서 보관하도록 정한 정보는 정해진 기간 동안 따로 보관한 뒤 지워요.</li>
             </ul>
             <div style={labelStyle}>본인 확인을 위해 비밀번호를 입력해 주세요</div>
-            <input
+            <PasswordInput
               style={inputStyle}
-              type="password"
               value={withdraw.password}
               onChange={e => setWithdraw(w => w && { ...w, password: e.target.value, error: null })}
               placeholder="현재 비밀번호"

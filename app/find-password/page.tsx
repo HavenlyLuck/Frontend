@@ -10,6 +10,7 @@ import {
   readIdentityVerificationRedirect,
   IdentityVerificationResult,
 } from '@/lib/identityVerification'
+import PasswordInput from '@/components/PasswordInput'
 
 // 회원가입 화면과 같은 규칙
 const USER_ID_REGEX = /^[A-Za-z0-9]{5,20}$/
@@ -132,8 +133,7 @@ export default function FindPasswordPage() {
             <form className="auth-form" onSubmit={handleReset}>
               <p className="auth-desc"><b>{loginId}</b> 계정의 새 비밀번호를 입력해주세요.</p>
               <div className="field">
-                <input
-                  type="password"
+                <PasswordInput
                   placeholder="새 비밀번호"
                   value={password}
                   onChange={e => setPassword(e.target.value.replace(/[^\x21-\x7E]/g, ''))}
@@ -145,8 +145,7 @@ export default function FindPasswordPage() {
                 <p className={`field-hint ${passwordHintClass}`}>영문 대소문자, 숫자, 특수문자를 모두 포함한 8~20자</p>
               </div>
               <div className="field">
-                <input
-                  type="password"
+                <PasswordInput
                   placeholder="새 비밀번호 확인"
                   value={confirm}
                   onChange={e => setConfirm(e.target.value.replace(/[^\x21-\x7E]/g, ''))}

@@ -2694,23 +2694,6 @@ a.product-card-home.is-soldout { cursor: pointer; }
 }
 .guide-footer a { color: var(--accent-fg); text-decoration: none; font-weight: 600; }
 
-/* 쌀 응모권 보유 표시 (응모 목록 상단) */
-.ssal-ticket-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--gold);
-  background: var(--gold-tint);
-  border: 1px solid var(--gold-tint-border);
-  border-radius: 8px;
-  padding: 4px 10px;
-  cursor: help;
-}
-.ssal-ticket-chip b {
-  font-weight: 800;
-}
-
 /* 컨텐츠 모아보기 */
 .contents-grid {
   display: grid;
@@ -5460,6 +5443,17 @@ a.product-card-home.is-soldout { cursor: pointer; }
   gap: 8px;
 }
 
+/* 비밀번호 입력칸 + 보기/숨기기 눈 버튼 (components/PasswordInput.tsx) */
+.password-input { position: relative; width: 100%; flex: 1; min-width: 0; }
+.password-input > input { width: 100%; box-sizing: border-box; }
+.password-toggle {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 8px; background: none; color: var(--text-tertiary); cursor: pointer;
+}
+.password-toggle:hover { color: var(--text); }
+.password-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 .field-input {
   flex: 1;
   min-width: 0;
@@ -7469,6 +7463,26 @@ a.review-private-hint { flex-shrink: 0; text-decoration: underline; }
   animation: successIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* 응모 완료 카드 자리 — 응모권 창 배경이 스크롤된 만큼 내려와서, 지금 보이는 화면 한가운데에 카드를 띄운다.
+   (응모권 창 배경은 위에서부터 쌓이므로, 카드를 그냥 두면 모바일에서 맨 위에 붙는다)
+   카드 바깥은 클릭이 배경으로 그대로 지나가서, 배경을 누르면 닫힌다 */
+.success-modal-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: none;
+  z-index: 2;
+}
+.success-modal-layer .success-modal {
+  position: relative;
+  pointer-events: auto;
+}
+
 @keyframes successIn {
   from { opacity: 0; transform: translateY(14px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
@@ -7679,6 +7693,12 @@ a.review-private-hint { flex-shrink: 0; text-decoration: underline; }
 .free-ticket.referral .free-ticket-icon { color: var(--gold); }
 .free-ticket-title { font-size: 13px; font-weight: 700; color: var(--text); }
 .free-ticket-desc { font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.free-ticket-count { flex-shrink: 0; font-size: 14px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.free-ticket.referral .free-ticket-count { color: var(--gold); }
+.free-ticket-more {
+  display: block; width: 100%; margin-top: 8px; padding: 8px; border: 1px dashed var(--border-strong); border-radius: 10px;
+  background: none; color: var(--text-secondary); font-size: 12px; font-weight: 600; cursor: pointer;
+}
 .free-ticket-note { margin: 10px 0 0; font-size: 11px; color: var(--text-tertiary); line-height: 1.5; }
 
 /* 응모 모달 — 쌀 응모권 장수와 카드 결제 장수를 함께 고른다 */
