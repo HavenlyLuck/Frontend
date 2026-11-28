@@ -33,7 +33,8 @@ import { notifyPointsUpdated } from "@/hooks/useMyPoints";
 import { addRaffleToWishlist, getMyRaffleWishlist, removeRaffleFromWishlist } from "@/lib/wishlist";
 import EmojiIcon from '@/components/EmojiIcon'
 import { maskNickname } from "@/lib/mask";
-import { formatRaffleCountdown } from "@/lib/raffle";
+import { formatRaffleCountdown, isOfficialRaffle } from "@/lib/raffle";
+import OfficialBadge from "@/components/OfficialBadge";
 
 
 export default function RaffleProductPage({
@@ -357,6 +358,7 @@ export default function RaffleProductPage({
                       ? "응모 마감"
                       : "응모 진행 중"}
               </span>
+              {isOfficialRaffle(product) && <OfficialBadge />}
               {urgent && !soldOut && (
                 <span className="badge urgent">
                   <FlameIcon size={12} weight="fill" /> 마감 임박

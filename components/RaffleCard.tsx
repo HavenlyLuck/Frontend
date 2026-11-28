@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { TicketIcon } from '@phosphor-icons/react'
 import type { RaffleProductResponse } from '@/lib/api'
 import CardImage from '@/components/CardImage'
-import { formatRaffleCountdown, isSoldOutRaffle } from '@/lib/raffle'
+import { formatRaffleCountdown, isOfficialRaffle, isSoldOutRaffle } from '@/lib/raffle'
+import OfficialBadge from '@/components/OfficialBadge'
 import EmojiIcon from '@/components/EmojiIcon'
 
 
@@ -13,6 +14,7 @@ export default function RaffleCard({ product: p, secondsLeft }: { product: Raffl
     <>
       <div className="card-img">
         {p.image_url && <CardImage src={p.image_url} alt={p.product_name} />}
+        {isOfficialRaffle(p) && <OfficialBadge variant="overlay" />}
         {soldOut
           ? <div className="card-soldout-stamp"><span>SOLD OUT</span></div>
           : <div className="card-time-badge"><EmojiIcon name="timer" /> {formatRaffleCountdown(secondsLeft)}</div>}

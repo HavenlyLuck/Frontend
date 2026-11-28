@@ -16,9 +16,14 @@ export function isSoldOutRaffle(p: RaffleProductResponse): boolean {
   return p.status === "completed" || p.remaining_slots <= 0;
 }
 
+// 천운이 직접 올린 응모 ("천운 공식" 배지) — 고객이 상점 상품을 모금으로 전환해서 연 응모가 아닌 것
+export function isOfficialRaffle(p: RaffleProductResponse): boolean {
+  return p.funding_store_product_id == null;
+}
+
 /*
  * 홈/응모 목록에 보여줄 응모 상품: 진행 중(매진 후 추첨 대기 포함) + 추첨이 끝난 지 하루가 안 된 상품.
- * 진행 중인 상품이 먼저, 매진 상품은 뒤로.
+ * 진행 중인 상품이 먼저, 매진 상품은 뒤로. 같은 묶음 안에서는 천운 공식 응모가 맨 위 (서버 순서는 그대로 유지).
  * (추첨은 매진 1분 뒤 자동이라 drawn_at 기준으로 세도 매진 시각과 거의 같다)
  */
 export async function getListedRaffles(): Promise<RaffleProductResponse[]> {
@@ -30,7 +35,9 @@ export async function getListedRaffles(): Promise<RaffleProductResponse[]> {
     (p) => p.drawn_at && isWithinSoldOutWindow(p),
   );
   return [...open, ...recent].sort(
-    (a, b) => Number(isSoldOutRaffle(a)) - Number(isSoldOutRaffle(b)),
+    (a, b) =>
+      Number(isSoldOutRaffle(a)) - Number(isSoldOutRaffle(b)) ||
+      Number(!isOfficialRaffle(a)) - Number(!isOfficialRaffle(b)),
   );
 }
 
