@@ -15,19 +15,11 @@ import StoreProductCard from "@/components/StoreProductCard";
 import KujiCard from "@/components/KujiCard";
 import HomeHero, { WinnerTicker } from "@/components/HomeHero";
 import { fetchKujiList, type KujiListItem } from "@/lib/kujiList";
-import { getListedRaffles, isListedRaffleVisible, isSoldOutRaffle } from "@/lib/raffle";
+import { formatRaffleCountdown, getListedRaffles, isListedRaffleVisible, isSoldOutRaffle } from "@/lib/raffle";
 import EmojiIcon from '@/components/EmojiIcon'
 
 // 마감임박 섹션과 히어로 캐러셀은 아직 "준비중" 상태로 표시 (응모상품 섹션만 백엔드 연동됨)
 
-function formatRaffleCountdown(seconds: number): string {
-  if (seconds <= 0) return "마감";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)} 남음` : `${pad(m)}:${pad(s)} 남음`;
-}
 
 function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; remainingSeconds: number }) {
   const soldPct = rp.total_slots > 0 ? Math.min(100, Math.round((rp.sold_slots / rp.total_slots) * 100)) : 0;
