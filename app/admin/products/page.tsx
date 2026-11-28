@@ -21,6 +21,16 @@ import {
 import { fetchCatalog, type CatalogItem } from '@/lib/catalog'
 import { cancelRaffle, closeKuji, deleteStore, setStoreStock } from '@/lib/productActions'
 import CatalogPicker from '@/components/admin/CatalogPicker'
+import { fetchSalesSnapshot, formatSaleTime, type SaleLogEntry, type SalesSnapshot } from '@/lib/adminSales'
+
+// 판매 상태 탭 — 판매중: 지금 팔고 있음 / 판매완료: 한 번이라도 팔린 것(팔리는 순간부터, 판매중과 겹칠 수 있음) /
+// 내린 상품: 하나도 안 팔리고 끝난 것(응모 실패 · 관리자 취소 · 안 팔린 채 판매 종료)
+type SaleFilter = 'selling' | 'done' | 'ended'
+const SALE_FILTERS: [SaleFilter, string, string][] = [
+  ['selling', '판매중', '판매중인 상품이 없어요.'],
+  ['done', '판매완료', '아직 팔린 상품이 없어요.'],
+  ['ended', '내린 상품', '안 팔리고 내린 상품이 없어요.'],
+]
 
 type KujiTier = 'upper' | 'lower'
 
@@ -37,7 +47,8 @@ const ADMIN_PAGE_SIZE = 10
 const lightInput: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text)', padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
 
 // ── 상품 게시 ─────────────────────────────────────────────
-// "상품 등록"(app/admin/catalog)에 올려 둔 상품을 골라 응모 · 쿠지 · 상점에 올린다. 재고 수량 · 원가는 사이트에서 관리하지 않는다.
+// "상품 등록"(app/admin/catalog)에 올려 둔 상품을 골라 응모 · 쿠지 · 상점에 올린다. 원가는 사이트에서 관리하지 않는다.
+// 팔린 개수는 장부 기록으로 센다(lib/adminSales.ts) — 판매중 / 판매완료 / 내린 상품 탭
 // 관리자 확인은 app/admin/layout.tsx(AdminShell)가 한다
 export default function AdminProductsPage() {
   const adminToken: string | null = useAdminToken()
@@ -77,13 +88,23 @@ export default function AdminProductsPage() {
     reloadStoreProducts()
   }, [authChecked])
 
+  // 상점 상품별 팔린 개수 (서버 상품 목록에는 없어서 장부 기록으로 센다 — lib/adminSales.ts)
+  const [sales, setSales] = useState<SalesSnapshot | null>(null)
+  const [salesError, setSalesError] = useState(false)
+  function reloadSales() {
+    if (!adminToken) return
+    fetchSalesSnapshot(adminToken)
+      .then(s => { setSales(s); setSalesError(false) })
+      .catch(() => setSalesError(true))
+  }
+
   useEffect(() => {
-    if (authChecked && adminToken) reloadKujiSets()
+    if (authChecked && adminToken) { reloadKujiSets(); reloadSales() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authChecked, adminToken])
 
   const [productTab, setProductTab] = useState<ProductType>('응모')
-  const [saleFilter, setSaleFilter] = useState<'selling' | 'done'>('selling')
+  const [saleFilter, setSaleFilter] = useState<SaleFilter>('selling')
   const [productPage, setProductPage] = useState(1)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newP, setNewP] = useState({ title: '', price: '', img: '', stock: '', maxTickets: '', ticketPrice: '10,000원', description: '' })
@@ -187,10 +208,13 @@ export default function AdminProductsPage() {
     const sp = storeProducts.find(s => s.store_product_id === p.id)
     if (!sp) return { meta: p.price, figure: '-', sub: '', progress: null, tone: 'var(--text)', ended: false }
     const category = STORE_CATEGORIES[sp.pay_type].find(c => c.id === sp.category)?.label
+    const soldN = sales?.storeSold.get(sp.store_product_id) ?? 0
+    const storeMeta = `${sp.pay_type === 'cash' ? `${sp.price.toLocaleString()}원` : `${sp.price.toLocaleString()} 쌀포인트`}${category ? ` · ${category}` : ''}`
+    const soldNote = soldN > 0 ? ` · ${soldN}개 판매` : ''
     return {
-      meta: `${sp.pay_type === 'cash' ? `${sp.price.toLocaleString()}원` : `${sp.price.toLocaleString()} 쌀포인트`}${category ? ` · ${category}` : ''}`,
+      meta: storeMeta,
       figure: isRegular(sp) ? '일반' : `${sp.stock}개`,
-      sub: isRegular(sp) ? '수량 제한 없이 판매 중' : sp.stock > 0 ? '한정 · 판매 중' : '매진 · 판매 종료',
+      sub: (isRegular(sp) ? '수량 제한 없이 판매 중' : sp.stock > 0 ? '한정 · 판매 중' : '매진 · 판매 종료') + soldNote,
       progress: null,
       tone: isRegular(sp) ? 'var(--text)' : sp.stock === 0 ? 'var(--danger)' : sp.stock <= 3 ? 'var(--gold)' : 'var(--text)',
       ended: isSoldOut(sp),
@@ -287,6 +311,7 @@ export default function AdminProductsPage() {
               runProductAction(`${key}-delete`, async () => {
                 await deleteStore(adminToken!, sp)
                 setStoreProducts(prev => prev.filter(s => s.store_product_id !== sp.store_product_id))
+                reloadSales()   // 팔린 적 있으면 판매완료에 "상점에서 내림"으로 남는다
               })
             }}
           >
@@ -588,20 +613,51 @@ export default function AdminProductsPage() {
     )
   }
 
-  // 탭별 상품 + 판매중 여부 (응모: 아직 응모권을 팔고 있음 / 쿠지: 남은 장수 있음 / 상점: 일반이거나 한정 수량이 남음)
-  const tabItems: { product: Product; selling: boolean }[] = productTab === '응모'
-    ? raffleProducts.map(rp => ({ product: raffleToProduct(rp), selling: rp.status === 'open' && rp.is_open && rp.remaining_slots > 0 }))
-    : productTab === '상점(일반)' || productTab === '상점(쌀포인트)'
+  // 탭별 상품 + 판매 상태. selling: 지금 팔고 있음 / sold: 한 번이라도 팔림(결제 끝남) — 둘 다 아니면 "내린 상품"
+  //   응모: 응모권 다 팔림(추첨 대기 · 추첨 완료)만 팔린 것. 매진 못 해 취소된 응모는 내린 상품
+  //   쿠지: 제비가 1장이라도 팔리면 팔린 것 (판매 종료 때 안 나간 상은 재고로 돌아간다)
+  //   상점: 1개라도 팔리면 팔린 것. 팔린 개수는 장부 기록에서 — 못 불러오면 0으로 본다
+  const isStoreTab = productTab === '상점(일반)' || productTab === '상점(쌀포인트)'
+  const storePay = productTab === '상점(일반)' ? 'cash' : 'ssal'
+  const tabItems: { product: Product; selling: boolean; sold: boolean }[] = productTab === '응모'
+    ? raffleProducts.map(rp => ({
+        product: raffleToProduct(rp),
+        selling: rp.status === 'open' && rp.is_open && rp.remaining_slots > 0,
+        sold: rp.status === 'completed' || (rp.status === 'open' && rp.remaining_slots <= 0),
+      }))
+    : isStoreTab
       ? storeProducts
-          .filter(sp => sp.pay_type === (productTab === '상점(일반)' ? 'cash' : 'ssal'))
-          .map(sp => ({ product: storeToProduct(sp), selling: !isSoldOut(sp) }))
-      : kujiSets.map(ks => ({ product: kujiToProduct(ks), selling: ks.status === 'open' && ks.remaining_tickets > 0 }))
-  const sellingCount = tabItems.filter(x => x.selling).length
-  const doneCount = tabItems.length - sellingCount
-  const saleFiltered = tabItems.filter(x => x.selling === (saleFilter === 'selling')).map(x => x.product)
-  const pageCount = Math.max(1, Math.ceil(saleFiltered.length / ADMIN_PAGE_SIZE))
+          .filter(sp => sp.pay_type === storePay)
+          .map(sp => ({ product: storeToProduct(sp), selling: !isSoldOut(sp), sold: (sales?.storeSold.get(sp.store_product_id) ?? 0) > 0 }))
+      : kujiSets.map(ks => ({
+          product: kujiToProduct(ks),
+          selling: ks.status === 'open' && ks.remaining_tickets > 0,
+          sold: ks.total_tickets - ks.remaining_tickets > 0,
+        }))
+
+  // 판매완료 — 쿠지 · 상점은 판매 기록(결제 1건 = 한 줄, 최신순, 같은 상품이 또 팔려도 따로).
+  // 응모는 판 하나가 통째로 팔리므로 응모 하나 = 한 줄 (응모권 다 팔림)
+  const logKind = productTab === '쿠지' ? 'kuji' : productTab === '상점(일반)' ? 'store_cash' : 'store_ssal'
+  const saleLog = productTab === '응모' ? [] : (sales?.log ?? []).filter(e => e.kind === logKind)
+  const showLog = saleFilter === 'done' && productTab !== '응모'
+
+  const inFilter = (x: { selling: boolean; sold: boolean }, f: SaleFilter) =>
+    f === 'selling' ? x.selling : f === 'done' ? x.sold : !x.selling && !x.sold
+  const filterCount = (f: SaleFilter) =>
+    f === 'done' && productTab !== '응모' ? saleLog.length : tabItems.filter(x => inFilter(x, f)).length
+  const saleFiltered = tabItems.filter(x => inFilter(x, saleFilter)).map(x => x.product)
+  const listLength = showLog ? saleLog.length : saleFiltered.length
+  const pageCount = Math.max(1, Math.ceil(listLength / ADMIN_PAGE_SIZE))
   const currentPage = Math.min(productPage, pageCount)
-  const filtered = saleFiltered.slice((currentPage - 1) * ADMIN_PAGE_SIZE, currentPage * ADMIN_PAGE_SIZE)
+  const pageSlice = <T,>(list: T[]) => list.slice((currentPage - 1) * ADMIN_PAGE_SIZE, currentPage * ADMIN_PAGE_SIZE)
+  const filtered = showLog ? [] : pageSlice(saleFiltered)
+  const logPage = showLog ? pageSlice(saleLog) : []
+
+  // 판매 기록 한 줄에 붙일 사진 — 지금 목록에 있는 상품이면 그 사진 (내린 상품은 사진 없이)
+  const logImage = (e: SaleLogEntry) =>
+    e.productId == null ? null
+      : e.kind === 'kuji' ? kujiSets.find(k => k.kuji_set_id === e.productId)?.image_url ?? null
+        : storeProducts.find(s => s.store_product_id === e.productId)?.image_url ?? null
 
   if (!authChecked) return null
 
@@ -630,7 +686,7 @@ export default function AdminProductsPage() {
           ))}
         </div>
         <div className="admin-sale-toggle" role="tablist" aria-label="판매 상태">
-          {([['selling', '판매중', sellingCount], ['done', '판매완료', doneCount]] as const).map(([key, label, count]) => (
+          {SALE_FILTERS.map(([key, label]) => (
             <button
               key={key}
               role="tab"
@@ -638,7 +694,7 @@ export default function AdminProductsPage() {
               className={saleFilter === key ? 'active' : ''}
               onClick={() => { setSaleFilter(key); setProductPage(1) }}
             >
-              {label} <span className="count">{count}</span>
+              {label} <span className="count">{filterCount(key)}</span>
             </button>
           ))}
         </div>
@@ -653,6 +709,9 @@ export default function AdminProductsPage() {
         )}
         {(productTab === '상점(일반)' || productTab === '상점(쌀포인트)') && storeListError && (
           <div style={{ color: '#e14d72', fontSize: 13, marginBottom: 12 }}>{storeListError}</div>
+        )}
+        {(productTab === '상점(일반)' || productTab === '상점(쌀포인트)') && salesError && (
+          <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>판매 기록을 불러오지 못해서 팔린 개수가 안 보여요. 판매완료 · 내린 상품 탭이 맞지 않을 수 있어요. 새로고침해 주세요.</div>
         )}
 
         {showAddForm && (
@@ -1064,9 +1123,41 @@ export default function AdminProductsPage() {
             </div>
           </div>
         )}
-        {filtered.length === 0 ? (
+        {showLog && productTab === '쿠지' && salesError && (
+          <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>판매 기록을 불러오지 못했어요. 새로고침해 주세요.</div>
+        )}
+        {showLog ? (
+          logPage.length === 0 ? (
+            <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '40px 0', border: '1px dashed var(--border-strong)', borderRadius: 12, marginBottom: 24 }}>
+              {sales == null && !salesError ? '판매 기록을 불러오는 중...' : SALE_FILTERS.find(([key]) => key === saleFilter)?.[2]}
+            </div>
+          ) : (
+            <div className="admin-plist">
+              {logPage.map(e => {
+                const img = logImage(e)
+                const paid = e.kind === 'store_ssal'
+                  ? `${e.amountSsal.toLocaleString()} 쌀포인트`
+                  : `카드 ${e.amountKrw.toLocaleString()}원${e.amountSsal > 0 ? ` · 할인 ${e.amountSsal.toLocaleString()}P` : ''}`
+                return (
+                  <div key={e.id} className="admin-prow">
+                    <div className="admin-prow-thumb">{img ? <img src={img} alt="" /> : null}</div>
+                    <div className="admin-prow-main">
+                      <div className="admin-prow-title">{e.title}</div>
+                      <div className="admin-prow-meta">{formatSaleTime(e.at)} · {paid}</div>
+                    </div>
+                    <div className="admin-prow-status">
+                      <div className="admin-prow-figure">{e.quantity}{e.kind === 'kuji' ? '장' : '개'} 판매</div>
+                      {e.kind === 'kuji' && e.prizes.length > 0 && <div className="admin-prow-sub">{e.prizes.join(' · ')}</div>}
+                    </div>
+                    <div className="admin-prow-actions" />
+                  </div>
+                )
+              })}
+            </div>
+          )
+        ) : filtered.length === 0 ? (
           <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '40px 0', border: '1px dashed var(--border-strong)', borderRadius: 12, marginBottom: 24 }}>
-            {saleFilter === 'selling' ? '판매중인 상품이 없어요.' : '판매가 끝난 상품이 없어요.'}
+            {SALE_FILTERS.find(([key]) => key === saleFilter)?.[2]}
           </div>
         ) : (
           <div className="admin-plist">

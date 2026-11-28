@@ -884,6 +884,56 @@ export function getFinance(token: string, from: string, to: string) {
   })
 }
 
+// 관리자 주간 장부 (GET /admin/ledger) — 기간(한국 날짜, 양 끝 포함, 최대 1년)의 판매 · 물건 나감 · 회차.
+// 여기서는 상품별로 팔린 개수와 재고 계산에 필요한 것만 받는다 (lib/adminSales.ts)
+export interface LedgerOutflow {
+  at: string
+  round_id: string | null          // raffle-12 · kuji-3 · store-5
+  catalog_item_id: number | null   // 등록 상품 (연결 안 했으면 null)
+  item_name: string
+  quantity: number                 // 반품 · 보관 기한 전환(물건이 회사에 남음)은 음수
+  reason: 'raffle_win' | 'kuji_prize' | 'kuji_last_one' | 'store_sale' | 'ssal_shop' | 'storage_convert' | 'return'
+}
+
+export interface LedgerRound {
+  round_id: string
+  kind: 'raffle' | 'kuji' | 'store_cash' | 'store_ssal'
+  title: string
+  status: string                   // 상점: on_sale | sold_out | deleted
+  price: number
+  tickets_total: number | null
+  tickets_sold: number             // 상점: 지금까지 팔린 개수 (구매 취소된 것 빼고)
+  created_at: string | null
+  closed_at: string | null
+}
+
+// 판매 한 줄 (결제 1건 · 쌀포인트 구매 1건) — 개인정보 없이 user_id만
+export interface LedgerSale {
+  id: string
+  at: string                       // UTC
+  kind: 'raffle' | 'kuji' | 'store_cash' | 'store_ssal' | 'shipping_fee'
+  round_id: string | null
+  title: string
+  user_id: number
+  pay: 'cash' | 'ssal' | 'ssal_ticket'
+  tickets: number                  // 응모권 · 제비 장수 / 상점 구매 수량
+  amount_krw: number               // 카드 결제 금액(원)
+  amount_ssal: number              // 쓴 쌀포인트 (쌀포인트 상점 · 카드 상점 할인)
+  status: 'pending' | 'confirmed' | 'refunded'
+}
+
+export interface LedgerResponse {
+  sales: LedgerSale[]
+  outflows: LedgerOutflow[]
+  rounds: LedgerRound[]
+}
+
+export function getLedger(token: string, from: string, to: string) {
+  return request<LedgerResponse>(`/admin/ledger?${new URLSearchParams({ from, to })}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
 export function createExpense(token: string, payload: Pick<ExpenseResponse, 'spent_on' | 'label' | 'amount'>) {
   return request<ExpenseResponse>('/finance/expenses', {
     method: 'POST',

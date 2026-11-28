@@ -9,6 +9,7 @@ import { josa } from '@/lib/josa'
 import { createCatalogItem, deleteCatalogItem, fetchCatalog, updateCatalogItem, type CatalogItem } from '@/lib/catalog'
 import { PRODUCT_INFO_FIELDS, parseProductDescription, productInfoTemplate } from '@/lib/productInfo'
 import PurchasePanel from '@/components/admin/PurchasePanel'
+import { fetchSalesSnapshot } from '@/lib/adminSales'
 
 const lightInput: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text)', padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
 const smallBtn = (danger = false): React.CSSProperties => ({
@@ -37,9 +38,18 @@ export default function AdminCatalogPage() {
   // 입고 패널을 연 상품 — adding: 바로 입고 입력 칸을 연 채로
   const [openStock, setOpenStock] = useState<{ id: number; adding: boolean } | null>(null)
 
-  const reload = () => fetchCatalog(token)
-    .then(list => { setItems(list); setListError(null) })
-    .catch(err => setListError(err instanceof ApiError ? err.message : '등록된 상품을 불러오지 못했어요.'))
+  // 등록 상품별로 지금까지 나간 개수 — 재고 = 입고 − 나간 수 (lib/adminSales.ts). 못 불러오면 null로 두고 입고 수만 보여준다
+  const [outByCatalog, setOutByCatalog] = useState<Map<number, number> | null>(null)
+  const [salesError, setSalesError] = useState(false)
+
+  const reload = () => Promise.all([
+    fetchCatalog(token)
+      .then(list => { setItems(list); setListError(null) })
+      .catch(err => setListError(err instanceof ApiError ? err.message : '등록된 상품을 불러오지 못했어요.')),
+    fetchSalesSnapshot(token)
+      .then(s => { setOutByCatalog(s.outByCatalog); setSalesError(false) })
+      .catch(() => setSalesError(true)),
+  ])
   useEffect(() => { reload() }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openNew = () => { setEditing('new'); setDraft(EMPTY); setFormError(null) }
@@ -161,6 +171,7 @@ export default function AdminCatalogPage() {
       </div>
 
       {listError && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{listError}</div>}
+      {salesError && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>판매 기록을 불러오지 못해서 재고 대신 입고 수만 보여요. 새로고침해 주세요.</div>}
 
       {items === null && !listError ? (
         <div style={{ color: 'var(--text-tertiary)', padding: '40px 0', textAlign: 'center' }}>불러오는 중...</div>
@@ -185,8 +196,10 @@ export default function AdminCatalogPage() {
                     </span>
                     {' · '}
                     <span style={{ color: it.purchasedQty === 0 ? 'var(--gold)' : undefined }}>
-                      {it.purchasedQty === 0 ? '입고 기록 없음' : `입고 ${it.purchasedQty}개 · 평균 원가 ${it.avgUnitCost.toLocaleString()}원`}
+                      {it.purchasedQty === 0 ? '입고 기록 없음' : `평균 원가 ${it.avgUnitCost.toLocaleString()}원`}
                     </span>
+                    {it.purchasedQty > 0 && ' · '}
+                    <StockText purchased={it.purchasedQty} out={outByCatalog?.get(it.id) ?? 0} loaded={outByCatalog != null} />
                   </div>
                 </div>
                 <div className="admin-prow-actions">
@@ -204,5 +217,23 @@ export default function AdminCatalogPage() {
         </div>
       )}
     </div>
+  )
+}
+
+// 재고 = 입고 − 나간 수 (응모 당첨 · 쿠지 · 상점 판매. 구매 취소 · 보관 기한 전환은 다시 재고로).
+// 판매 기록을 아직 못 받았으면 입고 수만 보여준다
+function StockText({ purchased, out, loaded }: { purchased: number; out: number; loaded: boolean }) {
+  if (!loaded) return purchased > 0 ? <span>입고 {purchased}개</span> : null
+  const stock = purchased - out
+  const parts = [`입고 ${purchased}개`, ...(out !== 0 ? [`판매 ${out}개`] : [])]
+  return (
+    <span>
+      <b style={{ color: stock < 0 ? 'var(--danger)' : stock === 0 ? 'var(--text-tertiary)' : 'var(--text)', fontWeight: 700 }}>
+        재고 {stock}개
+      </b>
+      {' · '}{parts.join(' · ')}
+      {/* 일반 판매는 재고가 없어도 주문을 받으므로 0 밑으로 내려간다 — 모자란 만큼 떼 와서 보낸다 */}
+      {stock < 0 && <span style={{ color: 'var(--danger)' }}> ({-stock}개 모자람 · 떼 와서 보내야 해요)</span>}
+    </span>
   )
 }
