@@ -8,6 +8,7 @@ import { login, ApiError } from '@/lib/api'
 import { notifyPointsUpdated } from '@/hooks/useMyPoints'
 import { getValidSession, safeNextPath, signupPath } from '@/lib/auth'
 import { notifyStorageUpdated } from '@/lib/storage'
+import PasswordInput from '@/components/PasswordInput'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -109,10 +110,10 @@ export default function LoginPage() {
               />
             </div>
             <div className="field">
-              <input
+              <PasswordInput
                 id="login-password"
                 name="password"
-                type="password"
+               
                 placeholder="비밀번호"
                 value={form.password}
                 onChange={handleChange}
