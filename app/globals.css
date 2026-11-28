@@ -1103,6 +1103,36 @@ a.product-card-home.is-soldout { cursor: pointer; }
   margin-bottom: 8px;
 }
 
+/* "천운 공식" — 천운이 직접 올린 응모 (components/OfficialBadge.tsx). 브랜드 금색 */
+.official-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: #2a1f0a;
+  background: linear-gradient(135deg, #ecd39a 0%, var(--gold) 100%);
+  border-radius: 99px;
+  padding: 4px 10px;
+}
+/* 카드 사진 왼쪽 위 — 매진 도장(z-index 2) 위에도 보이게 */
+.official-badge.is-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  font-size: 11px;
+  padding: 3px 8px 3px 7px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+@media (max-width: 480px) {
+  .official-badge.is-overlay { top: 6px; left: 6px; font-size: 10px; gap: 3px; padding: 2px 7px 2px 6px; }
+}
+
 .card-title {
   font-size: 14px;
   font-weight: 600;
@@ -1326,8 +1356,9 @@ a.product-card-home.is-soldout { cursor: pointer; }
 
 .status-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   margin-bottom: 14px;
 }
 
@@ -8384,7 +8415,16 @@ a.home-hero-card:hover {
   padding: 14px 18px;
   font-size: 13px;
 }
+.home-hero-head-left {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  min-width: 0;
+}
+.home-hero-card-head .official-badge { font-size: 11px; padding: 3px 8px; }
 .home-hero-live {
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -8399,6 +8439,8 @@ a.home-hero-card:hover {
   box-shadow: 0 0 0 4px var(--accent-tint);
 }
 .home-hero-time {
+  white-space: nowrap;
+  flex-shrink: 0;
   color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
 }

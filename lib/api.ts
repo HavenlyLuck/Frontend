@@ -357,6 +357,8 @@ export interface RaffleProductResponse {
   drand_round: number | null
   drand_randomness: string | null
   drand_signature: string | null
+  // 고객이 상점 상품을 응모로 전환(모금)해서 열린 응모면 그 상점 상품 id. 천운이 직접 올린 응모는 null (lib/raffle.ts isOfficialRaffle)
+  funding_store_product_id?: number | null
 }
 
 export function getRaffleProducts(status?: 'open' | 'completed' | 'cancelled') {

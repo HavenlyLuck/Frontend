@@ -6,7 +6,8 @@ import localFont from "next/font/local";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { CaretLeftIcon, CaretRightIcon, LightningIcon, SparkleIcon, TicketIcon } from "@phosphor-icons/react";
 import { getKujiRecentWins, getKujiSets, getRaffleProducts, type KujiRecentWin, type KujiSetResponse, type RaffleProductResponse } from "@/lib/api";
-import { parseServerTime } from "@/lib/raffle";
+import { isOfficialRaffle, parseServerTime } from "@/lib/raffle";
+import OfficialBadge from "./OfficialBadge";
 import CardImage from "./CardImage";
 import { maskNickname } from "@/lib/mask";
 import LogoMark from "./LogoMark";
@@ -318,7 +319,10 @@ function FeaturedRaffle({ rp, countdown }: { rp: RaffleProductResponse; countdow
   return (
     <Link className="home-hero-card" href={`/eungmo/${rp.raffle_product_id}`}>
       <div className="home-hero-card-head">
-        <span className="home-hero-live"><i aria-hidden="true" /> 진행 중인 응모</span>
+        <span className="home-hero-head-left">
+          <span className="home-hero-live"><i aria-hidden="true" /> 진행 중인 응모</span>
+          {isOfficialRaffle(rp) && <OfficialBadge />}
+        </span>
         <span className="home-hero-time">{countdown}</span>
       </div>
       <div className="home-hero-card-img card-img">

@@ -15,7 +15,8 @@ import StoreProductCard from "@/components/StoreProductCard";
 import KujiCard from "@/components/KujiCard";
 import HomeHero, { WinnerTicker } from "@/components/HomeHero";
 import { fetchKujiList, type KujiListItem } from "@/lib/kujiList";
-import { formatRaffleCountdown, getListedRaffles, isListedRaffleVisible, isSoldOutRaffle } from "@/lib/raffle";
+import { formatRaffleCountdown, getListedRaffles, isListedRaffleVisible, isOfficialRaffle, isSoldOutRaffle } from "@/lib/raffle";
+import OfficialBadge from "@/components/OfficialBadge";
 import EmojiIcon from '@/components/EmojiIcon'
 
 // 마감임박 섹션과 히어로 캐러셀은 아직 "준비중" 상태로 표시 (응모상품 섹션만 백엔드 연동됨)
@@ -28,6 +29,7 @@ function RaffleHomeCard({ rp, remainingSeconds }: { rp: RaffleProductResponse; r
     <>
       <div className="card-img">
         {rp.image_url && <CardImage src={rp.image_url} alt={rp.product_name} />}
+        {isOfficialRaffle(rp) && <OfficialBadge variant="overlay" />}
         {soldOut
           ? <div className="card-soldout-stamp"><span>SOLD OUT</span></div>
           : <div className="card-time-badge"><EmojiIcon name="timer" /> {formatRaffleCountdown(remainingSeconds)}</div>}

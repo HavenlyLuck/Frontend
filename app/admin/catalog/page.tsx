@@ -195,11 +195,17 @@ export default function AdminCatalogPage() {
                       {filled === 0 ? '상품정보제공고시 비어 있음' : `상품정보제공고시 ${filled} / ${PRODUCT_INFO_FIELDS.length}항목`}
                     </span>
                     {' · '}
-                    <span style={{ color: it.purchasedQty === 0 ? 'var(--gold)' : undefined }}>
-                      {it.purchasedQty === 0 ? '입고 기록 없음' : `평균 원가 ${it.avgUnitCost.toLocaleString()}원`}
-                    </span>
-                    {it.purchasedQty > 0 && ' · '}
-                    <StockText purchased={it.purchasedQty} out={outByCatalog?.get(it.id) ?? 0} loaded={outByCatalog != null} />
+                    {isEventItem(it.name) ? (
+                      // 쌀 응모권 같은 이벤트용 상품 — 실물이 아니라 입고 · 재고를 세지 않는다
+                      <span style={{ color: 'var(--text-tertiary)' }}>이벤트용 · 재고 안 셈</span>
+                    ) : (
+                      <>
+                        <span style={{ color: it.purchasedQty === 0 ? 'var(--gold)' : undefined }}>
+                          {it.purchasedQty === 0 ? '입고 기록 없음' : `평균 원가 ${it.avgUnitCost.toLocaleString()}원`}
+                        </span>
+                        <StockText purchased={it.purchasedQty} out={outByCatalog?.get(it.id) ?? 0} loaded={outByCatalog != null} />
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="admin-prow-actions">
@@ -220,14 +226,19 @@ export default function AdminCatalogPage() {
   )
 }
 
+// 쌀 응모권처럼 이벤트 · 보상으로 주는 상품 — 실물 재고가 아니라 세지 않는다 (사용자 결정 2026-11-28)
+const isEventItem = (name: string) => name.includes('응모권')
+
 // 재고 = 입고 − 나간 수 (응모 당첨 · 쿠지 · 상점 판매. 구매 취소 · 보관 기한 전환은 다시 재고로).
 // 판매 기록을 아직 못 받았으면 입고 수만 보여준다
 function StockText({ purchased, out, loaded }: { purchased: number; out: number; loaded: boolean }) {
-  if (!loaded) return purchased > 0 ? <span>입고 {purchased}개</span> : null
+  if (!loaded) return purchased > 0 ? <span> · 입고 {purchased}개</span> : null
+  if (purchased === 0 && out === 0) return null   // 아직 떼 온 적도 판 적도 없음 — "입고 기록 없음"만
   const stock = purchased - out
   const parts = [`입고 ${purchased}개`, ...(out !== 0 ? [`판매 ${out}개`] : [])]
   return (
     <span>
+      {' · '}
       <b style={{ color: stock < 0 ? 'var(--danger)' : stock === 0 ? 'var(--text-tertiary)' : 'var(--text)', fontWeight: 700 }}>
         재고 {stock}개
       </b>
